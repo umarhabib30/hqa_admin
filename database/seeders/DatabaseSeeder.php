@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
             AdminUserSeeder::class,
             StaffUserSeeder::class,
             PermissionSeeder::class,    
+            SponsorshipPackageSeeder::class,
         ]);
     }
 }
