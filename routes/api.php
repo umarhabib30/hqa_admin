@@ -24,6 +24,7 @@ use App\Http\Controllers\Api\PtoSubscribeMailApiController;
 use App\Http\Controllers\Api\SocialApiController;
 use App\Http\Controllers\Api\TopAchieverApiController;
 use App\Http\Controllers\Api\VideoApiController;
+use App\Http\Controllers\Api\SponserPackageApiController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -122,3 +123,6 @@ Route::post('/alumniSubscribe', [AlumniMailApiController::class, 'store']);
 
 // Alumni Form
 Route::post('/alumniForm', [AlumniFormApiController::class, 'store']);
+
+// Sponsors Packages
+Route::get('/sponsorsPackages', [SponserPackageApiController::class, 'packages']);
