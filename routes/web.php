@@ -29,6 +29,10 @@ use App\Http\Controllers\TopAchieverController;
 use App\Http\Controllers\NewsController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\VideoController;
+use App\Http\Controllers\ManagerController;
+use App\Http\Controllers\SponsorPackageController;
+use App\Http\Controllers\CouponController;
+use App\Http\Controllers\PermissionController;
 use App\Models\PtoLetterGuide;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
@@ -138,3 +142,23 @@ Route::resource('socials', SocialController::class)->except(['show']);
 //career job post Route
 Route::resource('jobPost', jobPostController::class);
 Route::resource('jobApp', jobAppController::class);
+
+// Managers Routes (with auth middleware)
+Route::middleware(['auth'])->group(function () {
+    Route::resource('managers', ManagerController::class);
+    Route::get('/managers/{id}/reset-password', [ManagerController::class, 'showResetPassword'])->name('managers.reset-password');
+    Route::put('/managers/{id}/reset-password', [ManagerController::class, 'resetPassword'])->name('managers.reset-password.update');
+});
+
+// Sponsor Packages Routes
+Route::resource('sponsor-packages', SponsorPackageController::class);
+
+// Coupons Routes
+Route::resource('coupons', CouponController::class);
+Route::get('/coupons/{id}/codes', [CouponController::class, 'showCodes'])->name('coupons.codes');
+
+// Permissions Routes (Super Admin Only)
+Route::middleware(['auth'])->group(function () {
+    Route::get('/permissions', [PermissionController::class, 'index'])->name('permissions.index');
+    Route::post('/permissions/update-role', [PermissionController::class, 'updateRolePermissions'])->name('permissions.update-role');
+});

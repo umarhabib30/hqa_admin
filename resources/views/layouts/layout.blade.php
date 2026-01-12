@@ -31,6 +31,42 @@
 
     </div>
     <script src="//unpkg.com/alpinejs" defer></script>
+    
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    @stack('scripts')
+    
+    <script>
+        // SweetAlert for delete confirmation
+        document.addEventListener('DOMContentLoaded', function() {
+            const deleteForms = document.querySelectorAll('.delete-form');
+            
+            deleteForms.forEach(form => {
+                form.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    
+                    const button = form.querySelector('.delete-btn');
+                    const managerName = button ? button.getAttribute('data-name') : 'this manager';
+                    
+                    Swal.fire({
+                        title: 'Are you sure?',
+                        text: `You want to delete ${managerName}? This action cannot be undone!`,
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#d33',
+                        cancelButtonColor: '#3085d6',
+                        confirmButtonText: 'Yes, delete it!',
+                        cancelButtonText: 'Cancel'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            form.submit();
+                        }
+                    });
+                });
+            });
+        });
+    </script>
 
 </body>
 

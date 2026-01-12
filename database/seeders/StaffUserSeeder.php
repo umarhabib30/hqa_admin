@@ -15,6 +15,7 @@ class StaffUserSeeder extends Seeder
             'name' => 'Staff',
             'email' => 'staff@hqa.com',
             'password' => Hash::make('password123'),
+            'role' => 'manager',
         ]);
     }
 }

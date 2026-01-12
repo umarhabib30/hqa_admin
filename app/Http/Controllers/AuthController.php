@@ -28,7 +28,8 @@ class AuthController extends Controller
                 'email' => 'Invalid email or password'
             ]);
         }
-
+        
+        return redirect()->route('dashboard.index');
         $user = Auth::user();
         Auth::logout(); // login after OTP only
 

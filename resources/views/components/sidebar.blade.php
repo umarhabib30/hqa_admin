@@ -13,6 +13,8 @@
     <!-- MENU -->
     <nav class="flex-1 py-6 px-4 space-y-2 overflow-y-auto">
         <!-- Dashboard -->
+        @php $user = auth()->user(); @endphp
+        @if($user->hasPermission('dashboard.view') || $user->isSuperAdmin())
         <a href="{{ route('dashboard.index') }}"
             class="flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-gray-700 transition-all duration-200
                   hover:bg-blue-100 hover:text-[#00285E]
@@ -23,8 +25,10 @@
             </svg>
             Dashboard
         </a>
+        @endif
 
         <!-- HomePage Dropdown -->
+        @if($user->hasAnyPermission(['homepage.view', 'homepage.modal', 'homepage.memories', 'homepage.top_achievers', 'homepage.news', 'homepage.videos', 'homepage.socials']) || $user->isSuperAdmin())
         <div x-data="{ open: {{ request()->routeIs('homeModal.*') || request()->routeIs('memories.*') || request()->routeIs('topAchievers.*') || request()->routeIs('news.*') || request()->routeIs('videos.*') || request()->routeIs('socials.*') ? 'true' : 'false' }} }"
             class="space-y-1">
             <button @click="open = !open"
@@ -45,26 +49,43 @@
             </button>
 
             <div x-show="open" x-transition x-cloak class="pl-12 space-y-1">
+                @if($user->hasPermission('homepage.modal') || $user->isSuperAdmin())
                 <a href="{{ route('homeModal.index') }}"
                     class="block py-2.5 px-4 rounded-lg text-sm font-medium text-gray-600 transition-all {{ request()->routeIs('homeModal.*') ? 'bg-blue-200 text-[#00285E] font-bold' : 'hover:bg-gray-200' }}">Home
                     PopUp</a>
+                @endif
+                @if($user->hasPermission('homepage.memories') || $user->isSuperAdmin())
                 <a href="{{ route('memories.index') }}"
                     class="block py-2.5 px-4 rounded-lg text-sm font-medium text-gray-600 transition-all {{ request()->routeIs('memories.*') ? 'bg-blue-200 text-[#00285E] font-bold' : 'hover:bg-gray-200' }}">Home
                     Alumni</a>
+                @endif
+                @if($user->hasPermission('homepage.top_achievers') || $user->isSuperAdmin())
                 <a href="{{ route('topAchievers.index') }}"
                     class="block py-2.5 px-4 rounded-lg text-sm font-medium text-gray-600 transition-all {{ request()->routeIs('topAchievers.*') ? 'bg-blue-200 text-[#00285E] font-bold' : 'hover:bg-gray-200' }}">Home
                     Top Achievers</a>
+                @endif
+                @if($user->hasPermission('homepage.news') || $user->isSuperAdmin())
                 <a href="{{ route('news.index') }}"
                     class="block py-2.5 px-4 rounded-lg text-sm font-medium text-gray-600 transition-all {{ request()->routeIs('news.*') ? 'bg-blue-200 text-[#00285E] font-bold' : 'hover:bg-gray-200' }}">Home
                     News Section</a>
+                @endif
+                @if($user->hasPermission('homepage.videos') || $user->isSuperAdmin())
                 <a href="{{ route('videos.index') }}"
                     class="block py-2.5 px-4 rounded-lg text-sm font-medium text-gray-600 transition-all {{ request()->routeIs('videos.*') ? 'bg-blue-200 text-[#00285E] font-bold' : 'hover:bg-gray-200' }}">Home
                     Videos Section</a>
+                @endif
+                @if($user->hasPermission('homepage.socials') || $user->isSuperAdmin())
                 <a href="{{ route('socials.index') }}"
                     class="block py-2.5 px-4 rounded-lg text-sm font-medium text-gray-600 transition-all {{ request()->routeIs('socials.*') ? 'bg-blue-200 text-[#00285E] font-bold' : 'hover:bg-gray-200' }}">Home
                     Socials Section</a>
+                @endif
             </div>
         </div>
+        @endif
+
+
+        <!-- Donation Dropdown -->
+        @if($user->hasAnyPermission(['donation.view', 'donation.achievements', 'donation.fundraise', 'donation.booking', 'donation.images']) || $user->isSuperAdmin())
 
 
         <!-- Donation Dropdown -->
@@ -88,21 +109,31 @@
             </button>
 
             <div x-show="open" x-transition x-cloak class="pl-12 space-y-1">
+                @if($user->hasPermission('donation.achievements') || $user->isSuperAdmin())
                 <a href="{{ route('achievements.index') }}"
                     class="block py-2.5 px-4 rounded-lg text-sm font-medium text-gray-600 transition-all {{ request()->routeIs('achievements.*') ? 'bg-blue-200 text-[#00285E] font-bold' : 'hover:bg-gray-200' }}">Achievements</a>
+                @endif
+                @if($user->hasPermission('donation.fundraise') || $user->isSuperAdmin())
                 <a href="{{ route('fundRaise.index') }}"
                     class="block py-2.5 px-4 rounded-lg text-sm font-medium text-gray-600 transition-all {{ request()->routeIs('fundRaise.*') ? 'bg-blue-200 text-[#00285E] font-bold' : 'hover:bg-gray-200' }}">FundRaise
                     Goals</a>
+                @endif
+                @if($user->hasPermission('donation.booking') || $user->isSuperAdmin())
                 <a href="{{ route('donationBooking.index') }}"
                     class="block py-2.5 px-4 rounded-lg text-sm font-medium text-gray-600 transition-all {{ request()->routeIs('donationBooking.*') ? 'bg-blue-200 text-[#00285E] font-bold' : 'hover:bg-gray-200' }}">Donation
                     Booking</a>
+                @endif
+                @if($user->hasPermission('donation.images') || $user->isSuperAdmin())
                 <a href="{{ route('donationImage.index') }}"
                     class="block py-2.5 px-4 rounded-lg text-sm font-medium text-gray-600 transition-all {{ request()->routeIs('donationImage.*') ? 'bg-blue-200 text-[#00285E] font-bold' : 'hover:bg-gray-200' }}">Donation
                     Image</a>
+                @endif
             </div>
         </div>
+        @endif
 
         <!-- PTO Dropdown -->
+        @if($user->hasAnyPermission(['pto.view', 'pto.events', 'pto.subscribe', 'pto.images', 'pto.letter_guide', 'pto.easy_join', 'pto.fee']) || $user->isSuperAdmin())
         <div x-data="{ open: {{ request()->routeIs('ptoEvents.*') || request()->routeIs('ptoSubscribemails.*') || request()->routeIs('ptoImages.*') || request()->routeIs('ptoLetterGuide.*') ? 'true' : 'false' }} }"
             class="space-y-1">
             <button @click="open = !open"
@@ -123,28 +154,42 @@
             </button>
 
             <div x-show="open" x-transition x-cloak class="pl-12 space-y-1">
+                @if($user->hasPermission('pto.events') || $user->isSuperAdmin())
                 <a href="{{ route('ptoEvents.index') }}"
                     class="block py-2.5 px-4 rounded-lg text-sm font-medium text-gray-600 transition-all {{ request()->routeIs('ptoEvents.*') ? 'bg-blue-200 text-[#00285E] font-bold' : 'hover:bg-gray-200' }}">PTO
                     Events</a>
+                @endif
+                @if($user->hasPermission('pto.subscribe') || $user->isSuperAdmin())
                 <a href="{{ route('ptoSubscribemails.index') }}"
                     class="block py-2.5 px-4 rounded-lg text-sm font-medium text-gray-600 transition-all {{ request()->routeIs('ptoSubscribemails.*') ? 'bg-blue-200 text-[#00285E] font-bold' : 'hover:bg-gray-200' }}">PTO
                     Subscribe Mails</a>
+                @endif
+                @if($user->hasPermission('pto.images') || $user->isSuperAdmin())
                 <a href="{{ route('ptoImages.index') }}"
                     class="block py-2.5 px-4 rounded-lg text-sm font-medium text-gray-600 transition-all {{ request()->routeIs('ptoImages.*') ? 'bg-blue-200 text-[#00285E] font-bold' : 'hover:bg-gray-200' }}">PTO
                     Images</a>
+                @endif
+                @if($user->hasPermission('pto.letter_guide') || $user->isSuperAdmin())
                 <a href="{{ route('ptoLetterGuide.index') }}"
                     class="block py-2.5 px-4 rounded-lg text-sm font-medium text-gray-600 transition-all {{ request()->routeIs('ptoLetterGuide.*') ? 'bg-blue-200 text-[#00285E] font-bold' : 'hover:bg-gray-200' }}">PTO
                     Letter Guide Download</a>
+                @endif
+                @if($user->hasPermission('pto.easy_join') || $user->isSuperAdmin())
                 <a href="{{ route('easy-joins.index') }}"
                     class="block py-2.5 px-4 rounded-lg text-sm font-medium text-gray-600 transition-all {{ request()->routeIs('easy-joins.*') ? 'bg-blue-200 text-[#00285E] font-bold' : 'hover:bg-gray-200' }}">PTO
                     Easy Join</a>
+                @endif
+                @if($user->hasPermission('pto.fee') || $user->isSuperAdmin())
                 <a href="{{ route('fee.index') }}"
                     class="block py-2.5 px-4 rounded-lg text-sm font-medium text-gray-600 transition-all {{ request()->routeIs('fee.*') ? 'bg-blue-200 text-[#00285E] font-bold' : 'hover:bg-gray-200' }}">PTO
                     Fee Person</a>
+                @endif
             </div>
         </div>
+        @endif
 
         <!-- Calendar -->
+        @if($user->hasPermission('calendar.manage') || $user->isSuperAdmin())
         <a href="{{ route('calender.index') }}"
             class="flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-gray-700 transition-all duration-200
                   hover:bg-blue-100 hover:text-[#00285E]
@@ -155,8 +200,10 @@
             </svg>
             Calendar
         </a>
+        @endif
 
         <!-- Teacher Job Post -->
+        @if($user->hasAnyPermission(['career.view', 'career.job_posts', 'career.job_applications']) || $user->isSuperAdmin())
         <div class="space-y-2">
 
             <!-- Teacher Jobs Dropdown -->
@@ -192,29 +239,35 @@
                 <div x-show="open" x-collapse class="mt-2 ml-6 space-y-1">
 
                     <!-- Teacher Job Post -->
+                    @if($user->hasPermission('career.job_posts') || $user->isSuperAdmin())
                     <a href="{{ route('jobPost.index') }}" class="block px-4 py-2 rounded-lg text-sm transition
                        {{ request()->routeIs('jobPost.*')
     ? 'bg-blue-50 text-[#00285E] font-semibold'
     : 'text-gray-600 hover:bg-blue-50 hover:text-[#00285E]' }}">
                         Teacher Job Post
                     </a>
+                    @endif
 
                     <!-- Job Applications -->
+                    @if($user->hasPermission('career.job_applications') || $user->isSuperAdmin())
                     <a href="{{ route('jobApp.index') }}" class="block px-4 py-2 rounded-lg text-sm transition
                        {{ request()->routeIs('jobApp.*')
     ? 'bg-blue-50 text-[#00285E] font-semibold'
     : 'text-gray-600 hover:bg-blue-50 hover:text-[#00285E]' }}">
                         Job Applications
                     </a>
+                    @endif
 
                 </div>
             </div>
 
         </div>
+        @endif
 
 
 
         <!-- Alumni Dropdown -->
+        @if($user->hasAnyPermission(['alumni.view', 'alumni.huston', 'alumni.events', 'alumni.posts', 'alumni.images', 'alumni.forms', 'alumni.mails']) || $user->isSuperAdmin())
         <div x-data="{ open: {{ request()->routeIs('alumniHuston.*') || request()->routeIs('alumniEvent.*') || request()->routeIs('alumniPosts.*') || request()->routeIs('alumniImages.*') || request()->routeIs('alumniForm.*') ? 'true' : 'false' }} }"
             class="space-y-1">
             <button @click="open = !open"
@@ -235,25 +288,94 @@
             </button>
 
             <div x-show="open" x-transition x-cloak class="pl-12 space-y-1">
+                @if($user->hasPermission('alumni.huston') || $user->isSuperAdmin())
                 <a href="{{ route('alumniHuston.index') }}"
                     class="block py-2.5 px-4 rounded-lg text-sm font-medium text-gray-600 transition-all {{ request()->routeIs('alumniHuston.*') ? 'bg-blue-200 text-[#00285E] font-bold' : 'hover:bg-gray-200' }}">Alumni
                     Houston </a>
+                @endif
+                @if($user->hasPermission('alumni.events') || $user->isSuperAdmin())
                 <a href="{{ route('alumniEvent.index') }}"
                     class="block py-2.5 px-4 rounded-lg text-sm font-medium text-gray-600 transition-all {{ request()->routeIs('alumniEvent.*') ? 'bg-blue-200 text-[#00285E] font-bold' : 'hover:bg-gray-200' }}">Alumni
                     Event</a>
+                @endif
+                @if($user->hasPermission('alumni.posts') || $user->isSuperAdmin())
                 <a href="{{ route('alumniPosts.index') }}"
                     class="block py-2.5 px-4 rounded-lg text-sm font-medium text-gray-600 transition-all {{ request()->routeIs('alumniPosts.*') ? 'bg-blue-200 text-[#00285E] font-bold' : 'hover:bg-gray-200' }}">Alumni
                     Posts</a>
+                @endif
+                @if($user->hasPermission('alumni.images') || $user->isSuperAdmin())
                 <a href="{{ route('alumniImages.index') }}"
                     class="block py-2.5 px-4 rounded-lg text-sm font-medium text-gray-600 transition-all {{ request()->routeIs('alumniImages.*') ? 'bg-blue-200 text-[#00285E] font-bold' : 'hover:bg-gray-200' }}">Alumni
                     Images</a>
+                @endif
+                @if($user->hasPermission('alumni.forms') || $user->isSuperAdmin())
                 <a href="{{ route('alumniForm.index') }}"
                     class="block py-2.5 px-4 rounded-lg text-sm font-medium text-gray-600 transition-all {{ request()->routeIs('alumniForm.*') ? 'bg-blue-200 text-[#00285E] font-bold' : 'hover:bg-gray-200' }}">Alumni
                     Form</a>
+                @endif
+                @if($user->hasPermission('alumni.mails') || $user->isSuperAdmin())
                 <a href="{{ route('alumniMail.index') }}"
                     class="block py-2.5 px-4 rounded-lg text-sm font-medium text-gray-600 transition-all {{ request()->routeIs('alumniMail.*') ? 'bg-blue-200 text-[#00285E] font-bold' : 'hover:bg-gray-200' }}">Alumni
                     Mail</a>
+                @endif
             </div>
         </div>
+        @endif
+
+        <!-- Users -->
+        @if($user->hasPermission('managers.view') || $user->isSuperAdmin())
+        <a href="{{ route('managers.index') }}"
+            class="flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-gray-700 transition-all duration-200
+                  hover:bg-blue-100 hover:text-[#00285E]
+                  {{ request()->routeIs('managers.*') ? 'bg-blue-100 text-[#00285E] font-bold border-r-4 border-[#00285E] shadow-sm' : '' }}">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+            </svg>
+            Users
+        </a>
+        @endif
+
+        <!-- Sponsor Packages -->
+        @if($user->hasPermission('sponsor_packages.view') || $user->isSuperAdmin())
+        <a href="{{ route('sponsor-packages.index') }}"
+            class="flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-gray-700 transition-all duration-200
+                  hover:bg-blue-100 hover:text-[#00285E]
+                  {{ request()->routeIs('sponsor-packages.*') ? 'bg-blue-100 text-[#00285E] font-bold border-r-4 border-[#00285E] shadow-sm' : '' }}">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Sponsor Packages
+        </a>
+        @endif
+
+        <!-- Coupons -->
+        @if($user->hasPermission('coupons.view') || $user->isSuperAdmin())
+        <a href="{{ route('coupons.index') }}"
+            class="flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-gray-700 transition-all duration-200
+                  hover:bg-blue-100 hover:text-[#00285E]
+                  {{ request()->routeIs('coupons.*') ? 'bg-blue-100 text-[#00285E] font-bold border-r-4 border-[#00285E] shadow-sm' : '' }}">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+            </svg>
+            Coupons
+        </a>
+        @endif
+
+        <!-- Permissions (Super Admin Only) -->
+        @if($user->isSuperAdmin())
+        <a href="{{ route('permissions.index') }}"
+            class="flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-gray-700 transition-all duration-200
+                  hover:bg-blue-100 hover:text-[#00285E]
+                  {{ request()->routeIs('permissions.*') ? 'bg-blue-100 text-[#00285E] font-bold border-r-4 border-[#00285E] shadow-sm' : '' }}">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+            Permissions
+        </a>
+        @endif
     </nav>
 </aside>
