@@ -13,12 +13,11 @@ class TopAchieverApiController extends Controller
      */
     public function index()
     {
+        
         try {
             $achievers = TopAchiever::all()->map(function ($achiever) {
                 return [
                     'id' => $achiever->id,
-                    'title' => $achiever->title,
-                    'desc' => $achiever->desc,
                     'class_achiever' => $achiever->class_achiever,
                     'achiever_name' => $achiever->achiever_name,
                     'achiever_desc' => $achiever->achiever_desc,

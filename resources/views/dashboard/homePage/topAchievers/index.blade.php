@@ -27,7 +27,7 @@
             <thead class="bg-gray-100 text-sm text-gray-700">
                 <tr>
                     <th class="p-4 text-left">Main Image</th>
-                    <th class="p-4 text-left">Title</th>
+                    {{-- <th class="p-4 text-left">Title</th> --}}
                     <th class="p-4 text-left">Name</th>
                     <th class="p-4 text-left">Class</th>
                     <th class="p-4 text-left">Meta Entries</th>
@@ -51,7 +51,7 @@
                         @endif
                     </td>
 
-                    <td class="p-4 font-medium">{{ $achiever->title }}</td>
+                    {{-- <td class="p-4 font-medium">{{ $achiever->title }}</td> --}}
                     <td class="p-4">{{ $achiever->achiever_name }}</td>
                     <td class="p-4">{{ $achiever->class_achiever }}</td>
 

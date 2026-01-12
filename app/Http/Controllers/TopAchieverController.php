@@ -22,8 +22,8 @@ class TopAchieverController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'title' => 'required|string|max:255',
-            'desc' => 'nullable|string',
+            // 'title' => 'required|string|max:255',
+            // 'desc' => 'nullable|string',
             'image' => 'nullable|image',
             'class_achiever' => 'required|string',
             'achiever_name' => 'required|string',
@@ -33,8 +33,8 @@ class TopAchieverController extends Controller
         ]);
 
         $data = $request->only([
-            'title',
-            'desc',
+            // 'title',
+            // 'desc',
             'class_achiever',
             'achiever_name',
             'achiever_desc'

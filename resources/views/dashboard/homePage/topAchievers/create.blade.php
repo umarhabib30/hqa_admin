@@ -7,9 +7,9 @@
         <form method="POST" enctype="multipart/form-data" action="{{ route('topAchievers.store') }}" class="space-y-6">
             @csrf
 
-            <input name="title" placeholder="Title" class="w-full border p-3 rounded" required>
+            {{-- <input name="title" placeholder="Title" class="w-full border p-3 rounded" required>
 
-            <textarea name="desc" placeholder="Main Description" class="w-full border p-3 rounded h-32"></textarea>
+            <textarea name="desc" placeholder="Main Description" class="w-full border p-3 rounded h-32"></textarea> --}}
 
             <input type="file" name="image" class="w-full border-[#00285E] border-2 p-3">
 

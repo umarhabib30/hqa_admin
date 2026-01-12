@@ -13,8 +13,8 @@ return new class extends Migration
     {
         Schema::create('top_achievers', function (Blueprint $table) {
             $table->id();
-           $table->string('title');
-            $table->text('desc')->nullable();
+        //    $table->string('title');
+        //     $table->text('desc')->nullable();
             $table->string('image')->nullable();
             $table->string('class_achiever');
             $table->string('achiever_name');

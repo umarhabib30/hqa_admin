@@ -9,9 +9,9 @@
             @csrf
             @method('PUT')
 
-            <input name="title" value="{{ $achiever->title }}" class="w-full border p-3 rounded" required>
+            {{-- <input name="title" value="{{ $achiever->title }}" class="w-full border p-3 rounded" required>
 
-            <textarea name="desc" class="w-full border p-3 rounded h-32">{{ $achiever->desc }}</textarea>
+            <textarea name="desc" class="w-full border p-3 rounded h-32">{{ $achiever->desc }}</textarea> --}}
 
             @if($achiever->image)
                 <img src="{{ Storage::url($achiever->image) }}" class="w-32 h-32 object-cover rounded-lg mb-2">
