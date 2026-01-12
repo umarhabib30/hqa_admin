@@ -36,6 +36,14 @@ use App\Http\Controllers\PermissionController;
 use App\Models\PtoLetterGuide;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Artisan;
+
+
+
+Route::get('/link-storage', function () {
+    Artisan::call('storage:link');
+    return 'Storage link created successfully!';
+});
 
 Route::get('/', function () {
     return view('auth.login');
