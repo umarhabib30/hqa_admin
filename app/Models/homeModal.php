@@ -6,5 +6,5 @@ use Illuminate\Database\Eloquent\Model;
 
 class HomeModal extends Model
 {
-    protected $guarded = [];
+    protected $fillable = ['title', 'cdesc', 'image'];
 }

@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\HomeModal;
+use App\Models\HomeModel;
 
 
 class HomeModalApiController extends Controller
@@ -13,7 +13,7 @@ class HomeModalApiController extends Controller
      */
     public function index()
     {
-        $modals = HomeModal::all()->map(function ($modal) {
+        $modals = HomeModel::all()->map(function ($modal) {
             return [
                 'id' => $modal->id,
                 'title' => $modal->title,
@@ -36,7 +36,7 @@ class HomeModalApiController extends Controller
      */
     public function show($id)
     {
-        $modal = HomeModal::find($id);
+        $modal = HomeModel::find($id);
 
         if (!$modal) {
             return response()->json([
