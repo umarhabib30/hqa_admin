@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\HomeModal;
 
+
 class HomeModalApiController extends Controller
 {
     /**
