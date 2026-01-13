@@ -27,10 +27,12 @@ use App\Http\Controllers\Api\VideoApiController;
 use App\Http\Controllers\Api\SponserPackageApiController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\ContactSponserController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
+
 
 
 Route::get('/hello', function () {
@@ -126,3 +128,6 @@ Route::post('/alumniForm', [AlumniFormApiController::class, 'store']);
 
 // Sponsors Packages
 Route::get('/sponsorsPackages', [SponserPackageApiController::class, 'packages']);
+
+// Contact Sponser
+Route::post('/contactSponser', [ContactSponserController::class, 'store']);

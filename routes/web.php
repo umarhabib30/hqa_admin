@@ -37,7 +37,7 @@ use App\Models\PtoLetterGuide;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Artisan;
-
+use App\Http\Controllers\ContactSponserController;
 
 
 Route::get('/link-storage', function () {
@@ -164,6 +164,10 @@ Route::resource('sponsor-packages', SponsorPackageController::class);
 // Coupons Routes
 Route::resource('coupons', CouponController::class);
 Route::get('/coupons/{id}/codes', [CouponController::class, 'showCodes'])->name('coupons.codes');
+
+// Contact Sponser Routes
+Route::get('contact-sponser', [ContactSponserController::class, 'index'])->name('contact-sponser.index');
+Route::get('contact-sponser/{id}', [ContactSponserController::class, 'show'])->name('contact-sponser.show');
 
 // Permissions Routes (Super Admin Only)
 Route::middleware(['auth'])->group(function () {
