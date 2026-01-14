@@ -82,6 +82,10 @@ Route::post(
     '/donation-booking/{id}/book-seat',
     [DonationBookingController::class, 'bookSeat']
 )->name('donationBooking.bookSeat');
+Route::get(
+    '/donation-booking/scan',
+    [DonationBookingController::class, 'scanPage']
+)->name('donationBooking.scan');
 
 Route::resource('Booking', BookingController::class);
 

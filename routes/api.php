@@ -25,6 +25,8 @@ use App\Http\Controllers\Api\SocialApiController;
 use App\Http\Controllers\Api\TopAchieverApiController;
 use App\Http\Controllers\Api\VideoApiController;
 use App\Http\Controllers\Api\SponserPackageApiController;
+use App\Http\Controllers\Api\DonationBookingApiController as DonationBookingCheckInController;
+use App\Http\Controllers\Api\ApplyCouponController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ContactSponserController;
@@ -77,6 +79,7 @@ Route::get('/donationGalleries', [DonationImageApiController::class, 'index']);
 //Donation Booking APi
 Route::get('/donationBooking', [DonationBookingApiController::class, 'index']);
 Route::post('/donationBooking/{id}/book', [DonationBookingApiController::class, 'bookSeat']);
+Route::post('/donationBooking/check-in', [DonationBookingCheckInController::class, 'checkIn']);
 
 //PTO API'S
 
@@ -131,3 +134,6 @@ Route::get('/sponsorsPackages', [SponserPackageApiController::class, 'packages']
 
 // Contact Sponser
 Route::post('/contactSponser', [ContactSponserController::class, 'store']);
+
+// Apply Coupon
+Route::post('/apply-coupon', [ApplyCouponController::class, 'apply']);

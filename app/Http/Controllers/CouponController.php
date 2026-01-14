@@ -60,23 +60,18 @@ class CouponController extends Controller
     {
         $request->validate([
             'coupon_name' => 'required|string|max:255',
-            'discount_price' => 'nullable|numeric|min:0',
-            'discount_percentage' => 'nullable|numeric|min:0|max:100',
+            'coupon_type' => 'required|in:amount,percentage',
+            'discount_price' => 'nullable|numeric|min:0.01|required_if:coupon_type,amount',
+            'discount_percentage' => 'nullable|numeric|min:0.01|max:100|required_if:coupon_type,percentage',
             'quantity' => 'required|integer|min:1|max:1000',
         ]);
-
-        // Ensure at least one discount type is provided
-        if (empty($request->discount_price) && empty($request->discount_percentage)) {
-            return back()
-                ->withErrors(['discount_percentage' => 'Please provide either discount price or discount percentage.'])
-                ->withInput();
-        }
 
         // Create the coupon
         $coupon = Coupon::create([
             'coupon_name' => $request->coupon_name,
-            'discount_price' => $request->discount_price,
-            'discount_percentage' => $request->discount_percentage,
+            'coupon_type' => $request->coupon_type,
+            'discount_price' => $request->coupon_type === 'amount' ? $request->discount_price : null,
+            'discount_percentage' => $request->coupon_type === 'percentage' ? $request->discount_percentage : null,
             'quantity' => $request->quantity,
         ]);
 
@@ -133,21 +128,16 @@ class CouponController extends Controller
 
         $request->validate([
             'coupon_name' => 'required|string|max:255',
-            'discount_price' => 'nullable|numeric|min:0',
-            'discount_percentage' => 'nullable|numeric|min:0|max:100',
+            'coupon_type' => 'required|in:amount,percentage',
+            'discount_price' => 'nullable|numeric|min:0.01|required_if:coupon_type,amount',
+            'discount_percentage' => 'nullable|numeric|min:0.01|max:100|required_if:coupon_type,percentage',
         ]);
-
-        // Ensure at least one discount type is provided
-        if (empty($request->discount_price) && empty($request->discount_percentage)) {
-            return back()
-                ->withErrors(['discount_percentage' => 'Please provide either discount price or discount percentage.'])
-                ->withInput();
-        }
 
         $coupon->update([
             'coupon_name' => $request->coupon_name,
-            'discount_price' => $request->discount_price,
-            'discount_percentage' => $request->discount_percentage,
+            'coupon_type' => $request->coupon_type,
+            'discount_price' => $request->coupon_type === 'amount' ? $request->discount_price : null,
+            'discount_percentage' => $request->coupon_type === 'percentage' ? $request->discount_percentage : null,
         ]);
 
         return redirect()

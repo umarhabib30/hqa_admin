@@ -32,10 +32,22 @@
             @enderror
         </div>
 
+        <!-- Coupon Type -->
+        <div>
+            <label for="coupon_type" class="block text-sm font-medium text-gray-700 mb-2">Coupon Type <span class="text-red-500">*</span></label>
+            <select id="coupon_type" name="coupon_type" required class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#00285E] focus:border-transparent @error('coupon_type') border-red-500 @enderror">
+                <option value="percentage" {{ old('coupon_type', $coupon->coupon_type ?? 'percentage') === 'percentage' ? 'selected' : '' }}>Percentage (Default)</option>
+                <option value="amount" {{ old('coupon_type', $coupon->coupon_type ?? 'percentage') === 'amount' ? 'selected' : '' }}>Amount (Fixed Value)</option>
+            </select>
+            @error('coupon_type')
+            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+            @enderror
+        </div>
+
         <!-- Discount Options -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <!-- Discount Price -->
-            <div>
+            <div class="coupon-amount-field">
                 <label for="discount_price" class="block text-sm font-medium text-gray-700 mb-2">Discount Price (Optional)</label>
                 <div class="relative">
                     <span class="absolute left-4 top-3 text-gray-500">$</span>
@@ -54,7 +66,7 @@
             </div>
 
             <!-- Discount Percentage -->
-            <div>
+            <div class="coupon-percentage-field">
                 <label for="discount_percentage" class="block text-sm font-medium text-gray-700 mb-2">Discount Percentage (Optional)</label>
                 <div class="relative">
                     <input type="number" 
@@ -71,7 +83,7 @@
                 @error('discount_percentage')
                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                 @enderror
-                <p class="mt-1 text-xs text-gray-500">Provide either discount price or percentage (or both)</p>
+                <p class="mt-1 text-xs text-gray-500">Provide the value based on the selected type</p>
             </div>
         </div>
 
@@ -88,5 +100,39 @@
         </div>
     </form>
 </div>
+
+@push('scripts')
+<script>
+    (function () {
+        const typeSelect = document.getElementById('coupon_type');
+        const amountField = document.querySelector('.coupon-amount-field');
+        const percentField = document.querySelector('.coupon-percentage-field');
+        const priceInput = document.getElementById('discount_price');
+        const percentInput = document.getElementById('discount_percentage');
+
+        const toggleFields = () => {
+            const isPercentage = typeSelect.value === 'percentage';
+            if (isPercentage) {
+                amountField.style.display = 'none';
+                priceInput.value = '';
+                priceInput.disabled = true;
+
+                percentField.style.display = '';
+                percentInput.disabled = false;
+            } else {
+                percentField.style.display = 'none';
+                percentInput.value = '';
+                percentInput.disabled = true;
+
+                amountField.style.display = '';
+                priceInput.disabled = false;
+            }
+        };
+
+        typeSelect.addEventListener('change', toggleFields);
+        toggleFields();
+    })();
+</script>
+@endpush
 
 @endsection

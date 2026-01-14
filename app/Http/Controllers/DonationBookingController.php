@@ -7,6 +7,11 @@ use Illuminate\Http\Request;
 use Stripe\Stripe;
 use Stripe\PaymentIntent;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\DonationBookingTicketMail;
+use Endroid\QrCode\QrCode;
+use Endroid\QrCode\Writer\PngWriter;
+use Endroid\QrCode\Encoding\Encoding;
 
 class DonationBookingController extends Controller
 {
@@ -100,6 +105,7 @@ class DonationBookingController extends Controller
         ]);
 
         $event = DonationBooking::findOrFail($id);
+        $assignedTables = [];
 
         DB::beginTransaction();
 
@@ -156,10 +162,12 @@ class DonationBookingController extends Controller
                             'paid_amount' => $request->amount,
                             'payment_id' => $intent->id,
                             'booked_at'  => now(),
+                            'checked_in_at' => null,
                         ];
 
                         $event->full_tables_booked += 1;
                         $tableBooked = true;
+                        $assignedTables[] = $i;
                         break;
                     }
                 }
@@ -194,9 +202,11 @@ class DonationBookingController extends Controller
                         'paid_amount' => $request->amount,
                         'payment_id' => $intent->id,
                         'booked_at'  => now(),
+                        'checked_in_at' => null,
                     ];
 
                     $remainingSeats -= $allocate;
+                    $assignedTables[] = $i;
                 }
 
                 if ($remainingSeats > 0) {
@@ -212,6 +222,43 @@ class DonationBookingController extends Controller
             ]);
 
             DB::commit();
+
+            // Prepare email + PDF
+            $bookingSummary = [
+                'type' => $request->booking_type,
+                'first_name' => $request->first_name,
+                'last_name' => $request->last_name,
+                'email' => $request->email,
+                'phone' => $request->phone,
+                'seat_types' => $request->seat_types ?? [],
+                'total_seats' => $request->booking_type === 'full_table'
+                    ? $event->seats_per_table
+                    : array_sum($request->seat_types),
+                'tables' => array_unique($assignedTables),
+            ];
+
+            $qrPayload = json_encode([
+                'type' => 'donation_booking',
+                'event_id' => $event->id,
+                'payment_id' => $intent->id,
+                'email' => $request->email,
+            ]);
+
+            $qr = QrCode::create($qrPayload)
+                ->setEncoding(new Encoding('UTF-8'))
+                ->setSize(400);
+            $writer = new PngWriter();
+            $qrDataUrl = $writer->write($qr)->getDataUri();
+
+            Mail::to($request->email)->send(
+                new DonationBookingTicketMail(
+                    $event->toArray(),
+                    $bookingSummary,
+                    $intent->id,
+                    $qrDataUrl,
+                    (float) $request->amount
+                )
+            );
 
             return response()->json([
                 'success' => true,
@@ -232,6 +279,14 @@ class DonationBookingController extends Controller
     {
         $event = DonationBooking::findOrFail($id);
         return view('dashboard.donation.donationBooking.update', compact('event'));
+    }
+
+    /**
+     * Show QR scan page for check-in (admin/mobile friendly).
+     */
+    public function scanPage()
+    {
+        return view('dashboard.donation.donationBooking.scan');
     }
 
     public function update(Request $request, $id)

@@ -7,6 +7,7 @@ use App\Models\DonationBooking;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Throwable;
+use Carbon\Carbon;
 
 class DonationBookingApiController extends Controller
 {
@@ -207,5 +208,76 @@ class DonationBookingApiController extends Controller
                 'error'   => $e->getMessage()
             ], 500);
         }
+    }
+
+    /* =====================================================
+       POST: Check-in via QR (payment_id)
+    ===================================================== */
+    public function checkIn(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'qr_token' => 'required|string',
+        ]);
+
+        $event = DonationBooking::latest()->first();
+
+        if (!$event) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No event found'
+            ], 404);
+        }
+
+        $bookings = $event->table_bookings ?? [];
+        $matched = [];
+        $updated = false;
+
+        foreach ($bookings as $tableNo => $tableBookings) {
+            foreach ($tableBookings as $idx => $booking) {
+                if (($booking['payment_id'] ?? '') !== $validated['qr_token']) {
+                    continue;
+                }
+
+                $alreadyChecked = !empty($booking['checked_in_at']);
+                $checkInTime = $alreadyChecked ? $booking['checked_in_at'] : Carbon::now()->toDateTimeString();
+
+                // update booking entry
+                $bookings[$tableNo][$idx]['checked_in_at'] = $checkInTime;
+                $updated = $updated || !$alreadyChecked;
+
+                $matched[] = [
+                    'table_no' => $tableNo,
+                    'type' => $booking['type'] ?? 'seats',
+                    'first_name' => $booking['first_name'] ?? '',
+                    'last_name' => $booking['last_name'] ?? '',
+                    'email' => $booking['email'] ?? '',
+                    'phone' => $booking['phone'] ?? '',
+                    'seat_types' => $booking['seat_types'] ?? [],
+                    'total_seats' => $booking['total_seats'] ?? 0,
+                    'checked_in_at' => $checkInTime,
+                    'already_checked_in' => $alreadyChecked,
+                ];
+            }
+        }
+
+        if (empty($matched)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No booking found for this QR token',
+            ], 404);
+        }
+
+        if ($updated) {
+            $event->update(['table_bookings' => $bookings]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'event_id' => $event->id,
+                'payment_id' => $validated['qr_token'],
+                'bookings' => $matched,
+            ],
+        ]);
     }
 }

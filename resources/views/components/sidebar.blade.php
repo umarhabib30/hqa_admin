@@ -138,6 +138,9 @@
                         <a href="{{ route('donationBooking.index') }}"
                             class="block py-2.5 px-4 rounded-lg text-sm font-medium text-gray-600 transition-all {{ request()->routeIs('donationBooking.*') ? 'bg-blue-200 text-[#00285E] font-bold' : 'hover:bg-gray-200' }}">Donation
                             Booking</a>
+                        <a href="{{ route('donationBooking.scan') }}"
+                            class="block py-2.5 px-4 rounded-lg text-sm font-medium text-gray-600 transition-all {{ request()->routeIs('donationBooking.scan') ? 'bg-blue-200 text-[#00285E] font-bold' : 'hover:bg-gray-200' }}">Scan
+                            Check-in</a>
                     @endif
                     @if ($user->hasPermission('donation.images') || $user->isSuperAdmin())
                         <a href="{{ route('donationImage.index') }}"

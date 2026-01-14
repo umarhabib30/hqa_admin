@@ -33,6 +33,7 @@
             <thead class="bg-gray-100 text-sm text-gray-600">
                 <tr>
                     <th class="p-4 text-left">Coupon Name</th>
+                    <th class="p-4 text-left">Type</th>
                     <th class="p-4 text-right">Discount Price</th>
                     <th class="p-4 text-right">Discount %</th>
                     <th class="p-4 text-center">Total Codes</th>
@@ -46,6 +47,11 @@
                 @forelse($coupons as $coupon)
                 <tr class="hover:bg-gray-50 transition">
                     <td class="p-4 font-medium">{{ $coupon->coupon_name }}</td>
+                    <td class="p-4">
+                        <span class="px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-800">
+                            {{ ucfirst($coupon->coupon_type ?? 'amount') }}
+                        </span>
+                    </td>
                     <td class="p-4 text-right">
                         @if($coupon->discount_price)
                             <span class="font-semibold text-green-600">${{ number_format($coupon->discount_price, 2) }}</span>
@@ -125,6 +131,7 @@
                 <div>
                     <h3 class="font-semibold text-gray-800">{{ $coupon->coupon_name }}</h3>
                     <div class="text-sm text-gray-600 mt-2 space-y-1">
+                        <p><strong>Type:</strong> <span class="font-semibold">{{ ucfirst($coupon->coupon_type ?? 'amount') }}</span></p>
                         @if($coupon->discount_price)
                             <p><strong>Discount Price:</strong> <span class="text-green-600 font-semibold">${{ number_format($coupon->discount_price, 2) }}</span></p>
                         @endif
