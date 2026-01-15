@@ -86,10 +86,9 @@
             hideError();
             showStatus('Validating ticket...');
             try {
-                const res = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ qr_token: token })
+                const res = await fetch(apiUrl + '?qr_token=' + encodeURIComponent(token), {
+                    method: 'GET',
+                    headers: { 'Accept': 'application/json' }
                 });
                 const data = await res.json();
                 hideStatus();

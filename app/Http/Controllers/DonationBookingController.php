@@ -8,6 +8,7 @@ use Stripe\Stripe;
 use Stripe\PaymentIntent;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Carbon\Carbon;
 
 class DonationBookingController extends Controller
 {
@@ -325,5 +326,72 @@ class DonationBookingController extends Controller
         $event = DonationBooking::findOrFail($id);
         $event->delete();
         return redirect()->route('donationBooking.index')->with('success', 'Event deleted successfully');
+    }
+
+    public function checkIn(Request $request)
+    {
+        $validated = $request->validate([
+            'qr_token' => 'required|string',
+        ]);
+
+        $event = DonationBooking::latest()->first();
+
+        if (!$event) {
+            return redirect()
+                ->route('donationBooking.scan')
+                ->with('error', 'No event found');
+        }
+
+        $bookings = $event->table_bookings ?? [];
+        $matched = [];
+        $updated = false;
+
+        foreach ($bookings as $tableNo => $tableBookings) {
+            foreach ($tableBookings as $idx => $booking) {
+                if (($booking['payment_id'] ?? '') !== $validated['qr_token']) {
+                    continue;
+                }
+
+                $alreadyChecked = !empty($booking['checked_in_at']);
+                $checkInTime = $alreadyChecked ? $booking['checked_in_at'] : Carbon::now()->toDateTimeString();
+
+                // update booking entry
+                $bookings[$tableNo][$idx]['checked_in_at'] = $checkInTime;
+                $updated = $updated || !$alreadyChecked;
+
+                $matched[] = [
+                    'table_no' => $tableNo,
+                    'type' => $booking['type'] ?? 'seats',
+                    'first_name' => $booking['first_name'] ?? '',
+                    'last_name' => $booking['last_name'] ?? '',
+                    'email' => $booking['email'] ?? '',
+                    'phone' => $booking['phone'] ?? '',
+                    'seat_types' => $booking['seat_types'] ?? [],
+                    'total_seats' => $booking['total_seats'] ?? 0,
+                    'checked_in_at' => $checkInTime,
+                    'already_checked_in' => $alreadyChecked,
+                    'payment_id' => $validated['qr_token'],
+                ];
+            }
+        }
+
+        if (empty($matched)) {
+            return redirect()
+                ->route('donationBooking.scan')
+                ->with('error', 'No booking found for this QR token');
+        }
+
+        if ($updated) {
+            $event->update(['table_bookings' => $bookings]);
+        }
+
+        return redirect()
+            ->route('donationBooking.scan')
+            ->with('success', 'Check-in successful')
+            ->with('checkin_data', [
+                'event_id' => $event->id,
+                'payment_id' => $validated['qr_token'],
+                'bookings' => $matched,
+            ]);
     }
 }

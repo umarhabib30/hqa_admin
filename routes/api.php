@@ -79,7 +79,7 @@ Route::get('/donationGalleries', [DonationImageApiController::class, 'index']);
 //Donation Booking APi
 Route::get('/donationBooking', [DonationBookingApiController::class, 'index']);
 Route::post('/donationBooking/{id}/book', [DonationBookingApiController::class, 'bookSeat']);
-Route::post('/donationBooking/check-in', [DonationBookingCheckInController::class, 'checkIn']);
+
 
 //PTO API'S
 

@@ -86,8 +86,10 @@ Route::get(
     '/donation-booking/scan',
     [DonationBookingController::class, 'scanPage']
 )->name('donationBooking.scan');
-
-Route::resource('Booking', BookingController::class);
+Route::get(
+    '/donation-booking/check-in',
+    [DonationBookingController::class, 'checkIn']
+)->name('donationBooking.checkIn');
 
 //Pto Events Pages Routes 
 Route::resource('ptoEvents', PtoEventsController::class);
