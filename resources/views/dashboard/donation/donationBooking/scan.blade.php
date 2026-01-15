@@ -40,7 +40,8 @@
 @endsection
 
 @push('scripts')
-<script src="https://unpkg.com/html5-qrcode@2.3.10/html5-qrcode.min.js"></script>
+<!-- html5-qrcode will be loaded dynamically; this tag is a prefetch hint -->
+<link rel="prefetch" href="https://unpkg.com/html5-qrcode@2.3.10/html5-qrcode.min.js">
 <script>
     (function() {
         const readerId = "qr-reader";
@@ -55,6 +56,38 @@
         let scanner;
         let starting = false;
         let html5qrcodeReady = false;
+
+        const loadHtml5QrCode = () => {
+            if (typeof Html5Qrcode !== 'undefined') {
+                html5qrcodeReady = true;
+                return Promise.resolve();
+            }
+            const sources = [
+                'https://unpkg.com/html5-qrcode@2.3.10/html5-qrcode.min.js',
+                'https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.10/html5-qrcode.min.js',
+                'https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.10/html5-qrcode.min.js'
+            ];
+
+            const tryLoad = (idx) => {
+                return new Promise((resolve, reject) => {
+                    const existing = document.getElementById('html5-qrcode-lib');
+                    if (existing) {
+                        existing.onload = () => { html5qrcodeReady = true; resolve(); };
+                        existing.onerror = () => reject(new Error('Failed to load html5-qrcode'));
+                        return;
+                    }
+                    const script = document.createElement('script');
+                    script.id = 'html5-qrcode-lib';
+                    script.src = sources[idx];
+                    script.async = true;
+                    script.onload = () => { html5qrcodeReady = true; resolve(); };
+                    script.onerror = () => reject(new Error('Failed to load html5-qrcode'));
+                    document.head.appendChild(script);
+                });
+            };
+
+            return tryLoad(0).catch(() => tryLoad(1)).catch(() => tryLoad(2));
+        };
 
         const showStatus = (msg) => {
             statusEl.textContent = msg;
@@ -119,32 +152,24 @@
         const startScanner = () => {
             if (scanner || starting) return;
             starting = true;
-            if (!html5qrcodeReady || typeof Html5Qrcode === 'undefined') {
-                showError('Scanner library not loaded. Please refresh the page.');
-                enableBtn.classList.remove('hidden');
-                starting = false;
-                return;
-            }
-
-            try {
+            loadHtml5QrCode().then(() => {
+                if (typeof Html5Qrcode === 'undefined') {
+                    throw new Error('Scanner library not loaded. Please refresh the page.');
+                }
                 scanner = new Html5Qrcode(readerId);
-                scanner.start(
+                return scanner.start(
                     { facingMode: 'environment' },
                     { fps: 10, qrbox: 250 },
                     onScanSuccess,
                     () => {}
-                ).then(() => {
-                    starting = false;
-                }).catch(err => {
-                    starting = false;
-                    showError('Unable to start camera: ' + err + '. Ensure HTTPS/localhost and camera permission.');
-                    enableBtn.classList.remove('hidden');
-                });
-            } catch (err) {
+                );
+            }).then(() => {
                 starting = false;
-                showError('Scanner init failed: ' + err.message);
+            }).catch(err => {
+                starting = false;
+                showError('Unable to start camera: ' + err.message + '. Ensure HTTPS/localhost and camera permission.');
                 enableBtn.classList.remove('hidden');
-            }
+            });
         };
 
         const requestPermissionAndStart = async () => {
@@ -173,22 +198,19 @@
         enableBtn.addEventListener('click', requestPermissionAndStart);
 
         // Wait for html5-qrcode script load
-        const ensureLibrary = () => {
-            if (typeof Html5Qrcode !== 'undefined') {
-                html5qrcodeReady = true;
+        loadHtml5QrCode()
+            .then(() => {
                 if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
                     requestPermissionAndStart();
                 } else {
                     showError('Camera API not supported in this browser/device.');
                     enableBtn.classList.remove('hidden');
                 }
-            } else {
-                // retry after small delay
-                setTimeout(ensureLibrary, 150);
-            }
-        };
-
-        ensureLibrary();
+            })
+            .catch(err => {
+                showError(err.message || 'Failed to load scanner library.');
+                enableBtn.classList.remove('hidden');
+            });
     })();
 </script>
 @endpush
