@@ -54,6 +54,7 @@
 
         let scanner;
         let starting = false;
+        let html5qrcodeReady = false;
 
         const showStatus = (msg) => {
             statusEl.textContent = msg;
@@ -118,19 +119,32 @@
         const startScanner = () => {
             if (scanner || starting) return;
             starting = true;
-            scanner = new Html5Qrcode(readerId);
-            scanner.start(
-                { facingMode: 'environment' },
-                { fps: 10, qrbox: 250 },
-                onScanSuccess,
-                () => {}
-            ).then(() => {
-                starting = false;
-            }).catch(err => {
-                starting = false;
-                showError('Unable to start camera: ' + err + '. Ensure HTTPS/localhost and camera permission.');
+            if (!html5qrcodeReady || typeof Html5Qrcode === 'undefined') {
+                showError('Scanner library not loaded. Please refresh the page.');
                 enableBtn.classList.remove('hidden');
-            });
+                starting = false;
+                return;
+            }
+
+            try {
+                scanner = new Html5Qrcode(readerId);
+                scanner.start(
+                    { facingMode: 'environment' },
+                    { fps: 10, qrbox: 250 },
+                    onScanSuccess,
+                    () => {}
+                ).then(() => {
+                    starting = false;
+                }).catch(err => {
+                    starting = false;
+                    showError('Unable to start camera: ' + err + '. Ensure HTTPS/localhost and camera permission.');
+                    enableBtn.classList.remove('hidden');
+                });
+            } catch (err) {
+                starting = false;
+                showError('Scanner init failed: ' + err.message);
+                enableBtn.classList.remove('hidden');
+            }
         };
 
         const requestPermissionAndStart = async () => {
@@ -158,12 +172,23 @@
 
         enableBtn.addEventListener('click', requestPermissionAndStart);
 
-        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-            requestPermissionAndStart();
-        } else {
-            showError('Camera API not supported in this browser/device.');
-            enableBtn.classList.remove('hidden');
-        }
+        // Wait for html5-qrcode script load
+        const ensureLibrary = () => {
+            if (typeof Html5Qrcode !== 'undefined') {
+                html5qrcodeReady = true;
+                if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                    requestPermissionAndStart();
+                } else {
+                    showError('Camera API not supported in this browser/device.');
+                    enableBtn.classList.remove('hidden');
+                }
+            } else {
+                // retry after small delay
+                setTimeout(ensureLibrary, 150);
+            }
+        };
+
+        ensureLibrary();
     })();
 </script>
 @endpush
