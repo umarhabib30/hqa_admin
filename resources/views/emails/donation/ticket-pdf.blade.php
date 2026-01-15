@@ -1,69 +1,110 @@
-@php
-    $name = ($booking['first_name'] ?? '') . ' ' . ($booking['last_name'] ?? '');
-@endphp
 <!DOCTYPE html>
 <html>
+
 <head>
     <meta charset="utf-8">
     <title>Donation Booking Ticket</title>
     <style>
-        body { font-family: DejaVu Sans, sans-serif; color: #111; }
-        .card { border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin-bottom: 12px; }
-        .row { display: flex; justify-content: space-between; margin-bottom: 6px; }
-        .label { color: #6b7280; font-size: 12px; }
-        .value { font-size: 14px; font-weight: 600; }
-        .qr { text-align: center; margin-top: 16px; }
+        body {
+            font-family: 'DejaVu Sans', sans-serif;
+            color: #111;
+            line-height: 1.5;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .ticket-box {
+            border: 1px solid #e5e7eb;
+            padding: 20px;
+            border-radius: 8px;
+        }
+
+        /* Dompdf needs tables for alignment, not Flexbox */
+        .info-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .info-table td {
+            padding: 8px;
+            border-bottom: 1px solid #f3f4f6;
+        }
+
+        .label {
+            color: #6b7280;
+            font-size: 12px;
+            width: 40%;
+        }
+
+        .value {
+            font-size: 14px;
+            font-weight: bold;
+            text-align: right;
+            width: 60%;
+        }
+
+        .qr-section {
+            text-align: center;
+            margin-top: 30px;
+        }
+
+        .footer-text {
+            font-size: 10px;
+            color: #9ca3af;
+            text-align: center;
+            margin-top: 10px;
+        }
     </style>
 </head>
-<body>
-    <h2>Donation Booking Ticket</h2>
-    <p><strong>{{ $event['event_title'] ?? 'Event' }}</strong></p>
-    <p>{{ $event['event_location'] ?? '' }}</p>
-    <p>{{ $event['event_start_date'] ?? '' }} {{ $event['event_start_time'] ?? '' }} - {{ $event['event_end_date'] ?? '' }} {{ $event['event_end_time'] ?? '' }}</p>
 
-    <div class="card">
-        <div class="row">
-            <div class="label">Name</div>
-            <div class="value">{{ trim($name) ?: 'Guest' }}</div>
-        </div>
-        <div class="row">
-            <div class="label">Email</div>
-            <div class="value">{{ $booking['email'] ?? '' }}</div>
-        </div>
-        <div class="row">
-            <div class="label">Phone</div>
-            <div class="value">{{ $booking['phone'] ?? '' }}</div>
-        </div>
-        <div class="row">
-            <div class="label">Booking Type</div>
-            <div class="value">{{ ucfirst($booking['type'] ?? 'seats') }}</div>
-        </div>
-        <div class="row">
-            <div class="label">Tables</div>
-            <div class="value">{{ implode(', ', $booking['tables'] ?? []) }}</div>
-        </div>
-        <div class="row">
-            <div class="label">Seats</div>
-            <div class="value">
-                {{ $booking['total_seats'] ?? 0 }}
-                @if(!empty($booking['seat_types']))
-                    ( @foreach($booking['seat_types'] as $t => $q) {{ $t }}: {{ $q }}@if(!$loop->last), @endif @endforeach )
-                @endif
-            </div>
-        </div>
-        <div class="row">
-            <div class="label">Payment ID</div>
-            <div class="value">{{ $paymentIntentId }}</div>
-        </div>
-        <div class="row">
-            <div class="label">Paid Amount</div>
-            <div class="value">${{ number_format($paidAmount, 2) }}</div>
-        </div>
+<body>
+    <div class="header">
+        <h2>Donation Booking Ticket</h2>
+        <p><strong>{{ $event['event_title'] ?? 'Event' }}</strong></p>
+        <p style="font-size: 12px;">{{ $event['event_location'] ?? '' }}</p>
     </div>
 
-    <div class="qr">
-        <p>Show this QR code at entry</p>
-        <img src="{{ $qrCodeDataUrl }}" alt="QR Code" width="240" height="240">
+    <div class="ticket-box">
+        <table class="info-table">
+            <tr>
+                <td class="label">Name</td>
+                <td class="value">{{ ($booking['first_name'] ?? '') . ' ' . ($booking['last_name'] ?? '') }}</td>
+            </tr>
+            <tr>
+                <td class="label">Email</td>
+                <td class="value">{{ $booking['email'] ?? '' }}</td>
+            </tr>
+            <tr>
+                <td class="label">Booking Type</td>
+                <td class="value">{{ ucfirst($booking['type'] ?? 'seats') }}</td>
+            </tr>
+            <tr>
+                <td class="label">Tables Assigned</td>
+                <td class="value">{{ implode(', ', (array) ($booking['tables'] ?? [])) }}</td>
+            </tr>
+            <tr>
+                <td class="label">Total Seats</td>
+                <td class="value">{{ $booking['total_seats'] ?? 0 }}</td>
+            </tr>
+            <tr>
+                <td class="label">Paid Amount</td>
+                <td class="value">${{ number_format($paidAmount, 2) }}</td>
+            </tr>
+            <tr>
+                <td class="label" style="border:none;">Payment ID</td>
+                <td class="value" style="border:none; font-size: 10px;">{{ $paymentIntentId }}</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="qr-section">
+        <p style="font-size: 12px; margin-bottom: 10px;">Show this QR code at entry</p>
+        <img src="{{ $qrCodeDataUrl }}" width="200" height="200">
+        <p class="footer-text">Generated on {{ date('Y-m-d H:i') }}</p>
     </div>
 </body>
+
 </html>
