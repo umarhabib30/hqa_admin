@@ -61,12 +61,33 @@
 
 <body>
     <div class="header">
-        <h2>Donation Booking Ticket</h2>
-        <p><strong>{{ $event['event_title'] ?? 'Event' }}</strong></p>
-        <p style="font-size: 12px;">{{ $event['event_location'] ?? '' }}</p>
+        <h2>HQA Annual Ramadan Fundraiser Ticket</h2>
+        <p style="font-size: 13px; margin: 4px 0;">Houston Quran Academy</p>
     </div>
 
     <div class="ticket-box">
+        <table class="info-table" style="margin-bottom: 10px;">
+            <tr>
+                <td class="label">Event</td>
+                <td class="value">Annual Ramadan Fundraiser</td>
+            </tr>
+            <tr>
+                <td class="label">Date & Time</td>
+                <td class="value">Feb 21, 4:30 PM – 9:30 PM</td>
+            </tr>
+            <tr>
+                <td class="label">Venue</td>
+                <td class="value" style="font-size: 12px; line-height: 1.4;">
+                    945 Gessner Rd, Houston, TX 77024<br>
+                    4th Floor, Azalea Ballroom
+                </td>
+            </tr>
+            <tr>
+                <td class="label">Parking</td>
+                <td class="value" style="font-size: 12px;">Complimentary self-parking; valet discounted by Westin.</td>
+            </tr>
+        </table>
+
         <table class="info-table">
             <tr>
                 <td class="label">Name</td>
