@@ -14,6 +14,7 @@ use Endroid\QrCode\QrCode;
 use Endroid\QrCode\Writer\PngWriter;
 use Endroid\QrCode\Encoding\Encoding;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Log;
 
 class DonationBookingApiController extends Controller
 {
@@ -87,6 +88,14 @@ class DonationBookingApiController extends Controller
             $assignedTables = [];
             $paymentId = (string) Str::uuid();
             $paidAmount = $validated['amount'] ?? 0;
+
+            Log::info('API donation booking request', [
+                'event_id' => $id,
+                'booking_type' => $validated['booking_type'],
+                'email' => $validated['email'],
+                'seat_types' => $validated['seat_types'] ?? [],
+                'amount' => $paidAmount,
+            ]);
 
             /* =====================================================
                🟢 FULL TABLE BOOKING (ONLY EMPTY TABLE)
@@ -256,6 +265,20 @@ class DonationBookingApiController extends Controller
             } catch (Throwable $mailEx) {
                 $mailSent = false;
                 $mailError = $mailEx->getMessage();
+                Log::error('API donation booking mail send failed', [
+                    'event_id' => $event->id,
+                    'payment_id' => $paymentId,
+                    'email' => $validated['email'],
+                    'error' => $mailError,
+                ]);
+            }
+
+            if ($mailSent) {
+                Log::info('API donation booking mail sent', [
+                    'event_id' => $event->id,
+                    'payment_id' => $paymentId,
+                    'email' => $validated['email'],
+                ]);
             }
 
             return response()->json([
