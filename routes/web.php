@@ -174,6 +174,7 @@ Route::get('/coupons/{id}/codes', [CouponController::class, 'showCodes'])->name(
 // Contact Sponser Routes
 Route::get('contact-sponser', [ContactSponserController::class, 'index'])->name('contact-sponser.index');
 Route::get('contact-sponser/{id}', [ContactSponserController::class, 'show'])->name('contact-sponser.show');
+Route::delete('contact-sponser/{id}', [ContactSponserController::class, 'destroy'])->name('contact-sponser.destroy');
 
 // Permissions Routes (Super Admin Only)
 Route::middleware(['auth'])->group(function () {

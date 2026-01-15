@@ -46,4 +46,14 @@ class ContactSponserController extends Controller
         $contact = ContactSponserModel::find($id);
         return view('dashboard.contact-sponser.detail', compact('contact'));
     }
+
+    public function destroy($id)
+    {
+        $contact = ContactSponserModel::findOrFail($id);
+        $contact->delete();
+
+        return redirect()
+            ->route('contact-sponser.index')
+            ->with('success', 'Contact deleted successfully.');
+    }
 }
