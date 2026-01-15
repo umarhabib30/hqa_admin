@@ -7,8 +7,6 @@ use Illuminate\Http\Request;
 use Stripe\Stripe;
 use Stripe\PaymentIntent;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Mail;
-use App\Mail\DonationBookingTicketMail;
 use Illuminate\Support\Facades\Log;
 
 class DonationBookingController extends Controller
@@ -233,29 +231,6 @@ class DonationBookingController extends Controller
             ]);
 
             DB::commit();
-
-            // Prepare email + PDF
-            $bookingSummary = [
-                'type' => $request->booking_type,
-                'first_name' => $request->first_name,
-                'last_name' => $request->last_name,
-                'email' => $request->email,
-                'phone' => $request->phone,
-                'seat_types' => $request->seat_types ?? [],
-                'total_seats' => $request->booking_type === 'full_table'
-                    ? $event->seats_per_table
-                    : array_sum($request->seat_types),
-                'tables' => array_unique($assignedTables),
-            ];
-
-            Mail::to($request->email)->send(
-                new DonationBookingTicketMail(
-                    $event->toArray(),
-                    $bookingSummary,
-                    $intent->id,
-                    (float) $request->amount
-                )
-            );
 
             return response()->json([
                 'success' => true,

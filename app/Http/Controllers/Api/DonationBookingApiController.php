@@ -8,6 +8,12 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Throwable;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\DonationBookingTicketMail;
+use Endroid\QrCode\QrCode;
+use Endroid\QrCode\Writer\PngWriter;
+use Endroid\QrCode\Encoding\Encoding;
+use Illuminate\Support\Str;
 
 class DonationBookingApiController extends Controller
 {
@@ -73,14 +79,21 @@ class DonationBookingApiController extends Controller
                 'last_name'  => 'required|string',
                 'email'      => 'required|email',
                 'phone'      => 'required|string',
+                'amount'     => 'nullable|numeric|min:0',
             ]);
 
             $event = DonationBooking::findOrFail($id);
             $bookings = $event->table_bookings ?? [];
+            $assignedTables = [];
+            $paymentId = (string) Str::uuid();
+            $paidAmount = $validated['amount'] ?? 0;
 
             /* =====================================================
                🟢 FULL TABLE BOOKING (ONLY EMPTY TABLE)
             ===================================================== */
+            $successMessage = 'Seats booked successfully';
+            $responseData = [];
+
             if ($validated['booking_type'] === 'full_table') {
 
                 $tableNo = null;
@@ -112,18 +125,18 @@ class DonationBookingApiController extends Controller
                     'seat_types'  => [],
                     'total_seats' => $event->seats_per_table,
                     'booked_at'   => now()->toDateTimeString(),
+                    'payment_id'  => $paymentId,
+                    'paid_amount' => $paidAmount,
+                    'checked_in_at' => null,
                 ];
 
                 $event->update([
                     'table_bookings'     => $bookings,
                     'full_tables_booked' => $event->full_tables_booked + 1
                 ]);
-
-                return response()->json([
-                    'success'  => true,
-                    'message'  => 'Full table booked successfully',
-                    'table_no' => $tableNo
-                ], 200);
+                $assignedTables[] = $tableNo;
+                $successMessage = 'Full table booked successfully';
+                $responseData = ['table_no' => $tableNo];
             }
 
             /* =====================================================
@@ -132,7 +145,7 @@ class DonationBookingApiController extends Controller
             $seatTypes = $validated['seat_types'] ?? [];
             $totalSeats = array_sum($seatTypes);
 
-            if ($totalSeats <= 0) {
+            if ($validated['booking_type'] === 'seats' && $totalSeats <= 0) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Select at least one seat'
@@ -180,13 +193,17 @@ class DonationBookingApiController extends Controller
                     'seat_types'  => $assignedSeatTypes,
                     'total_seats' => array_sum($assignedSeatTypes),
                     'booked_at'   => now()->toDateTimeString(),
+                    'payment_id'  => $paymentId,
+                    'paid_amount' => $paidAmount,
+                    'checked_in_at' => null,
                 ];
 
                 $remainingSeats -= $seatsForTable;
+                $assignedTables[] = $table;
                 if ($remainingSeats <= 0) break;
             }
 
-            if ($remainingSeats > 0) {
+            if ($validated['booking_type'] === 'seats' && $remainingSeats > 0) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Not enough seats available'
@@ -197,9 +214,48 @@ class DonationBookingApiController extends Controller
                 'table_bookings' => $bookings
             ]);
 
+            // Email ticket with QR
+            $bookingSummary = [
+                'type' => $validated['booking_type'],
+                'first_name' => $validated['first_name'],
+                'last_name' => $validated['last_name'],
+                'email' => $validated['email'],
+                'phone' => $validated['phone'],
+                'seat_types' => $seatTypes,
+                'total_seats' => $validated['booking_type'] === 'full_table'
+                    ? $event->seats_per_table
+                    : array_sum($seatTypes),
+                'tables' => array_unique($assignedTables),
+            ];
+
+            $qrPayload = json_encode([
+                'type' => 'donation_booking',
+                'event_id' => $event->id,
+                'payment_id' => $paymentId,
+                'email' => $validated['email'],
+            ]);
+
+            $qr = QrCode::create($qrPayload)
+                ->setEncoding(new Encoding('UTF-8'))
+                ->setSize(400);
+            $writer = new PngWriter();
+            $qrDataUrl = $writer->write($qr)->getDataUri();
+
+            Mail::to($validated['email'])->send(
+                new DonationBookingTicketMail(
+                    $event->toArray(),
+                    $bookingSummary,
+                    $paymentId,
+                    $qrDataUrl,
+                    (float) $paidAmount
+                )
+            );
+
             return response()->json([
                 'success' => true,
-                'message' => 'Seats booked successfully'
+                'message' => $successMessage,
+                'data' => $responseData,
+                'payment_id' => $paymentId,
             ], 200);
         } catch (Throwable $e) {
             return response()->json([
