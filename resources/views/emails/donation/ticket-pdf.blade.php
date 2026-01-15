@@ -46,11 +46,6 @@
             width: 60%;
         }
 
-        .qr-section {
-            text-align: center;
-            margin-top: 30px;
-        }
-
         .footer-text {
             font-size: 10px;
             color: #9ca3af;
@@ -100,11 +95,7 @@
         </table>
     </div>
 
-    <div class="qr-section">
-        <p style="font-size: 12px; margin-bottom: 10px;">Show this QR code at entry</p>
-        <img src="{{ $qrCodeDataUrl }}" width="200" height="200">
-        <p class="footer-text">Generated on {{ date('Y-m-d H:i') }}</p>
-    </div>
+    <p class="footer-text">Generated on {{ date('Y-m-d H:i') }}</p>
 </body>
 
 </html>

@@ -9,9 +9,6 @@ use Stripe\PaymentIntent;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\DonationBookingTicketMail;
-use Endroid\QrCode\QrCode;
-use Endroid\QrCode\Writer\PngWriter;
-use Endroid\QrCode\Encoding\Encoding;
 
 class DonationBookingController extends Controller
 {
@@ -237,25 +234,11 @@ class DonationBookingController extends Controller
                 'tables' => array_unique($assignedTables),
             ];
 
-            $qrPayload = json_encode([
-                'type' => 'donation_booking',
-                'event_id' => $event->id,
-                'payment_id' => $intent->id,
-                'email' => $request->email,
-            ]);
-
-            $qr = QrCode::create($qrPayload)
-                ->setEncoding(new Encoding('UTF-8'))
-                ->setSize(400);
-            $writer = new PngWriter();
-            $qrDataUrl = $writer->write($qr)->getDataUri();
-
             Mail::to($request->email)->send(
                 new DonationBookingTicketMail(
                     $event->toArray(),
                     $bookingSummary,
                     $intent->id,
-                    $qrDataUrl,
                     (float) $request->amount
                 )
             );

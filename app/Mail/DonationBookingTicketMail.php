@@ -15,15 +15,13 @@ class DonationBookingTicketMail extends Mailable
     public array $event;
     public array $booking;
     public string $paymentIntentId;
-    public string $qrCodeDataUrl;
     public float $paidAmount;
 
-    public function __construct(array $event, array $booking, string $paymentIntentId, string $qrCodeDataUrl, float $paidAmount)
+    public function __construct(array $event, array $booking, string $paymentIntentId, float $paidAmount)
     {
         $this->event = $event;
         $this->booking = $booking;
         $this->paymentIntentId = $paymentIntentId;
-        $this->qrCodeDataUrl = $qrCodeDataUrl;
         $this->paidAmount = $paidAmount;
     }
 
@@ -33,7 +31,6 @@ class DonationBookingTicketMail extends Mailable
             'event' => $this->event,
             'booking' => $this->booking,
             'paymentIntentId' => $this->paymentIntentId,
-            'qrCodeDataUrl' => $this->qrCodeDataUrl,
             'paidAmount' => $this->paidAmount,
         ])->render();
 
