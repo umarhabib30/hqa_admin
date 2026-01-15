@@ -21,6 +21,10 @@
 
     <div id="scan-status" class="hidden bg-blue-50 text-blue-800 px-4 py-3 rounded-lg text-sm"></div>
     <div id="scan-error" class="hidden bg-red-50 text-red-700 px-4 py-3 rounded-lg text-sm"></div>
+    <button id="enable-camera"
+        class="hidden px-4 py-2 text-sm font-semibold text-white bg-[#00285E] rounded-lg shadow hover:bg-[#001f49] transition">
+        Enable Camera
+    </button>
 
     <div id="result-card" class="hidden bg-white rounded-xl shadow p-4 space-y-3">
         <div class="flex items-center justify-between">
@@ -46,8 +50,10 @@
         const resultCard = document.getElementById('result-card');
         const detailsEl = document.getElementById('booking-details');
         const scanAgainBtn = document.getElementById('scan-again');
+        const enableBtn = document.getElementById('enable-camera');
 
         let scanner;
+        let starting = false;
 
         const showStatus = (msg) => {
             statusEl.textContent = msg;
@@ -109,16 +115,38 @@
             sendCheckIn(decodedText);
         };
 
-        const initScanner = () => {
+        const startScanner = () => {
+            if (scanner || starting) return;
+            starting = true;
             scanner = new Html5Qrcode(readerId);
             scanner.start(
                 { facingMode: 'environment' },
                 { fps: 10, qrbox: 250 },
                 onScanSuccess,
                 () => {}
-            ).catch(err => {
+            ).then(() => {
+                starting = false;
+            }).catch(err => {
+                starting = false;
                 showError('Unable to start camera: ' + err + '. Ensure HTTPS/localhost and camera permission.');
+                enableBtn.classList.remove('hidden');
             });
+        };
+
+        const requestPermissionAndStart = async () => {
+            hideError();
+            showStatus('Requesting camera permission...');
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+                stream.getTracks().forEach(t => t.stop());
+                hideStatus();
+                enableBtn.classList.add('hidden');
+                startScanner();
+            } catch (err) {
+                hideStatus();
+                showError('Camera permission denied or unavailable: ' + err.message);
+                enableBtn.classList.remove('hidden');
+            }
         };
 
         scanAgainBtn.addEventListener('click', () => {
@@ -128,7 +156,14 @@
             scanner.resume();
         });
 
-        initScanner();
+        enableBtn.addEventListener('click', requestPermissionAndStart);
+
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            requestPermissionAndStart();
+        } else {
+            showError('Camera API not supported in this browser/device.');
+            enableBtn.classList.remove('hidden');
+        }
     })();
 </script>
 @endpush

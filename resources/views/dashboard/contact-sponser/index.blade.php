@@ -68,10 +68,18 @@
                         </td>
 
                         <td class="p-4 text-center">
-                            <a href="{{ route('contact-sponser.show', $contact->id) }}"
-                                class="px-3 py-1 rounded border border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white transition">
-                                 View
-                             </a>                             
+                            <div class="flex justify-center gap-2">
+                                <a href="{{ route('contact-sponser.show', $contact->id) }}"
+                                    class="px-3 py-1 rounded border border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white transition">
+                                     View
+                                </a>
+                                <button type="button"
+                                    class="px-3 py-1 rounded border border-red-600 text-red-600 hover:bg-red-600 hover:text-white transition delete-contact-btn"
+                                    data-id="{{ $contact->id }}"
+                                    data-name="{{ $contact->full_name }}">
+                                    Delete
+                                </button>
+                            </div>
                         </td>
                     </tr>
                 @empty
@@ -152,5 +160,41 @@
     </div>
 
 </div>
+
+@push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    document.querySelectorAll('.delete-contact-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const id = btn.getAttribute('data-id');
+            const name = btn.getAttribute('data-name') || 'this contact';
+
+            Swal.fire({
+                title: 'Delete contact?',
+                text: `Are you sure you want to delete ${name}?`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Yes, delete',
+                cancelButtonText: 'Cancel'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Build a form to submit DELETE
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = '{{ url('contact-sponser') }}/' + id;
+                    form.innerHTML = `
+                        @csrf
+                        @method('DELETE')
+                    `;
+                    document.body.appendChild(form);
+                    form.submit();
+                }
+            });
+        });
+    });
+</script>
+@endpush
 
 @endsection
