@@ -241,7 +241,7 @@ class DonationBookingApiController extends Controller
             $mailError = null;
             try {
                 // Encode a check-in URL in the QR so it can be opened directly
-                $qrPayload = url('/api/donationBooking/check-in?qr_token=' . $paymentId);
+                $qrPayload = route('donationBooking.checkIn', ['qr_token' => $paymentId]);
 
                 $qr = QrCode::create($qrPayload)
                     ->setEncoding(new Encoding('UTF-8'))
