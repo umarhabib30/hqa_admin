@@ -9,6 +9,7 @@ use Stripe\PaymentIntent;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\DonationBookingTicketMail;
+use Illuminate\Support\Facades\Log;
 
 class DonationBookingController extends Controller
 {
@@ -87,6 +88,7 @@ class DonationBookingController extends Controller
 
     public function bookSeat(Request $request, $id)
     {
+        
         $request->validate([
             'booking_type' => 'required|in:seats,full_table',
             'payment_method' => 'required|string',
@@ -99,6 +101,18 @@ class DonationBookingController extends Controller
             // seats booking ke liye
             'seat_types' => 'required_if:booking_type,seats|array',
             'amount'     => 'required|numeric|min:0',
+        ]);
+
+        Log::info('Donation booking request received', [
+            'event_id' => $id,
+            'booking_type' => $request->booking_type,
+            'first_name' => $request->first_name,
+            'last_name' => $request->last_name,
+            'email' => $request->email,
+            'phone' => $request->phone,
+            'seat_types' => $request->seat_types ?? [],
+            'amount' => $request->amount,
+            'payment_method' => $request->payment_method,
         ]);
 
         $event = DonationBooking::findOrFail($id);
