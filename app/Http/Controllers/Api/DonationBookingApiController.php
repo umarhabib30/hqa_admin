@@ -228,34 +228,43 @@ class DonationBookingApiController extends Controller
                 'tables' => array_unique($assignedTables),
             ];
 
-            $qrPayload = json_encode([
-                'type' => 'donation_booking',
-                'event_id' => $event->id,
-                'payment_id' => $paymentId,
-                'email' => $validated['email'],
-            ]);
+            $mailSent = true;
+            $mailError = null;
+            try {
+                $qrPayload = json_encode([
+                    'type' => 'donation_booking',
+                    'event_id' => $event->id,
+                    'payment_id' => $paymentId,
+                    'email' => $validated['email'],
+                ]);
 
-            $qr = QrCode::create($qrPayload)
-                ->setEncoding(new Encoding('UTF-8'))
-                ->setSize(400);
-            $writer = new PngWriter();
-            $qrDataUrl = $writer->write($qr)->getDataUri();
+                $qr = QrCode::create($qrPayload)
+                    ->setEncoding(new Encoding('UTF-8'))
+                    ->setSize(400);
+                $writer = new PngWriter();
+                $qrDataUrl = $writer->write($qr)->getDataUri();
 
-            Mail::to($validated['email'])->send(
-                new DonationBookingTicketMail(
-                    $event->toArray(),
-                    $bookingSummary,
-                    $paymentId,
-                    $qrDataUrl,
-                    (float) $paidAmount
-                )
-            );
+                Mail::to($validated['email'])->send(
+                    new DonationBookingTicketMail(
+                        $event->toArray(),
+                        $bookingSummary,
+                        $paymentId,
+                        $qrDataUrl,
+                        (float) $paidAmount
+                    )
+                );
+            } catch (Throwable $mailEx) {
+                $mailSent = false;
+                $mailError = $mailEx->getMessage();
+            }
 
             return response()->json([
                 'success' => true,
                 'message' => $successMessage,
                 'data' => $responseData,
                 'payment_id' => $paymentId,
+                'mail_sent' => $mailSent,
+                'mail_error' => $mailError,
             ], 200);
         } catch (Throwable $e) {
             return response()->json([
