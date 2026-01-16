@@ -147,7 +147,10 @@
                 <div id="ticket-wrapper" class="space-y-3">
                     @php
                         $oldTickets = old('ticket_types');
-                        $tickets = $oldTickets ?? ($event->ticket_types ?? []);
+                        $ticketsRaw = $oldTickets ?? ($event->ticket_types ?? []);
+                        $tickets = collect($ticketsRaw)
+                            ->reject(fn($t) => strtolower($t['name'] ?? '') === 'baby sitting')
+                            ->values();
                     @endphp
                     @forelse($tickets as $i => $ticket)
                         <div class="flex gap-3">
@@ -174,6 +177,20 @@
                             </button>
                         </div>
                     @endforelse
+                </div>
+
+                <div class="mt-3 border rounded-lg p-3 bg-gray-50">
+                    <label class="flex items-center gap-3">
+                        <input type="checkbox"
+                            name="enable_baby_sitting"
+                            value="1"
+                            class="w-4 h-4 text-[#00285E]"
+                            {{ old('enable_baby_sitting', collect($ticketsRaw ?? [])->contains(fn($t) => strtolower($t['name'] ?? '') === 'baby sitting')) ? 'checked' : '' }}>
+                        <span class="font-medium text-gray-700">
+                            Add Baby Sitting (Free)
+                        </span>
+                    </label>
+                    <p class="mt-1 text-xs text-gray-500">If checked, a Baby Sitting ticket category will be added at $0.</p>
                 </div>
 
                 <button type="button" onclick="addTicketType()" class="mt-3 text-sm text-[#00285E] font-semibold">
@@ -213,7 +230,9 @@
 
 <script>
     @php
-        $countTickets = isset($tickets) ? count($tickets) : count($event->ticket_types ?? []);
+        $countTickets = isset($tickets) ? count($tickets) : count(
+            collect($event->ticket_types ?? [])->reject(fn($t) => strtolower($t['name'] ?? '') === 'baby sitting')
+        );
     @endphp
     let index = {{ $countTickets }};
 
