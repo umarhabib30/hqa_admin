@@ -7,6 +7,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     @vite('resources/css/app.css')
+    <!-- Toastr CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" integrity="sha512-vKM265s8gK9QicfEoG7knrFt0EuV6bJm73PvvrLpzjAU6YewsGmmIOzBSSMSmc5QwDFi1Cdm42HcAUy3xZf5xg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 </head>
 
 <body class="bg-gray-100 min-h-screen " x-data="{ sidebarOpen: false }">
@@ -34,6 +36,8 @@
     
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- Toastr CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js" integrity="sha512-5p1YQSXQt3nHAfHixokKcddJgsIRsEhDRbugzuDUFcPRl1BDpRP70dNDO7xjMnIKh4j/wZUp3NEPoE+N1Ns5xg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     
     @stack('scripts')
     

@@ -8,6 +8,7 @@ use Stripe\Stripe;
 use Stripe\PaymentIntent;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
 
 class DonationBookingController extends Controller
@@ -25,7 +26,7 @@ class DonationBookingController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
+        $validator = Validator::make($request->all(), [
             'event_title' => 'required|string',
             'event_start_date' => 'required|date',
             'event_end_date' => 'required|date|after_or_equal:event_start_date',
@@ -46,6 +47,12 @@ class DonationBookingController extends Controller
             'allow_full_table' => 'nullable|boolean',
             'full_table_price' => 'nullable|required_if:allow_full_table,1|numeric|min:0',
         ]);
+
+        if ($validator->fails()) {
+            return redirect()->back()
+                ->withErrors(['error' => $validator->errors()->first()])
+                ->withInput();
+        }
 
         $totalSeats = $request->total_tables * $request->seats_per_table;
 

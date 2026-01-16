@@ -111,6 +111,33 @@
                     min="1" class="w-full px-4 py-3 rounded-lg border border-gray-300">
             </div>
 
+            {{-- FULL TABLE SETTINGS --}}
+            <div class="border rounded-lg p-4 bg-gray-50">
+                <label class="flex items-center gap-3">
+                    <input type="checkbox"
+                        name="allow_full_table"
+                        value="1"
+                        class="w-4 h-4 text-[#00285E]"
+                        {{ old('allow_full_table', $event->allow_full_table) ? 'checked' : '' }}>
+                    <span class="font-medium text-gray-700">
+                        Allow Full Table Booking
+                    </span>
+                </label>
+
+                <div class="mt-3">
+                    <label class="block text-sm text-gray-600 mb-1">
+                        Full Table Price
+                    </label>
+                    <input type="number"
+                        name="full_table_price"
+                        step="0.01"
+                        placeholder="e.g. 25000"
+                        value="{{ old('full_table_price', $event->full_table_price) }}"
+                        class="w-full px-4 py-3 rounded-lg border border-gray-300
+                          focus:ring-2 focus:ring-[#00285E] focus:outline-none">
+                </div>
+            </div>
+
             {{-- TICKET TYPES --}}
             <div>
                 <label class="block text-sm font-medium text-gray-600 mb-2">
@@ -118,19 +145,35 @@
                 </label>
 
                 <div id="ticket-wrapper" class="space-y-3">
-                    @foreach($event->ticket_types ?? [] as $i => $ticket)
+                    @php
+                        $oldTickets = old('ticket_types');
+                        $tickets = $oldTickets ?? ($event->ticket_types ?? []);
+                    @endphp
+                    @forelse($tickets as $i => $ticket)
                         <div class="flex gap-3">
-                            <input type="text" name="ticket_types[{{ $i }}][name]" value="{{ $ticket['name'] }}"
+                            <input type="text" name="ticket_types[{{ $i }}][name]" value="{{ $ticket['name'] ?? '' }}"
                                 class="w-1/2 px-3 py-2 border rounded-lg">
 
-                            <input type="number" name="ticket_types[{{ $i }}][price]" value="{{ $ticket['price'] }}"
+                            <input type="number" name="ticket_types[{{ $i }}][price]" value="{{ $ticket['price'] ?? '' }}"
                                 class="w-1/2 px-3 py-2 border rounded-lg">
 
                             <button type="button" onclick="this.parentElement.remove()" class="text-red-500 font-bold">
                                 ✕
                             </button>
                         </div>
-                    @endforeach
+                    @empty
+                        <div class="flex gap-3">
+                            <input type="text" name="ticket_types[0][name]" placeholder="Category"
+                                class="w-1/2 px-3 py-2 border rounded-lg">
+
+                            <input type="number" name="ticket_types[0][price]" placeholder="Price"
+                                class="w-1/2 px-3 py-2 border rounded-lg">
+
+                            <button type="button" onclick="this.parentElement.remove()" class="text-red-500 font-bold">
+                                ✕
+                            </button>
+                        </div>
+                    @endforelse
                 </div>
 
                 <button type="button" onclick="addTicketType()" class="mt-3 text-sm text-[#00285E] font-semibold">
@@ -169,7 +212,10 @@
 
 
 <script>
-    let index = {{ count($event->ticket_types ?? []) }};
+    @php
+        $countTickets = isset($tickets) ? count($tickets) : count($event->ticket_types ?? []);
+    @endphp
+    let index = {{ $countTickets }};
 
     function addTicketType() {
         document.getElementById('ticket-wrapper').insertAdjacentHTML('beforeend', `
