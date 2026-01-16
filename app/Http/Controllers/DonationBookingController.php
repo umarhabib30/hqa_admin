@@ -13,6 +13,22 @@ use Carbon\Carbon;
 
 class DonationBookingController extends Controller
 {
+    private function splitSeatTypes(array $seatTypes, int $allowedSeats): array
+    {
+        $result = [];
+
+        foreach ($seatTypes as $type => $qty) {
+            if ($allowedSeats <= 0) break;
+            $take = min((int) $qty, $allowedSeats);
+            if ($take > 0) {
+                $result[$type] = $take;
+                $allowedSeats -= $take;
+            }
+        }
+
+        return $result;
+    }
+
     public function index()
     {
         $event = DonationBooking::latest()->first();
@@ -173,7 +189,9 @@ class DonationBookingController extends Controller
 
                 for ($i = 1; $i <= $event->total_tables; $i++) {
                     $tableUsers = $bookings[$i] ?? [];
-                    $usedSeats = collect($tableUsers)->sum('total_seats');
+                    $usedSeats = collect($tableUsers)->sum(function ($entry) use ($event) {
+                        return DonationBooking::occupiedSeatsForBookingEntry((array) $entry, (int) $event->seats_per_table);
+                    });
 
                     if ($usedSeats === 0) {
                         $bookings[$i][] = [
@@ -202,19 +220,40 @@ class DonationBookingController extends Controller
                 }
             } else {
                 // SEATS booking
-                $totalSeatsRequested = array_sum($request->seat_types);
+                $seatTypes = $request->seat_types ?? [];
+                $countableSeatTypes = [];
+                $nonCountableSeatTypes = [];
+                foreach ($seatTypes as $type => $qty) {
+                    if (DonationBooking::isBabySittingType((string) $type)) {
+                        $nonCountableSeatTypes[$type] = (int) $qty;
+                    } else {
+                        $countableSeatTypes[$type] = (int) $qty;
+                    }
+                }
+
+                $totalSeatsRequested = array_sum($countableSeatTypes);
                 $remainingSeats = $totalSeatsRequested;
+                $remainingSeatTypes = $countableSeatTypes;
+                $firstEntryPointer = null; // ['table' => int, 'idx' => int]
 
                 for ($i = 1; $i <= $event->total_tables; $i++) {
                     if ($remainingSeats <= 0) break;
 
                     $tableUsers = $bookings[$i] ?? [];
-                    $usedSeats = collect($tableUsers)->sum('total_seats');
+                    $usedSeats = collect($tableUsers)->sum(function ($entry) use ($event) {
+                        return DonationBooking::occupiedSeatsForBookingEntry((array) $entry, (int) $event->seats_per_table);
+                    });
                     $available = $event->seats_per_table - $usedSeats;
 
                     if ($available <= 0) continue;
 
                     $allocate = min($available, $remainingSeats);
+
+                    $assignedSeatTypes = $this->splitSeatTypes($remainingSeatTypes, $allocate);
+                    foreach ($assignedSeatTypes as $type => $qty) {
+                        $remainingSeatTypes[$type] -= $qty;
+                        if ($remainingSeatTypes[$type] <= 0) unset($remainingSeatTypes[$type]);
+                    }
 
                     $bookings[$i][] = [
                         'type' => 'seats',
@@ -222,13 +261,16 @@ class DonationBookingController extends Controller
                         'last_name'  => $request->last_name,
                         'email'      => $request->email,
                         'phone'      => $request->phone,
-                        'seat_types' => $request->seat_types,
-                        'total_seats' => $allocate,
+                        'seat_types' => $assignedSeatTypes,
+                        'total_seats' => array_sum($assignedSeatTypes),
                         'paid_amount' => $request->amount,
                         'payment_id' => $intent->id,
                         'booked_at'  => now(),
                         'checked_in_at' => null,
                     ];
+                    if ($firstEntryPointer === null) {
+                        $firstEntryPointer = ['table' => $i, 'idx' => count($bookings[$i]) - 1];
+                    }
 
                     $remainingSeats -= $allocate;
                     $assignedTables[] = $i;
@@ -236,6 +278,17 @@ class DonationBookingController extends Controller
 
                 if ($remainingSeats > 0) {
                     throw new \Exception('Not enough seats available');
+                }
+
+                // Attach non-countable seat types (e.g. Baby Sitting) to the first created entry
+                if (!empty($nonCountableSeatTypes) && $firstEntryPointer !== null) {
+                    $t = $firstEntryPointer['table'];
+                    $idx = $firstEntryPointer['idx'];
+                    $existing = $bookings[$t][$idx]['seat_types'] ?? [];
+                    foreach ($nonCountableSeatTypes as $type => $qty) {
+                        $existing[$type] = ($existing[$type] ?? 0) + (int) $qty;
+                    }
+                    $bookings[$t][$idx]['seat_types'] = $existing;
                 }
             }
 
@@ -252,6 +305,7 @@ class DonationBookingController extends Controller
                 'success' => true,
                 'message' => 'Payment & Booking successful',
                 'payment_intent' => $intent->id,
+                'tables' => array_values(array_unique($assignedTables)),
             ]);
         } catch (\Exception $e) {
             DB::rollBack();

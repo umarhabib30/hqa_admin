@@ -23,7 +23,9 @@ class DashboardController extends Controller
                 $seats = 0;
 
                 foreach ($tableBookings as $table) {
-                    $seats += collect($table)->sum('total_seats');
+                    $seats += collect($table)->sum(function ($entry) use ($booking) {
+                        return DonationBooking::occupiedSeatsForBookingEntry((array) $entry, (int) $booking->seats_per_table);
+                    });
                 }
 
                 return $seats;
@@ -42,7 +44,9 @@ class DashboardController extends Controller
             $seats = 0;
 
             foreach ($tableBookings as $table) {
-                $seats += collect($table)->sum('total_seats');
+                $seats += collect($table)->sum(function ($entry) use ($booking) {
+                    return DonationBooking::occupiedSeatsForBookingEntry((array) $entry, (int) $booking->seats_per_table);
+                });
             }
 
             return $seats;
@@ -61,7 +65,9 @@ class DashboardController extends Controller
                 $total = 0;
 
                 foreach ($tableBookings as $table) {
-                    $total += collect($table)->sum('total_seats');
+                    $total += collect($table)->sum(function ($entry) use ($booking) {
+                        return DonationBooking::occupiedSeatsForBookingEntry((array) $entry, (int) $booking->seats_per_table);
+                    });
                 }
 
                 return $total;

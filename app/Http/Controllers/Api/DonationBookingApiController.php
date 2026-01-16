@@ -110,7 +110,9 @@ class DonationBookingApiController extends Controller
                 // 🔍 find first EMPTY table
                 for ($i = 1; $i <= $event->total_tables; $i++) {
                     $tableBookings = $bookings[$i] ?? [];
-                    $bookedSeats = collect($tableBookings)->sum('total_seats');
+                    $bookedSeats = collect($tableBookings)->sum(function ($entry) use ($event) {
+                        return DonationBooking::occupiedSeatsForBookingEntry((array) $entry, (int) $event->seats_per_table);
+                    });
 
                     if ($bookedSeats === 0) {
                         $tableNo = $i;
@@ -152,7 +154,16 @@ class DonationBookingApiController extends Controller
                🔵 SEAT BOOKING (AUTO TABLE SHIFT)
             ===================================================== */
             $seatTypes = $validated['seat_types'] ?? [];
-            $totalSeats = array_sum($seatTypes);
+            $countableSeatTypes = [];
+            $nonCountableSeatTypes = [];
+            foreach ($seatTypes as $type => $qty) {
+                if (DonationBooking::isBabySittingType((string) $type)) {
+                    $nonCountableSeatTypes[$type] = (int) $qty;
+                } else {
+                    $countableSeatTypes[$type] = (int) $qty;
+                }
+            }
+            $totalSeats = array_sum($countableSeatTypes);
 
             if ($validated['booking_type'] === 'seats' && $totalSeats <= 0) {
                 return response()->json([
@@ -162,13 +173,16 @@ class DonationBookingApiController extends Controller
             }
 
             $remainingSeats = $totalSeats;
-            $remainingSeatTypes = $seatTypes;
+            $remainingSeatTypes = $countableSeatTypes;
+            $firstEntryPointer = null; // ['table' => int, 'idx' => int]
 
             for ($table = 1; $table <= $event->total_tables; $table++) {
 
                 // ❌ Skip tables that already have FULL TABLE
                 $tableBookings = $bookings[$table] ?? [];
-                $alreadyBooked = collect($tableBookings)->sum('total_seats');
+                $alreadyBooked = collect($tableBookings)->sum(function ($entry) use ($event) {
+                    return DonationBooking::occupiedSeatsForBookingEntry((array) $entry, (int) $event->seats_per_table);
+                });
 
                 if ($alreadyBooked >= $event->seats_per_table) {
                     continue;
@@ -206,6 +220,9 @@ class DonationBookingApiController extends Controller
                     'paid_amount' => $paidAmount,
                     'checked_in_at' => null,
                 ];
+                if ($firstEntryPointer === null) {
+                    $firstEntryPointer = ['table' => $table, 'idx' => count($bookings[$table]) - 1];
+                }
 
                 $remainingSeats -= $seatsForTable;
                 $assignedTables[] = $table;
@@ -219,9 +236,18 @@ class DonationBookingApiController extends Controller
                 ], 400);
             }
 
-            $event->update([
-                'table_bookings' => $bookings
-            ]);
+            // Attach non-countable seat types (e.g. Baby Sitting) to the first created entry
+            if (!empty($nonCountableSeatTypes) && $firstEntryPointer !== null) {
+                $t = $firstEntryPointer['table'];
+                $idx = $firstEntryPointer['idx'];
+                $existing = $bookings[$t][$idx]['seat_types'] ?? [];
+                foreach ($nonCountableSeatTypes as $type => $qty) {
+                    $existing[$type] = ($existing[$type] ?? 0) + (int) $qty;
+                }
+                $bookings[$t][$idx]['seat_types'] = $existing;
+            }
+
+            $event->update(['table_bookings' => $bookings]);
 
             // Email ticket with QR
             $bookingSummary = [
@@ -233,7 +259,7 @@ class DonationBookingApiController extends Controller
                 'seat_types' => $seatTypes,
                 'total_seats' => $validated['booking_type'] === 'full_table'
                     ? $event->seats_per_table
-                    : array_sum($seatTypes),
+                    : array_sum($countableSeatTypes),
                 'tables' => array_unique($assignedTables),
             ];
 
@@ -280,7 +306,9 @@ class DonationBookingApiController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => $successMessage,
-                'data' => $responseData,
+                'data' => array_merge($responseData, [
+                    'tables' => array_values(array_unique($assignedTables)),
+                ]),
                 'payment_id' => $paymentId,
                 'mail_sent' => $mailSent,
                 'mail_error' => $mailError,
@@ -337,7 +365,8 @@ class DonationBookingApiController extends Controller
                     'email' => $booking['email'] ?? '',
                     'phone' => $booking['phone'] ?? '',
                     'seat_types' => $booking['seat_types'] ?? [],
-                    'total_seats' => $booking['total_seats'] ?? 0,
+                    // total_seats in payload should reflect capacity-consuming seats (exclude baby sitting)
+                    'total_seats' => DonationBooking::occupiedSeatsForBookingEntry((array) $booking, (int) $event->seats_per_table),
                     'checked_in_at' => $checkInTime,
                     'already_checked_in' => $alreadyChecked,
                 ];

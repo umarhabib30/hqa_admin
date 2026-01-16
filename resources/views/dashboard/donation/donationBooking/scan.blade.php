@@ -98,23 +98,51 @@
   };
 
   const renderDetails = (payload) => {
-    const booking = payload.bookings?.[0] || {};
-    const seatTypes = booking.seat_types || {};
+    const bookings = payload.bookings || [];
+    const first = bookings[0] || {};
+    const tables = [...new Set(bookings.map(b => b.table_no).filter(Boolean))];
+    const totalSeats = bookings.reduce((sum, b) => sum + (Number(b.total_seats) || 0), 0);
+
+    // Merge seat types across all matched bookings (keys may differ per table)
+    const seatTypes = bookings.reduce((acc, b) => {
+      const st = b.seat_types || {};
+      Object.entries(st).forEach(([t, q]) => {
+        acc[t] = (acc[t] || 0) + (Number(q) || 0);
+      });
+      return acc;
+    }, {});
     const seatSummary = Object.keys(seatTypes).length
       ? Object.entries(seatTypes).map(([t, q]) => `${t}: ${q}`).join(', ')
       : 'N/A';
 
+    const perTableHtml = bookings.length > 1
+      ? `
+        <div class="md:col-span-2">
+          <div class="font-semibold text-gray-800 mb-1">Per-table breakdown</div>
+          <div class="space-y-1">
+            ${bookings.map(b => `
+              <div class="text-sm text-gray-700">
+                <span class="font-semibold">Table ${b.table_no}:</span>
+                Seats ${b.total_seats ?? 0}
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `
+      : '';
+
     detailsEl.innerHTML = `
-      <div><span class="font-semibold">Name:</span> ${booking.first_name || ''} ${booking.last_name || ''}</div>
-      <div><span class="font-semibold">Email:</span> ${booking.email || ''}</div>
-      <div><span class="font-semibold">Phone:</span> ${booking.phone || ''}</div>
-      <div><span class="font-semibold">Booking Type:</span> ${booking.type || ''}</div>
-      <div><span class="font-semibold">Tables:</span> ${booking.table_no ? booking.table_no : (booking.tables || []).join(', ')}</div>
-      <div><span class="font-semibold">Seats:</span> ${booking.total_seats ?? 0}</div>
+      <div><span class="font-semibold">Name:</span> ${first.first_name || ''} ${first.last_name || ''}</div>
+      <div><span class="font-semibold">Email:</span> ${first.email || ''}</div>
+      <div><span class="font-semibold">Phone:</span> ${first.phone || ''}</div>
+      <div><span class="font-semibold">Booking Type:</span> ${first.type || ''}</div>
+      <div><span class="font-semibold">Tables:</span> ${tables.join(', ') || 'N/A'}</div>
+      <div><span class="font-semibold">Seats:</span> ${totalSeats}</div>
       <div><span class="font-semibold">Seat Types:</span> ${seatSummary}</div>
       <div><span class="font-semibold">Payment ID:</span> ${payload.payment_id || ''}</div>
-      <div><span class="font-semibold">Checked In At:</span> ${booking.checked_in_at || 'Just now'}</div>
-      <div><span class="font-semibold">Already Checked In:</span> ${booking.already_checked_in ? 'Yes' : 'No'}</div>
+      <div><span class="font-semibold">Checked In At:</span> ${first.checked_in_at || 'Just now'}</div>
+      <div><span class="font-semibold">Already Checked In:</span> ${first.already_checked_in ? 'Yes' : 'No'}</div>
+      ${perTableHtml}
     `;
     resultCard.classList.remove('hidden');
   };
