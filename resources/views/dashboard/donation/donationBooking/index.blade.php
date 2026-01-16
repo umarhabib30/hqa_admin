@@ -45,9 +45,7 @@
             @php
                 $bookings = $event->table_bookings ?? [];
 
-                $bookedSeats = collect($bookings)->flatten(1)->sum(function ($entry) use ($event) {
-                    return \App\Models\DonationBooking::occupiedSeatsForBookingEntry((array) $entry, (int) $event->seats_per_table);
-                });
+                $bookedSeats = collect($bookings)->flatten(1)->sum('total_seats');
                 $remainingSeats = $event->total_seats - $bookedSeats;
 
                 $seatTypeTotals = [];
@@ -119,9 +117,7 @@
             @for($i = 1; $i <= $event->total_tables; $i++)
                 @php
                     $tableUsers = $bookings[$i] ?? [];
-                    $tableBookedSeats = collect($tableUsers)->sum(function ($entry) use ($event) {
-                        return \App\Models\DonationBooking::occupiedSeatsForBookingEntry((array) $entry, (int) $event->seats_per_table);
-                    });
+                    $tableBookedSeats = collect($tableUsers)->sum('total_seats');
                     $isFullTable = $i <= $event->full_tables_booked;
                 @endphp
 
