@@ -157,22 +157,6 @@
             </div>
         </div>
 
-        {{-- BABY SITTING --}}
-        <div class="border rounded-lg p-4 bg-gray-50">
-            <label class="flex items-center gap-3">
-                <input type="checkbox"
-                    name="enable_baby_sitting"
-                    value="1"
-                    class="w-4 h-4 text-[#00285E]"
-                    {{ old('enable_baby_sitting') ? 'checked' : '' }}>
-                <span class="font-medium text-gray-700">
-                    Add Baby Sitting (Free)
-                </span>
-            </label>
-            <p class="mt-1 text-xs text-gray-500">If checked, a Baby Sitting ticket category will be added at $0.</p>
-        </div>
-
-
         <!-- TICKET TYPES -->
         <div>
             <label class="block text-sm font-medium text-gray-600 mb-2">
@@ -206,6 +190,20 @@
                     </div>
                     @php $initialIndex = 1; @endphp
                 @endif
+            </div>
+
+            <div class="mt-3 border rounded-lg p-3 bg-gray-50">
+                <label class="flex items-center gap-3">
+                    <input type="checkbox"
+                        name="enable_baby_sitting"
+                        value="1"
+                        class="w-4 h-4 text-[#00285E]"
+                        {{ old('enable_baby_sitting') ? 'checked' : '' }}>
+                    <span class="font-medium text-gray-700">
+                        Add Baby Sitting (Free)
+                    </span>
+                </label>
+                <p class="mt-1 text-xs text-gray-500">If checked, a Baby Sitting ticket category will be added at $0.</p>
             </div>
 
             <button type="button" onclick="addTicketType()" class="mt-3 text-sm text-[#00285E] font-semibold">

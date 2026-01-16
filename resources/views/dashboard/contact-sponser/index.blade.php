@@ -69,10 +69,10 @@
 
                         <td class="p-4 text-center">
                             <div class="flex justify-center gap-2">
-                                <a href="{{ route('contact-sponser.show', $contact->id) }}"
-                                    class="px-3 py-1 rounded border border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white transition">
-                                     View
-                                </a>
+                            <a href="{{ route('contact-sponser.show', $contact->id) }}"
+                                class="px-3 py-1 rounded border border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white transition">
+                                 View
+                             </a>                             
                                 <button type="button"
                                     class="px-3 py-1 rounded border border-red-600 text-red-600 hover:bg-red-600 hover:text-white transition delete-contact-btn"
                                     data-id="{{ $contact->id }}"
