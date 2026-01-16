@@ -54,6 +54,14 @@ class DonationBookingController extends Controller
                 ->withInput();
         }
 
+        $ticketTypes = $request->ticket_types ?? [];
+        if ($request->boolean('enable_baby_sitting')) {
+            $ticketTypes[] = [
+                'name' => 'Baby Sitting',
+                'price' => 0,
+            ];
+        }
+
         $totalSeats = $request->total_tables * $request->seats_per_table;
 
         DonationBooking::create([
@@ -83,7 +91,7 @@ class DonationBookingController extends Controller
             'table_bookings' => [],
 
             // ticket categories (Adult / Youth etc)
-            'ticket_types' => $request->ticket_types,
+            'ticket_types' => $ticketTypes,
         ]);
 
         return redirect()
@@ -291,9 +299,18 @@ class DonationBookingController extends Controller
             // ✅ FULL TABLE CONFIG
             'allow_full_table' => 'nullable|boolean',
             'full_table_price' => 'nullable|required_if:allow_full_table,1|numeric|min:0',
+            'enable_baby_sitting' => 'nullable|boolean',
         ]);
 
         $event = DonationBooking::findOrFail($id);
+
+        $ticketTypes = $request->ticket_types ?? [];
+        if ($request->boolean('enable_baby_sitting')) {
+            $ticketTypes[] = [
+                'name' => 'Baby Sitting',
+                'price' => 0,
+            ];
+        }
 
         $totalSeats = $request->total_tables * $request->seats_per_table;
 
@@ -319,7 +336,7 @@ class DonationBookingController extends Controller
                 ? $request->full_table_price
                 : null,
 
-            'ticket_types' => $request->ticket_types,
+            'ticket_types' => $ticketTypes,
         ]);
 
         return redirect()
