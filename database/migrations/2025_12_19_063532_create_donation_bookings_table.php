@@ -43,6 +43,10 @@ return new class extends Migration {
             $table->json('table_bookings')->nullable();
             $table->json('ticket_types')->nullable();
 
+// STRIPE FIELDS 
+    $table->string('stripe_payment_intent_id')->nullable();
+    $table->string('payment_status')->default('pending');
+
             $table->timestamps();
         });
     }

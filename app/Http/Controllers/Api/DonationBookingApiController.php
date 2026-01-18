@@ -16,6 +16,10 @@ use Endroid\QrCode\Encoding\Encoding;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
 
+// 💳 STRIPE IMPORTS
+use Stripe\Stripe;
+use Stripe\PaymentIntent;
+
 class DonationBookingApiController extends Controller
 {
     /* =====================================================
@@ -24,17 +28,14 @@ class DonationBookingApiController extends Controller
     private function splitSeatTypes(array $seatTypes, int $allowedSeats): array
     {
         $result = [];
-
         foreach ($seatTypes as $type => $qty) {
             if ($allowedSeats <= 0) break;
-
             $take = min($qty, $allowedSeats);
             if ($take > 0) {
                 $result[$type] = $take;
                 $allowedSeats -= $take;
             }
         }
-
         return $result;
     }
 
@@ -45,18 +46,10 @@ class DonationBookingApiController extends Controller
     {
         try {
             $event = DonationBooking::latest()->first();
-
             if (!$event) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'No event found'
-                ], 404);
+                return response()->json(['success' => false, 'message' => 'No event found'], 404);
             }
-
-            return response()->json([
-                'success' => true,
-                'data' => $event
-            ], 200);
+            return response()->json(['success' => true, 'data' => $event], 200);
         } catch (Throwable $e) {
             return response()->json([
                 'success' => false,
@@ -67,51 +60,61 @@ class DonationBookingApiController extends Controller
     }
 
     /* =====================================================
-       POST: Book Seat / Full Table
+       POST: Book Seat / Full Table with Stripe
     ===================================================== */
     public function bookSeat(Request $request, $id): JsonResponse
     {
         try {
             $validated = $request->validate([
-                'booking_type' => 'required|in:full_table,seats',
-                'seat_types'   => 'nullable|array',
-
-                'first_name' => 'required|string',
-                'last_name'  => 'required|string',
-                'email'      => 'required|email',
-                'phone'      => 'required|string',
-                'amount'     => 'nullable|numeric|min:0',
+                'booking_type'   => 'required|in:full_table,seats',
+                'seat_types'     => 'nullable|array',
+                'first_name'     => 'required|string',
+                'last_name'      => 'required|string',
+                'email'          => 'required|email',
+                'phone'          => 'required|string',
+                'amount'         => 'required|numeric|min:1',
+                'payment_method' => 'required|string', // From React
             ]);
 
             $event = DonationBooking::findOrFail($id);
-            $bookings = $event->table_bookings ?? [];
-            $assignedTables = [];
-            $paymentId = (string) Str::uuid();
-            $paidAmount = $validated['amount'] ?? 0;
 
-            Log::info('API donation booking request', [
-                'event_id' => $id,
-                'booking_type' => $validated['booking_type'],
-                'email' => $validated['email'],
-                'seat_types' => $validated['seat_types'] ?? [],
-                'amount' => $paidAmount,
+            /* -----------------------------------------------------
+               💳 STRIPE PAYMENT PROCESSING
+            ----------------------------------------------------- */
+            Stripe::setApiKey(config('services.stripe.secret'));
+
+            $intent = PaymentIntent::create([
+                'amount' => $validated['amount'] * 100, // Cents
+                'currency' => 'usd',
+                'payment_method' => $validated['payment_method'],
+                'confirm' => true,
+                'automatic_payment_methods' => [
+                    'enabled' => true,
+                    'allow_redirects' => 'never',
+                ],
+                'description' => "Booking for " . $event->event_title,
+                'receipt_email' => $validated['email'],
             ]);
 
-            /* =====================================================
-               🟢 FULL TABLE BOOKING (ONLY EMPTY TABLE)
-            ===================================================== */
-            $successMessage = 'Seats booked successfully';
-            $responseData = [];
+            if ($intent->status !== 'succeeded') {
+                return response()->json(['success' => false, 'message' => 'Payment failed.'], 400);
+            }
+
+            $paymentId = $intent->id;
+
+            /* -----------------------------------------------------
+               💾 DATABASE ALLOCATION LOGIC
+            ----------------------------------------------------- */
+            $bookings = $event->table_bookings ?? [];
+            $assignedTables = [];
+            $paidAmount = $validated['amount'];
+            $fullTablesCount = $event->full_tables_booked;
 
             if ($validated['booking_type'] === 'full_table') {
-
                 $tableNo = null;
-
-                // 🔍 find first EMPTY table
                 for ($i = 1; $i <= $event->total_tables; $i++) {
                     $tableBookings = $bookings[$i] ?? [];
                     $bookedSeats = collect($tableBookings)->sum('total_seats');
-
                     if ($bookedSeats === 0) {
                         $tableNo = $i;
                         break;
@@ -119,173 +122,123 @@ class DonationBookingApiController extends Controller
                 }
 
                 if (!$tableNo) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'No empty table available for full table booking'
-                    ], 400);
+                    return response()->json(['success' => false, 'message' => 'No empty table available'], 400);
                 }
 
                 $bookings[$tableNo][] = [
-                    'type'        => 'full_table',
-                    'first_name'  => $validated['first_name'],
-                    'last_name'   => $validated['last_name'],
-                    'email'       => $validated['email'],
-                    'phone'       => $validated['phone'],
-                    'seat_types'  => [],
-                    'total_seats' => $event->seats_per_table,
-                    'booked_at'   => now()->toDateTimeString(),
-                    'payment_id'  => $paymentId,
-                    'paid_amount' => $paidAmount,
+                    'type'          => 'full_table',
+                    'first_name'    => $validated['first_name'],
+                    'last_name'     => $validated['last_name'],
+                    'email'         => $validated['email'],
+                    'phone'         => $validated['phone'],
+                    'seat_types'    => [],
+                    'total_seats'   => $event->seats_per_table,
+                    'booked_at'     => now()->toDateTimeString(),
+                    'payment_id'    => $paymentId,
+                    'paid_amount'   => $paidAmount,
                     'checked_in_at' => null,
                 ];
-
-                $event->update([
-                    'table_bookings'     => $bookings,
-                    'full_tables_booked' => $event->full_tables_booked + 1
-                ]);
-                $assignedTables[] = $tableNo;
+                $fullTablesCount++;
                 $successMessage = 'Full table booked successfully';
-                $responseData = ['table_no' => $tableNo];
-            }
+                $assignedTables[] = $tableNo;
+            } else {
+                $seatTypes = $validated['seat_types'] ?? [];
+                $totalSeatsRequested = array_sum($seatTypes);
 
-            /* =====================================================
-               🔵 SEAT BOOKING (AUTO TABLE SHIFT)
-            ===================================================== */
-            $seatTypes = $validated['seat_types'] ?? [];
-            $totalSeats = array_sum($seatTypes);
-
-            if ($validated['booking_type'] === 'seats' && $totalSeats <= 0) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Select at least one seat'
-                ], 422);
-            }
-
-            $remainingSeats = $totalSeats;
-            $remainingSeatTypes = $seatTypes;
-
-            for ($table = 1; $table <= $event->total_tables; $table++) {
-
-                // ❌ Skip tables that already have FULL TABLE
-                $tableBookings = $bookings[$table] ?? [];
-                $alreadyBooked = collect($tableBookings)->sum('total_seats');
-
-                if ($alreadyBooked >= $event->seats_per_table) {
-                    continue;
+                if ($totalSeatsRequested <= 0) {
+                    return response()->json(['success' => false, 'message' => 'Select at least one seat'], 422);
                 }
 
-                $availableSeats = $event->seats_per_table - $alreadyBooked;
-                if ($availableSeats <= 0) continue;
+                $remainingSeats = $totalSeatsRequested;
+                $remainingSeatTypes = $seatTypes;
 
-                $seatsForTable = min($availableSeats, $remainingSeats);
+                for ($table = 1; $table <= $event->total_tables; $table++) {
+                    $tableBookings = $bookings[$table] ?? [];
+                    $alreadyBooked = collect($tableBookings)->sum('total_seats');
 
-                // 🔥 Seat-type proportional split
-                $assignedSeatTypes = $this->splitSeatTypes(
-                    $remainingSeatTypes,
-                    $seatsForTable
-                );
+                    if ($alreadyBooked >= $event->seats_per_table) continue;
 
-                // Reduce remaining
-                foreach ($assignedSeatTypes as $type => $qty) {
-                    $remainingSeatTypes[$type] -= $qty;
-                    if ($remainingSeatTypes[$type] <= 0) {
-                        unset($remainingSeatTypes[$type]);
+                    $availableInTable = $event->seats_per_table - $alreadyBooked;
+                    $seatsForThisTable = min($availableInTable, $remainingSeats);
+                    $assignedSeatTypes = $this->splitSeatTypes($remainingSeatTypes, $seatsForThisTable);
+
+                    foreach ($assignedSeatTypes as $type => $qty) {
+                        $remainingSeatTypes[$type] -= $qty;
+                        if ($remainingSeatTypes[$type] <= 0) unset($remainingSeatTypes[$type]);
                     }
+
+                    $bookings[$table][] = [
+                        'type'          => 'seats',
+                        'first_name'    => $validated['first_name'],
+                        'last_name'     => $validated['last_name'],
+                        'email'         => $validated['email'],
+                        'phone'         => $validated['phone'],
+                        'seat_types'    => $assignedSeatTypes,
+                        'total_seats'   => array_sum($assignedSeatTypes),
+                        'booked_at'     => now()->toDateTimeString(),
+                        'payment_id'    => $paymentId,
+                        'paid_amount'   => $paidAmount,
+                        'checked_in_at' => null,
+                    ];
+
+                    $remainingSeats -= $seatsForThisTable;
+                    $assignedTables[] = $table;
+                    if ($remainingSeats <= 0) break;
                 }
 
-                $bookings[$table][] = [
-                    'type'        => 'seats',
-                    'first_name'  => $validated['first_name'],
-                    'last_name'   => $validated['last_name'],
-                    'email'       => $validated['email'],
-                    'phone'       => $validated['phone'],
-                    'seat_types'  => $assignedSeatTypes,
-                    'total_seats' => array_sum($assignedSeatTypes),
-                    'booked_at'   => now()->toDateTimeString(),
-                    'payment_id'  => $paymentId,
-                    'paid_amount' => $paidAmount,
-                    'checked_in_at' => null,
-                ];
-
-                $remainingSeats -= $seatsForTable;
-                $assignedTables[] = $table;
-                if ($remainingSeats <= 0) break;
+                if ($remainingSeats > 0) {
+                    return response()->json(['success' => false, 'message' => 'Not enough seats available'], 400);
+                }
+                $successMessage = 'Seats booked successfully';
             }
 
-            if ($validated['booking_type'] === 'seats' && $remainingSeats > 0) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Not enough seats available'
-                ], 400);
-            }
-
+            /* -----------------------------------------------------
+               ✅ UPDATE DATABASE RECORD (With Payment Info)
+            ----------------------------------------------------- */
             $event->update([
-                'table_bookings' => $bookings
+                'table_bookings'           => $bookings,
+                'full_tables_booked'       => $fullTablesCount,
+                'stripe_payment_intent_id' => $paymentId,
+                'payment_status'           => 'paid',
             ]);
 
-            // Email ticket with QR
+            /* -----------------------------------------------------
+               📧 EMAIL TICKET WITH QR
+            ----------------------------------------------------- */
             $bookingSummary = [
-                'type' => $validated['booking_type'],
-                'first_name' => $validated['first_name'],
-                'last_name' => $validated['last_name'],
-                'email' => $validated['email'],
-                'phone' => $validated['phone'],
-                'seat_types' => $seatTypes,
-                'total_seats' => $validated['booking_type'] === 'full_table'
-                    ? $event->seats_per_table
-                    : array_sum($seatTypes),
-                'tables' => array_unique($assignedTables),
+                'type'        => $validated['booking_type'],
+                'first_name'  => $validated['first_name'],
+                'last_name'   => $validated['last_name'],
+                'email'       => $validated['email'],
+                'phone'       => $validated['phone'],
+                'seat_types'  => $validated['seat_types'] ?? [],
+                'total_seats' => $validated['booking_type'] === 'full_table' ? $event->seats_per_table : $totalSeatsRequested,
+                'tables'      => array_unique($assignedTables),
             ];
 
-            $mailSent = true;
-            $mailError = null;
+            $mailSent = false;
             try {
-                // Encode a check-in URL in the QR so it can be opened directly
                 $qrPayload = route('donationBooking.checkIn', ['qr_token' => $paymentId]);
-
-                $qr = QrCode::create($qrPayload)
-                    ->setEncoding(new Encoding('UTF-8'))
-                    ->setSize(400);
+                $qr = QrCode::create($qrPayload)->setEncoding(new Encoding('UTF-8'))->setSize(400);
                 $writer = new PngWriter();
                 $qrDataUrl = $writer->write($qr)->getDataUri();
 
                 Mail::to($validated['email'])->send(
-                    new DonationBookingTicketMail(
-                        $event->toArray(),
-                        $bookingSummary,
-                        $paymentId,
-                        $qrDataUrl,
-                        (float) $paidAmount
-                    )
+                    new DonationBookingTicketMail($event->toArray(), $bookingSummary, $paymentId, $qrDataUrl, (float)$paidAmount)
                 );
+                $mailSent = true;
             } catch (Throwable $mailEx) {
-                $mailSent = false;
-                $mailError = $mailEx->getMessage();
-                Log::error('API donation booking mail send failed', [
-                    'event_id' => $event->id,
-                    'payment_id' => $paymentId,
-                    'email' => $validated['email'],
-                    'error' => $mailError,
-                ]);
-            }
-
-            if ($mailSent) {
-                Log::info('API donation booking mail sent', [
-                    'event_id' => $event->id,
-                    'payment_id' => $paymentId,
-                    'email' => $validated['email'],
-                ]);
+                Log::error('Mail failed', ['error' => $mailEx->getMessage()]);
             }
 
             return response()->json([
                 'success' => true,
                 'message' => $successMessage,
-                'data' => $responseData,
                 'payment_id' => $paymentId,
-                'mail_sent' => $mailSent,
-                'mail_error' => $mailError,
+                'mail_sent' => $mailSent
             ], 200);
         } catch (Throwable $e) {
+            Log::error('Booking error', ['error' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
                 'message' => 'Booking failed',
@@ -299,18 +252,10 @@ class DonationBookingApiController extends Controller
     ===================================================== */
     public function checkIn(Request $request): JsonResponse
     {
-        $validated = $request->validate([
-            'qr_token' => 'required|string',
-        ]);
-
+        $validated = $request->validate(['qr_token' => 'required|string']);
         $event = DonationBooking::latest()->first();
 
-        if (!$event) {
-            return response()->json([
-                'success' => false,
-                'message' => 'No event found'
-            ], 404);
-        }
+        if (!$event) return response()->json(['success' => false, 'message' => 'No event found'], 404);
 
         $bookings = $event->table_bookings ?? [];
         $matched = [];
@@ -318,50 +263,24 @@ class DonationBookingApiController extends Controller
 
         foreach ($bookings as $tableNo => $tableBookings) {
             foreach ($tableBookings as $idx => $booking) {
-                if (($booking['payment_id'] ?? '') !== $validated['qr_token']) {
-                    continue;
+                if (($booking['payment_id'] ?? '') === $validated['qr_token']) {
+                    $alreadyChecked = !empty($booking['checked_in_at']);
+                    $checkInTime = $alreadyChecked ? $booking['checked_in_at'] : Carbon::now()->toDateTimeString();
+
+                    $bookings[$tableNo][$idx]['checked_in_at'] = $checkInTime;
+                    $updated = $updated || !$alreadyChecked;
+
+                    $matched[] = array_merge($booking, [
+                        'table_no' => $tableNo,
+                        'already_checked_in' => $alreadyChecked
+                    ]);
                 }
-
-                $alreadyChecked = !empty($booking['checked_in_at']);
-                $checkInTime = $alreadyChecked ? $booking['checked_in_at'] : Carbon::now()->toDateTimeString();
-
-                // update booking entry
-                $bookings[$tableNo][$idx]['checked_in_at'] = $checkInTime;
-                $updated = $updated || !$alreadyChecked;
-
-                $matched[] = [
-                    'table_no' => $tableNo,
-                    'type' => $booking['type'] ?? 'seats',
-                    'first_name' => $booking['first_name'] ?? '',
-                    'last_name' => $booking['last_name'] ?? '',
-                    'email' => $booking['email'] ?? '',
-                    'phone' => $booking['phone'] ?? '',
-                    'seat_types' => $booking['seat_types'] ?? [],
-                    'total_seats' => $booking['total_seats'] ?? 0,
-                    'checked_in_at' => $checkInTime,
-                    'already_checked_in' => $alreadyChecked,
-                ];
             }
         }
 
-        if (empty($matched)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'No booking found for this QR token',
-            ], 404);
-        }
+        if (empty($matched)) return response()->json(['success' => false, 'message' => 'Invalid QR token'], 404);
+        if ($updated) $event->update(['table_bookings' => $bookings]);
 
-        if ($updated) {
-            $event->update(['table_bookings' => $bookings]);
-        }
-
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'event_id' => $event->id,
-                'payment_id' => $validated['qr_token'],
-                'bookings' => $matched,
-            ],
-        ]);
+        return response()->json(['success' => true, 'data' => ['bookings' => $matched]]);
     }
 }

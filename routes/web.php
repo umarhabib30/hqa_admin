@@ -181,3 +181,4 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/permissions', [PermissionController::class, 'index'])->name('permissions.index');
     Route::post('/permissions/update-role', [PermissionController::class, 'updateRolePermissions'])->name('permissions.update-role');
 });
+

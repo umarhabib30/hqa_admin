@@ -26,12 +26,12 @@
     <li>Payment ID: {{ $paymentIntentId }}</li>
     <li>Booking Type: {{ ucfirst($booking['type'] ?? 'seats') }}</li>
     <li>Paid Amount: ${{ number_format($paidAmount, 2) }}</li>
-    <li>Tables: {{ implode(', ', $booking['tables'] ?? []) ?: 'N/A' }}</li>
     <li>Total Seats: {{ $booking['total_seats'] ?? 0 }}</li>
 </ul>
 
 <p>
-    May Allah accept our fasts, our efforts, and our intentions, and bless you for your continued support of Islamic education.
+    May Allah accept our fasts, our efforts, and our intentions, and bless you for your continued support of Islamic
+    education.
     We look forward to sharing a meaningful and spiritually uplifting evening with you.
 </p>
 
