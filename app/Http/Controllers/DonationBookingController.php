@@ -274,7 +274,38 @@ class DonationBookingController extends Controller
      */
     public function scanPage()
     {
-        return view('dashboard.donation.donationBooking.scan');
+        $event = DonationBooking::latest()->first();
+        $checkedIn = [];
+
+        if ($event) {
+            $bookings = $event->table_bookings ?? [];
+            foreach ($bookings as $tableNo => $tableBookings) {
+                foreach ($tableBookings as $booking) {
+                    if (empty($booking['checked_in_at'])) {
+                        continue;
+                    }
+
+                    $checkedIn[] = [
+                        'table_no' => $tableNo,
+                        'payment_id' => $booking['payment_id'] ?? '',
+                        'type' => $booking['type'] ?? 'seats',
+                        'first_name' => $booking['first_name'] ?? '',
+                        'last_name' => $booking['last_name'] ?? '',
+                        'email' => $booking['email'] ?? '',
+                        'phone' => $booking['phone'] ?? '',
+                        'seat_types' => $booking['seat_types'] ?? [],
+                        'total_seats' => $booking['total_seats'] ?? 0,
+                        'checked_in_at' => $booking['checked_in_at'],
+                    ];
+                }
+            }
+
+            usort($checkedIn, function ($a, $b) {
+                return strcmp((string) ($b['checked_in_at'] ?? ''), (string) ($a['checked_in_at'] ?? ''));
+            });
+        }
+
+        return view('dashboard.donation.donationBooking.scan', compact('event', 'checkedIn'));
     }
 
     public function update(Request $request, $id)
@@ -354,16 +385,26 @@ class DonationBookingController extends Controller
 
     public function checkIn(Request $request)
     {
-        $validated = $request->validate([
-            'qr_token' => 'required|string',
-        ]);
+        // Accept qr_token via GET query string (e.g. /donation-booking/check-in?qr_token=xxx)
+        $qrToken = (string) ($request->query('qr_token') ?? $request->input('qr_token') ?? '');
+        $qrToken = trim($qrToken);
+
+        if ($qrToken === '') {
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => 'Missing QR token'], 422);
+            }
+
+            return redirect()->route('donationBooking.scan')->with('error', 'Missing QR token');
+        }
 
         $event = DonationBooking::latest()->first();
 
         if (!$event) {
-            return redirect()
-                ->route('donationBooking.scan')
-                ->with('error', 'No event found');
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => 'No event found'], 404);
+            }
+
+            return redirect()->route('donationBooking.scan')->with('error', 'No event found');
         }
 
         $bookings = $event->table_bookings ?? [];
@@ -372,7 +413,7 @@ class DonationBookingController extends Controller
 
         foreach ($bookings as $tableNo => $tableBookings) {
             foreach ($tableBookings as $idx => $booking) {
-                if (($booking['payment_id'] ?? '') !== $validated['qr_token']) {
+                if (($booking['payment_id'] ?? '') !== $qrToken) {
                     continue;
                 }
 
@@ -394,19 +435,32 @@ class DonationBookingController extends Controller
                     'total_seats' => $booking['total_seats'] ?? 0,
                     'checked_in_at' => $checkInTime,
                     'already_checked_in' => $alreadyChecked,
-                    'payment_id' => $validated['qr_token'],
+                    'payment_id' => $qrToken,
                 ];
             }
         }
 
         if (empty($matched)) {
-            return redirect()
-                ->route('donationBooking.scan')
-                ->with('error', 'No booking found for this QR token');
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => 'No booking found for this QR token'], 404);
+            }
+
+            return redirect()->route('donationBooking.scan')->with('error', 'No booking found for this QR token');
         }
 
         if ($updated) {
             $event->update(['table_bookings' => $bookings]);
+        }
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'event_id' => $event->id,
+                    'payment_id' => $qrToken,
+                    'bookings' => $matched,
+                ],
+            ]);
         }
 
         return redirect()
@@ -414,7 +468,7 @@ class DonationBookingController extends Controller
             ->with('success', 'Check-in successful')
             ->with('checkin_data', [
                 'event_id' => $event->id,
-                'payment_id' => $validated['qr_token'],
+                'payment_id' => $qrToken,
                 'bookings' => $matched,
             ]);
     }

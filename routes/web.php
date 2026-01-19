@@ -87,7 +87,7 @@ Route::get(
     [DonationBookingController::class, 'scanPage']
 )->name('donationBooking.scan');
 Route::get(
-    '/donation-booking/check-in/{qr_token}',
+    '/donation-booking/check-in',
     [DonationBookingController::class, 'checkIn']
 )->name('donationBooking.checkIn');
 

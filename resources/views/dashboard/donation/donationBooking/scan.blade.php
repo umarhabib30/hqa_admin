@@ -36,6 +36,61 @@
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-gray-700" id="booking-details"></div>
     </div>
+
+    {{-- CHECKED-IN LIST --}}
+    <div class="bg-white rounded-xl shadow p-4">
+        <div class="flex items-center justify-between mb-3">
+            <h2 class="text-lg font-semibold text-gray-800">Checked-in People</h2>
+            <div class="text-sm text-gray-600">
+                Total: <span id="checkedin-count" class="font-semibold">{{ count($checkedIn ?? []) }}</span>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="min-w-full text-sm border-collapse">
+                <thead class="bg-gray-100">
+                    <tr>
+                        <th class="px-3 py-2 border text-left">Time</th>
+                        <th class="px-3 py-2 border text-left">Table</th>
+                        <th class="px-3 py-2 border text-left">Name</th>
+                        <th class="px-3 py-2 border text-left">Email</th>
+                        <th class="px-3 py-2 border text-left">Type</th>
+                        <th class="px-3 py-2 border text-left">Seats</th>
+                    </tr>
+                </thead>
+                <tbody id="checkedin-body">
+                    @forelse(($checkedIn ?? []) as $row)
+                        <tr class="border-t" data-key="{{ ($row['payment_id'] ?? '') }}-{{ ($row['table_no'] ?? '') }}">
+                            <td class="px-3 py-2 border">
+                                {{ $row['checked_in_at'] ?? '' }}
+                            </td>
+                            <td class="px-3 py-2 border">
+                                {{ $row['table_no'] ?? '' }}
+                            </td>
+                            <td class="px-3 py-2 border">
+                                {{ ($row['first_name'] ?? '') }} {{ ($row['last_name'] ?? '') }}
+                            </td>
+                            <td class="px-3 py-2 border break-all">
+                                {{ $row['email'] ?? '' }}
+                            </td>
+                            <td class="px-3 py-2 border">
+                                {{ ucfirst($row['type'] ?? 'seats') }}
+                            </td>
+                            <td class="px-3 py-2 border">
+                                {{ $row['total_seats'] ?? 0 }}
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="6" class="px-3 py-6 text-center text-gray-500">
+                                No one has checked in yet.
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
 @endsection
 
@@ -45,13 +100,16 @@
 <script>
 (function () {
   const readerId = "qr-reader";
-  const apiUrl = "{{ url('/api/donationBooking/check-in') }}";
+  // Use the web check-in endpoint (same one the QR code opens)
+  const apiUrl = "{{ url('/donation-booking/check-in') }}";
   const statusEl = document.getElementById('scan-status');
   const errorEl = document.getElementById('scan-error');
   const resultCard = document.getElementById('result-card');
   const detailsEl = document.getElementById('booking-details');
   const scanAgainBtn = document.getElementById('scan-again');
   const enableBtn = document.getElementById('enable-camera');
+  const checkedInBody = document.getElementById('checkedin-body');
+  const checkedInCount = document.getElementById('checkedin-count');
 
   let scanner = null;
   let starting = false;
@@ -119,6 +177,48 @@
     resultCard.classList.remove('hidden');
   };
 
+  const escapeHtml = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+
+  const upsertCheckedInRows = (payload) => {
+    const bookings = payload.bookings || [];
+    if (!checkedInBody || !checkedInCount || !bookings.length) return;
+
+    let added = 0;
+    bookings.forEach((b) => {
+      const key = `${payload.payment_id || ''}-${b.table_no || ''}`;
+      if (!key.trim()) return;
+
+      // If row exists, don't duplicate
+      if (checkedInBody.querySelector(`tr[data-key="${CSS.escape(key)}"]`)) return;
+
+      const tr = document.createElement('tr');
+      tr.className = 'border-t';
+      tr.setAttribute('data-key', key);
+      tr.innerHTML = `
+        <td class="px-3 py-2 border">${escapeHtml(b.checked_in_at || '')}</td>
+        <td class="px-3 py-2 border">${escapeHtml(b.table_no || '')}</td>
+        <td class="px-3 py-2 border">${escapeHtml((b.first_name || '') + ' ' + (b.last_name || ''))}</td>
+        <td class="px-3 py-2 border break-all">${escapeHtml(b.email || '')}</td>
+        <td class="px-3 py-2 border">${escapeHtml((b.type || 'seats').toString().charAt(0).toUpperCase() + (b.type || 'seats').toString().slice(1))}</td>
+        <td class="px-3 py-2 border">${escapeHtml(b.total_seats ?? 0)}</td>
+      `;
+
+      // Insert at top (after header/empty row)
+      const emptyRow = checkedInBody.querySelector('tr td[colspan]');
+      if (emptyRow) {
+        emptyRow.parentElement.remove();
+      }
+      checkedInBody.insertBefore(tr, checkedInBody.firstChild);
+      added += 1;
+    });
+
+    if (added > 0) {
+      checkedInCount.textContent = String((Number(checkedInCount.textContent) || 0) + added);
+    }
+  };
+
   const sendCheckIn = async (token) => {
     hideError();
     showStatus('Validating ticket...');
@@ -135,6 +235,7 @@
         return;
       }
       renderDetails(data.data || {});
+      upsertCheckedInRows(data.data || {});
     } catch (e) {
       hideStatus();
       showError('Network error. Please try again.');
