@@ -7,25 +7,37 @@
     <title>HQA Fundraiser Ticket - Premium Edition</title>
     <style>
         /**
-         * NOTE:
-         * Dompdf does NOT execute JavaScript, so Tailwind CDN ("cdn.tailwindcss.com") won't work in PDFs.
-         * Keep this template PDF-friendly with plain CSS + table layout.
-         */
+ * PDF-friendly CSS (dompdf safe)
+ * Fixes right-side clipping by:
+ *  - controlling PDF page margins via @page
+ *  - removing body padding
+ *  - forcing card to fit printable width (no 920px overflow)
+ */
+
+        @page {
+            margin: 18px;
+            /* adjust if you want more/less white space around the ticket */
+        }
+
         * {
             box-sizing: border-box;
         }
 
+        html,
         body {
+            margin: 0;
+            padding: 0;
+            /* IMPORTANT: no body padding for PDF */
             font-family: DejaVu Sans, Arial, Helvetica, sans-serif;
             background: #f8fafc;
-            margin: 0;
-            padding: 24px;
             color: #0f172a;
         }
 
+        /* Outer wrapper */
         .card {
             width: 100%;
-            max-width: 920px;
+            max-width: 100%;
+            /* IMPORTANT: prevents overflow/clipping */
             margin: 0 auto;
             background: #ffffff;
             border: 1px solid #e2e8f0;
@@ -33,6 +45,7 @@
             overflow: hidden;
         }
 
+        /* Header */
         .header {
             padding: 28px 32px;
         }
@@ -76,6 +89,7 @@
             font-weight: 800;
         }
 
+        /* Hero */
         .hero {
             padding: 0 32px 18px 32px;
         }
@@ -94,6 +108,7 @@
             display: block;
         }
 
+        /* Main section */
         .main {
             width: 100%;
             padding: 22px 32px 32px 32px;
@@ -109,6 +124,7 @@
             padding-left: 18px;
         }
 
+        /* QR */
         .qrBox {
             border: 1px solid #e2e8f0;
             border-radius: 18px;
@@ -117,6 +133,7 @@
             background: #ffffff;
         }
 
+        /* Info rows */
         .info {
             margin-top: 18px;
         }
@@ -145,6 +162,7 @@
             line-height: 1.35;
         }
 
+        /* Details panel */
         .details {
             background: #f8fafc;
             border: 1px solid #e2e8f0;
@@ -196,6 +214,7 @@
             margin-bottom: 14px;
         }
 
+        /* Seat grid */
         .seatGrid {
             width: 100%;
             border-top: 1px solid #e2e8f0;
@@ -221,6 +240,7 @@
             margin-top: 2px;
         }
 
+        /* Footer */
         .footer {
             background: #0f172a;
             padding: 18px 26px;
@@ -242,6 +262,21 @@
             line-height: 1.5;
             margin: 0;
         }
+
+        /* Optional: if your dompdf still clips on some printers, reduce horizontal padding a bit */
+        @media print {
+            .header {
+                padding: 24px 26px;
+            }
+
+            .hero {
+                padding: 0 26px 16px 26px;
+            }
+
+            .main {
+                padding: 18px 26px 26px 26px;
+            }
+        }
     </style>
 </head>
 
@@ -257,14 +292,12 @@
     $startDate = !empty($event['event_start_date'])
         ? Carbon::parse($event['event_start_date'])->format('F j, Y')
         : 'TBA';
-    $endDate = !empty($event['event_end_date'])
-        ? Carbon::parse($event['event_end_date'])->format('F j, Y')
-        : null;
-    $dateLabel = $endDate && $endDate !== $startDate ? ($startDate . ' - ' . $endDate) : $startDate;
+    $endDate = !empty($event['event_end_date']) ? Carbon::parse($event['event_end_date'])->format('F j, Y') : null;
+    $dateLabel = $endDate && $endDate !== $startDate ? $startDate . ' - ' . $endDate : $startDate;
 
     $startTime = !empty($event['event_start_time']) ? Carbon::parse($event['event_start_time'])->format('g:i A') : null;
     $endTime = !empty($event['event_end_time']) ? Carbon::parse($event['event_end_time'])->format('g:i A') : null;
-    $timeLabel = $startTime && $endTime ? ($startTime . ' - ' . $endTime) : ($startTime ?: ($endTime ?: 'TBA'));
+    $timeLabel = $startTime && $endTime ? $startTime . ' - ' . $endTime : ($startTime ?: ($endTime ?: 'TBA'));
 
     $location = $event['event_location'] ?? 'TBA';
 
@@ -347,11 +380,12 @@
                             <div class="attendeeEmail">{{ $email }}</div>
 
                             <div class="seatGrid">
-                                @if($bookingType === 'full_table')
+                                @if ($bookingType === 'full_table')
                                     <table width="100%" cellspacing="0" cellpadding="0">
                                         <tr>
                                             <td class="seatCell">
-                                                <div class="seatQty">{{ str_pad((string) $totalSeats, 2, '0', STR_PAD_LEFT) }}</div>
+                                                <div class="seatQty">
+                                                    {{ str_pad((string) $totalSeats, 2, '0', STR_PAD_LEFT) }}</div>
                                                 <div class="seatLbl">Seats (Full Table)</div>
                                             </td>
                                         </tr>
@@ -360,22 +394,27 @@
                                     @php
                                         $filteredSeatTypes = [];
                                         foreach ($seatTypes as $t => $q) {
-                                            if ((int) $q > 0) $filteredSeatTypes[$t] = (int) $q;
+                                            if ((int) $q > 0) {
+                                                $filteredSeatTypes[$t] = (int) $q;
+                                            }
                                         }
                                         $chunks = array_chunk($filteredSeatTypes, 3, true);
                                     @endphp
 
-                                    @if(count($filteredSeatTypes))
+                                    @if (count($filteredSeatTypes))
                                         <table width="100%" cellspacing="0" cellpadding="0">
-                                            @foreach($chunks as $row)
+                                            @foreach ($chunks as $row)
                                                 <tr>
-                                                    @foreach($row as $t => $q)
+                                                    @foreach ($row as $t => $q)
                                                         <td class="seatCell" width="33%">
-                                                            <div class="seatQty">{{ str_pad((string) $q, 2, '0', STR_PAD_LEFT) }}</div>
-                                                            <div class="seatLbl">{{ ucwords(str_replace(['_', '-'], ' ', (string) $t)) }}</div>
+                                                            <div class="seatQty">
+                                                                {{ str_pad((string) $q, 2, '0', STR_PAD_LEFT) }}</div>
+                                                            <div class="seatLbl">
+                                                                {{ ucwords(str_replace(['_', '-'], ' ', (string) $t)) }}
+                                                            </div>
                                                         </td>
                                                     @endforeach
-                                                    @for($i = count($row); $i < 3; $i++)
+                                                    @for ($i = count($row); $i < 3; $i++)
                                                         <td class="seatCell" width="33%">&nbsp;</td>
                                                     @endfor
                                                 </tr>
@@ -385,7 +424,8 @@
                                         <table width="100%" cellspacing="0" cellpadding="0">
                                             <tr>
                                                 <td class="seatCell">
-                                                    <div class="seatQty">{{ str_pad((string) $totalSeats, 2, '0', STR_PAD_LEFT) }}</div>
+                                                    <div class="seatQty">
+                                                        {{ str_pad((string) $totalSeats, 2, '0', STR_PAD_LEFT) }}</div>
                                                     <div class="seatLbl">Total Seats</div>
                                                 </td>
                                             </tr>
