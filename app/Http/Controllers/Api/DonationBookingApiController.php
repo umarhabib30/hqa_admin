@@ -218,7 +218,8 @@ class DonationBookingApiController extends Controller
 
             $mailSent = false;
             try {
-                $qrPayload = route('donationBooking.checkIn', ['qr_token' => $paymentId]);
+                // Use url() to avoid wrong named-route URL generation in some deployments
+                $qrPayload = url('/donation-booking/check-in') . '?qr_token=' . urlencode($paymentId);
                 $qr = QrCode::create($qrPayload)->setEncoding(new Encoding('UTF-8'))->setSize(400);
                 $writer = new PngWriter();
                 $qrDataUrl = $writer->write($qr)->getDataUri();

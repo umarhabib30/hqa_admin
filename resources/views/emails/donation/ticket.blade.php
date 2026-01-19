@@ -1,24 +1,49 @@
 @php
-    $name = ($booking['first_name'] ?? '') . ' ' . ($booking['last_name'] ?? '');
+    use Carbon\Carbon;
+
+    // Event details (dynamic; if missing, show N/A to avoid misleading attendees)
+    $eventTitle = !empty($event['event_title']) ? $event['event_title'] : 'N/A';
+
+    $eventDate = 'N/A';
+    if (!empty($event['event_start_date'])) {
+        try {
+            $eventDate = Carbon::parse($event['event_start_date'])->format('F jS');
+        } catch (\Throwable $e) {
+            $eventDate = 'N/A';
+        }
+    }
+
+    $timeRange = 'N/A';
+    if (!empty($event['event_start_time']) && !empty($event['event_end_time'])) {
+        try {
+            $start = Carbon::parse($event['event_start_time'])->format('g:i A');
+            $end = Carbon::parse($event['event_end_time'])->format('g:i A');
+            $timeRange = $start . ' to ' . $end;
+        } catch (\Throwable $e) {
+            $timeRange = 'N/A';
+        }
+    }
+
+    $venue = !empty($event['event_location']) ? $event['event_location'] : 'N/A';
+    $contact = !empty($event['contact_number']) ? $event['contact_number'] : 'N/A';
 @endphp
 
-<p>Assalamu alaikum {{ trim($name) ?: 'Guest' }},</p>
+<p>Assalamu alaikum,</p>
 
 <p>
-    Thank you for registering for the <strong>Houston Quran Academy Annual Ramadan Fundraiser</strong>.
-    We are grateful for your commitment to our school and your support of this meaningful Iftar and fundraiser.
-    We are excited to welcome you and would be honored to have you join us for Iftar, insha’Allah.
+    Thank you for registering for the {{ $eventTitle }}. We are grateful for your commitment to our school and your
+    support of this meaningful Iftar and fundraiser. We are excited to welcome you and would be honored to have you
+    join us for Iftar, insha’Allah, on {{ $eventDate }} from {{ $timeRange }}.
 </p>
 
 <p>
-    <strong>Event:</strong> February 21st, 4:30 PM – 9:30 PM<br>
-    <strong>Venue:</strong> 945 Gessner Rd, Houston, TX 77024 (4th floor, Azalea Ballroom)<br>
-    <strong>Parking:</strong> Complimentary self-parking available; valet offered at discounted rates by the Westin.
+    The event will be held at {{ $venue }}. Complimentary self-parking will be available for our event, and valet
+    parking is also offered at discounted rates by the Westin for your convenience. If you need any assistance or have
+    questions prior to the event, please feel free to contact us at {{ $contact }}.
 </p>
 
 <p>
     We've attached your PDF ticket with QR code for entry. Please bring it on the event day.
-    If you need any assistance before the event, contact us at <strong>832-762-9212</strong>.
 </p>
 
 <p><strong>Your Booking</strong></p>
@@ -31,8 +56,7 @@
 
 <p>
     May Allah accept our fasts, our efforts, and our intentions, and bless you for your continued support of Islamic
-    education.
-    We look forward to sharing a meaningful and spiritually uplifting evening with you.
+    education. We look forward to sharing a meaningful and spiritually uplifting evening with you.
 </p>
 
-<p>HQA Event Organizing Team</p>
+<p>HQA Event Organising Team</p>
