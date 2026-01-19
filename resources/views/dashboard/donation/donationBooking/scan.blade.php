@@ -12,8 +12,8 @@
         </a>
     </div>
 
-    <div class="bg-white rounded-xl shadow p-4">
-        <div id="qr-reader" class="w-full" style="min-height:320px; background:#f9fafb; border:1px dashed #d1d5db; border-radius:8px;"></div>
+    <div class="bg-white rounded-xl shadow p-4 max-w-md mx-auto">
+        <div id="qr-reader" class="w-full" style="min-height:220px; background:#f9fafb; border:1px dashed #d1d5db; border-radius:8px;"></div>
         <div class="mt-3 text-xs text-gray-500">
             Grant camera permission. For mobile, prefer Chrome/Safari and rear camera. Camera access requires HTTPS or localhost.
         </div>
