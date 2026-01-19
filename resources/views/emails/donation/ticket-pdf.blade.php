@@ -5,54 +5,242 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>HQA Fundraiser Ticket - Premium Edition</title>
-    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap");
+        /**
+         * NOTE:
+         * Dompdf does NOT execute JavaScript, so Tailwind CDN ("cdn.tailwindcss.com") won't work in PDFs.
+         * Keep this template PDF-friendly with plain CSS + table layout.
+         */
+        * {
+            box-sizing: border-box;
+        }
 
         body {
-            font-family: "Plus Jakarta Sans", sans-serif;
-            background-color: #f8fafc;
-        }
-
-        .ticket-cutout {
-            position: relative;
-        }
-
-        .ticket-cutout::before,
-        .ticket-cutout::after {
-            content: "";
-            position: absolute;
-            width: 30px;
-            height: 30px;
+            font-family: DejaVu Sans, Arial, Helvetica, sans-serif;
             background: #f8fafc;
-            border-radius: 50%;
-            top: 50%;
-            transform: translateY(-50%);
-            z-index: 10;
+            margin: 0;
+            padding: 24px;
+            color: #0f172a;
         }
 
-        .ticket-cutout::before {
-            left: -15px;
+        .card {
+            width: 100%;
+            max-width: 920px;
+            margin: 0 auto;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 24px;
+            overflow: hidden;
         }
 
-        .ticket-cutout::after {
-            right: -15px;
+        .header {
+            padding: 28px 32px;
         }
 
-        @media print {
-            .no-print {
-                display: none;
-            }
+        .title {
+            font-size: 28px;
+            font-weight: 800;
+            line-height: 1.15;
+            margin: 0;
+        }
 
-            body {
-                background: white;
-                padding: 0;
-            }
+        .subtitle {
+            margin-top: 6px;
+            font-size: 12px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: #64748b;
+            font-weight: 700;
+        }
 
-            .max-w-4xl {
-                border: none;
-                shadow: none;
-            }
+        .ticketNo {
+            font-size: 10px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: #94a3b8;
+            font-weight: 700;
+            margin-top: 8px;
+            text-align: right;
+        }
+
+        .badge {
+            display: inline-block;
+            background: #4f46e5;
+            width: 56px;
+            height: 56px;
+            border-radius: 14px;
+            text-align: center;
+            line-height: 56px;
+            color: #ffffff;
+            font-size: 22px;
+            font-weight: 800;
+        }
+
+        .hero {
+            padding: 0 32px 18px 32px;
+        }
+
+        .heroBox {
+            height: 200px;
+            border-radius: 22px;
+            overflow: hidden;
+            background: #0f172a;
+        }
+
+        .heroBox img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            display: block;
+        }
+
+        .main {
+            width: 100%;
+            padding: 22px 32px 32px 32px;
+        }
+
+        .leftCol {
+            vertical-align: top;
+            padding-right: 18px;
+        }
+
+        .rightCol {
+            vertical-align: top;
+            padding-left: 18px;
+        }
+
+        .qrBox {
+            border: 1px solid #e2e8f0;
+            border-radius: 18px;
+            padding: 10px;
+            display: inline-block;
+            background: #ffffff;
+        }
+
+        .info {
+            margin-top: 18px;
+        }
+
+        .infoRow {
+            margin-bottom: 12px;
+            padding: 10px 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            background: #f8fafc;
+        }
+
+        .infoLabel {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #94a3b8;
+            font-weight: 800;
+            margin-bottom: 4px;
+        }
+
+        .infoValue {
+            font-size: 13px;
+            font-weight: 700;
+            color: #0f172a;
+            line-height: 1.35;
+        }
+
+        .details {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 24px;
+            padding: 20px 20px 18px 20px;
+        }
+
+        .kicker {
+            font-size: 10px;
+            font-weight: 800;
+            color: #4f46e5;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+        }
+
+        .type {
+            font-size: 24px;
+            font-weight: 900;
+            font-style: italic;
+            margin-bottom: 8px;
+        }
+
+        .meta {
+            font-size: 12px;
+            color: #475569;
+            margin-bottom: 16px;
+        }
+
+        .sectionLabel {
+            font-size: 10px;
+            font-weight: 800;
+            color: #94a3b8;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+        }
+
+        .attendeeName {
+            font-size: 16px;
+            font-weight: 800;
+            margin-bottom: 2px;
+        }
+
+        .attendeeEmail {
+            font-size: 12px;
+            color: #64748b;
+            font-style: italic;
+            margin-bottom: 14px;
+        }
+
+        .seatGrid {
+            width: 100%;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 14px;
+        }
+
+        .seatCell {
+            text-align: center;
+            padding: 8px 6px;
+        }
+
+        .seatQty {
+            font-size: 20px;
+            font-weight: 900;
+        }
+
+        .seatLbl {
+            font-size: 10px;
+            font-weight: 800;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 2px;
+        }
+
+        .footer {
+            background: #0f172a;
+            padding: 18px 26px;
+            text-align: center;
+            color: #cbd5e1;
+        }
+
+        .footerTitle {
+            color: #a5b4fc;
+            font-weight: 900;
+            font-size: 10px;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+
+        .footerText {
+            font-size: 11px;
+            line-height: 1.5;
+            margin: 0;
         }
     </style>
 </head>
@@ -96,182 +284,127 @@
     $paidLabel = '$' . number_format((float) ($paidAmount ?? 0), 2);
 @endphp
 
-<body class="p-6 md:p-12">
-    <div
-        class="max-w-4xl mx-auto bg-white shadow-[0_32px_64px_-15px_rgba(0,0,0,0.1)] rounded-[2rem] overflow-hidden border border-slate-100">
-        <div class="flex justify-between items-center p-10">
-            <div class="space-y-1">
-                <h1 class="text-4xl font-[800] text-slate-900 tracking-tight leading-none">
-                    {{ $eventTitle }}
-                </h1>
-                <p class="text-slate-500 font-medium text-lg uppercase tracking-wider">
-                    Houston Quran Academy
-                </p>
-            </div>
-            <div class="flex flex-col items-center">
-                <div
-                    class="w-20 h-20 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-200">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="w-12 h-12 text-white" fill="none"
-                        viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                            d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                    </svg>
-                </div>
-                <span class="text-[10px] font-bold text-slate-400 mt-2 tracking-widest uppercase text-center">
-                    Ticket #{{ $ticketNo }}
-                </span>
-            </div>
+<body>
+    <div class="card">
+        <div class="header">
+            <table width="100%" cellspacing="0" cellpadding="0">
+                <tr>
+                    <td style="vertical-align: top;">
+                        <div class="title">{{ $eventTitle }}</div>
+                        <div class="subtitle">Houston Quran Academy</div>
+                    </td>
+                    <td style="vertical-align: top; text-align: right;">
+                        <div class="badge">HQA</div>
+                        <div class="ticketNo">Ticket #{{ $ticketNo }}</div>
+                    </td>
+                </tr>
+            </table>
         </div>
 
-        <div class="px-10">
-            <div class="relative group h-64 overflow-hidden rounded-3xl">
+        <div class="hero">
+            <div class="heroBox">
                 <img src="https://images.unsplash.com/photo-1541339907198-e08756ebafe3?q=80&w=2070&auto=format&fit=crop"
-                    alt="Academy Campus" class="w-full h-full object-cover" />
-                <div class="absolute inset-0 bg-gradient-to-t from-slate-900/40 to-transparent"></div>
+                    alt="Event image" />
             </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-12 gap-0 p-10 ticket-cutout">
-            <div class="md:col-span-5 pr-0 md:pr-10 border-r-0 md:border-r border-dashed border-slate-200">
-                <div class="flex flex-col items-center md:items-start">
-                    <div class="p-3 bg-white rounded-2xl border border-slate-100 shadow-sm mb-8">
-                        <img src="{{ $qrCodeDataUrl }}"
-                            alt="Ticket QR Code" class="w-36 h-36" />
-                    </div>
-
-                    <div class="space-y-6 w-full">
-                        <div class="flex items-start group">
-                            <div
-                                class="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center mr-4 text-indigo-600 transition-colors group-hover:bg-indigo-600 group-hover:text-white">
-                                📅
-                            </div>
-                            <div>
-                                <p class="text-[10px] uppercase font-bold text-slate-400 tracking-widest">
-                                    Date
-                                </p>
-                                <p class="font-bold text-slate-800">{{ $dateLabel }}</p>
-                            </div>
+        <div class="main">
+            <table width="100%" cellspacing="0" cellpadding="0">
+                <tr>
+                    <td class="leftCol" width="42%">
+                        <div class="qrBox">
+                            <img src="{{ $qrCodeDataUrl }}" alt="Ticket QR Code" width="160" height="160" />
                         </div>
 
-                        <div class="flex items-start group">
-                            <div
-                                class="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center mr-4 text-indigo-600 transition-colors group-hover:bg-indigo-600 group-hover:text-white">
-                                🕒
+                        <div class="info">
+                            <div class="infoRow">
+                                <div class="infoLabel">Date</div>
+                                <div class="infoValue">{{ $dateLabel }}</div>
                             </div>
-                            <div>
-                                <p class="text-[10px] uppercase font-bold text-slate-400 tracking-widest">
-                                    Time
-                                </p>
-                                <p class="font-bold text-slate-800">{{ $timeLabel }}</p>
+                            <div class="infoRow">
+                                <div class="infoLabel">Time</div>
+                                <div class="infoValue">{{ $timeLabel }}</div>
                             </div>
-                        </div>
-
-                        <div class="flex items-start group">
-                            <div
-                                class="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center mr-4 text-indigo-600 transition-colors group-hover:bg-indigo-600 group-hover:text-white">
-                                📍
-                            </div>
-                            <div>
-                                <p class="text-[10px] uppercase font-bold text-slate-400 tracking-widest">
-                                    Location
-                                </p>
-                                <p class="font-bold text-slate-800 text-sm">
-                                    {!! nl2br(e($location)) !!}
-                                </p>
+                            <div class="infoRow">
+                                <div class="infoLabel">Location</div>
+                                <div class="infoValue">{!! nl2br(e($location)) !!}</div>
                             </div>
                         </div>
-                    </div>
-                </div>
-            </div>
+                    </td>
 
-            <div class="md:col-span-7 pl-0 md:pl-10 mt-10 md:mt-0">
-                <div class="bg-slate-50 rounded-[2rem] p-8 border border-slate-100 relative overflow-hidden">
-                    <div class="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full -mr-16 -mt-16"></div>
-
-                    <div class="flex justify-between items-start mb-8">
-                        <div>
-                            <p class="text-[10px] font-bold text-indigo-600 uppercase tracking-[0.2em] mb-1">
-                                Ticket Type
-                            </p>
-                            <h2 class="text-3xl font-black text-slate-900 italic">
-                                {{ $typeLabel }}
-                            </h2>
-                            <p class="text-slate-500 font-medium text-sm mt-2">
-                                <span class="font-bold">Tables:</span> {{ $tablesLabel }}
-                                <span class="mx-2">•</span>
-                                <span class="font-bold">Paid:</span> {{ $paidLabel }}
-                            </p>
-                        </div>
-                    </div>
-
-                    <div class="mb-10">
-                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">
-                            Primary Attendee
-                        </p>
-                        <p class="text-slate-900 font-extrabold text-xl">{{ $name }}</p>
-                        <p class="text-slate-500 font-medium text-sm italic">
-                            {{ $email }}
-                        </p>
-                    </div>
-
-                    <div class="pt-8 border-t border-slate-200">
-                        @if($bookingType === 'full_table')
-                            <div class="text-center">
-                                <p class="text-3xl font-black text-slate-900">{{ str_pad((string) $totalSeats, 2, '0', STR_PAD_LEFT) }}</p>
-                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
-                                    Seats (Full Table)
-                                </p>
+                    <td class="rightCol" width="58%">
+                        <div class="details">
+                            <div class="kicker">Ticket Type</div>
+                            <div class="type">{{ $typeLabel }}</div>
+                            <div class="meta">
+                                <strong>Tables:</strong> {{ $tablesLabel }}
+                                &nbsp;&nbsp;•&nbsp;&nbsp;
+                                <strong>Paid:</strong> {{ $paidLabel }}
                             </div>
-                        @else
-                            @php
-                                $filteredSeatTypes = [];
-                                foreach ($seatTypes as $t => $q) {
-                                    if ((int) $q > 0) $filteredSeatTypes[$t] = (int) $q;
-                                }
-                            @endphp
 
-                            @if(count($filteredSeatTypes))
-                                <div class="grid grid-cols-3 gap-4">
-                                    @foreach($filteredSeatTypes as $t => $q)
-                                        <div class="text-center">
-                                            <p class="text-2xl font-black text-slate-900">{{ str_pad((string) $q, 2, '0', STR_PAD_LEFT) }}</p>
-                                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
-                                                {{ ucwords(str_replace(['_', '-'], ' ', (string) $t)) }}
-                                            </p>
-                                        </div>
-                                    @endforeach
-                                </div>
-                            @else
-                                <div class="text-center">
-                                    <p class="text-3xl font-black text-slate-900">{{ str_pad((string) $totalSeats, 2, '0', STR_PAD_LEFT) }}</p>
-                                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
-                                        Total Seats
-                                    </p>
-                                </div>
-                            @endif
-                        @endif
-                    </div>
-                </div>
-            </div>
+                            <div class="sectionLabel">Primary Attendee</div>
+                            <div class="attendeeName">{{ $name }}</div>
+                            <div class="attendeeEmail">{{ $email }}</div>
+
+                            <div class="seatGrid">
+                                @if($bookingType === 'full_table')
+                                    <table width="100%" cellspacing="0" cellpadding="0">
+                                        <tr>
+                                            <td class="seatCell">
+                                                <div class="seatQty">{{ str_pad((string) $totalSeats, 2, '0', STR_PAD_LEFT) }}</div>
+                                                <div class="seatLbl">Seats (Full Table)</div>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                @else
+                                    @php
+                                        $filteredSeatTypes = [];
+                                        foreach ($seatTypes as $t => $q) {
+                                            if ((int) $q > 0) $filteredSeatTypes[$t] = (int) $q;
+                                        }
+                                        $chunks = array_chunk($filteredSeatTypes, 3, true);
+                                    @endphp
+
+                                    @if(count($filteredSeatTypes))
+                                        <table width="100%" cellspacing="0" cellpadding="0">
+                                            @foreach($chunks as $row)
+                                                <tr>
+                                                    @foreach($row as $t => $q)
+                                                        <td class="seatCell" width="33%">
+                                                            <div class="seatQty">{{ str_pad((string) $q, 2, '0', STR_PAD_LEFT) }}</div>
+                                                            <div class="seatLbl">{{ ucwords(str_replace(['_', '-'], ' ', (string) $t)) }}</div>
+                                                        </td>
+                                                    @endforeach
+                                                    @for($i = count($row); $i < 3; $i++)
+                                                        <td class="seatCell" width="33%">&nbsp;</td>
+                                                    @endfor
+                                                </tr>
+                                            @endforeach
+                                        </table>
+                                    @else
+                                        <table width="100%" cellspacing="0" cellpadding="0">
+                                            <tr>
+                                                <td class="seatCell">
+                                                    <div class="seatQty">{{ str_pad((string) $totalSeats, 2, '0', STR_PAD_LEFT) }}</div>
+                                                    <div class="seatLbl">Total Seats</div>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    @endif
+                                @endif
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            </table>
         </div>
 
-        <div class="bg-slate-900 p-8 text-center relative">
-            <div class="absolute inset-0 opacity-10"
-                style="
-            background-image: radial-gradient(#ffffff 1px, transparent 1px);
-            background-size: 20px 20px;
-          ">
-            </div>
-            <div class="relative z-10">
-                <p class="text-indigo-300 font-bold text-xs uppercase tracking-[0.3em] mb-2">
-                    Thank you for your generous support
-                </p>
-                <p class="text-slate-400 text-[11px] leading-relaxed max-w-md mx-auto">
-                    This ticket is required for entry. Please have the QR code ready for
-                    scanning at the reception desk. All proceeds benefit the HQA
-                    Education Fund.
-                </p>
-            </div>
+        <div class="footer">
+            <div class="footerTitle">Thank you for your generous support</div>
+            <p class="footerText">
+                This ticket is required for entry. Please have the QR code ready for scanning at the reception desk.
+                All proceeds benefit the HQA Education Fund.
+            </p>
         </div>
     </div>
 </body>
