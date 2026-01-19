@@ -236,7 +236,8 @@
     const seatSummary = Object.keys(seatTypes).length
       ? Object.entries(seatTypes).map(([t, q]) => `${t}: ${q}`).join(', ')
       : 'N/A';
-    const babySitting = bookings.reduce((sum, b) => sum + (Number(b?.baby_sitting ?? 0) || 0), 0);
+    // baby_sitting is stored once per payment; show the max across entries (avoids double counting)
+    const babySitting = bookings.reduce((m, b) => Math.max(m, (Number(b?.baby_sitting ?? 0) || 0)), 0);
 
     detailsEl.innerHTML = `
       <div><span class="font-semibold">Name:</span> ${booking.first_name || ''} ${booking.last_name || ''}</div>

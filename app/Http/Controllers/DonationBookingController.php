@@ -305,10 +305,19 @@ class DonationBookingController extends Controller
 
         if ($event) {
             $bookings = $event->table_bookings ?? [];
+            $babyByPayment = [];
             foreach ($bookings as $tableNo => $tableBookings) {
                 foreach ($tableBookings as $booking) {
                     if (empty($booking['checked_in_at'])) {
                         continue;
+                    }
+
+                    $pid = (string) ($booking['payment_id'] ?? '');
+                    if ($pid !== '') {
+                        $babyByPayment[$pid] = max(
+                            (int) ($babyByPayment[$pid] ?? 0),
+                            DonationBooking::babySittingForBookingEntry((array) $booking)
+                        );
                     }
 
                     $checkedIn[] = [
@@ -322,11 +331,21 @@ class DonationBookingController extends Controller
                         'seat_types' => $booking['seat_types'] ?? [],
                         // Seats that consume TABLE capacity (exclude baby sitting; backwards compatible)
                         'total_seats' => DonationBooking::occupiedSeatsForBookingEntry((array) $booking, (int) $event->seats_per_table),
+                        // will be normalized per payment_id below
                         'baby_sitting' => DonationBooking::babySittingForBookingEntry((array) $booking),
                         'checked_in_at' => $booking['checked_in_at'],
                     ];
                 }
             }
+
+            // Normalize baby_sitting so it displays consistently for multi-table bookings
+            foreach ($checkedIn as &$row) {
+                $pid = (string) ($row['payment_id'] ?? '');
+                if ($pid !== '' && isset($babyByPayment[$pid])) {
+                    $row['baby_sitting'] = (int) $babyByPayment[$pid];
+                }
+            }
+            unset($row);
 
             usort($checkedIn, function ($a, $b) {
                 return strcmp((string) ($b['checked_in_at'] ?? ''), (string) ($a['checked_in_at'] ?? ''));
@@ -467,6 +486,22 @@ class DonationBookingController extends Controller
                     'payment_id' => $qrToken,
                 ];
             }
+        }
+
+        // Normalize baby_sitting so it displays consistently for multi-table bookings
+        $babyForPayment = 0;
+        foreach ($bookings as $tableBookings) {
+            foreach ($tableBookings as $booking) {
+                if (($booking['payment_id'] ?? '') === $qrToken) {
+                    $babyForPayment = max($babyForPayment, DonationBooking::babySittingForBookingEntry((array) $booking));
+                }
+            }
+        }
+        if ($babyForPayment > 0) {
+            foreach ($matched as &$m) {
+                $m['baby_sitting'] = $babyForPayment;
+            }
+            unset($m);
         }
 
         if (empty($matched)) {

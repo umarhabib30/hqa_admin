@@ -51,11 +51,17 @@
                 $remainingSeats = $event->total_seats - $bookedSeats;
 
                 $seatTypeTotals = [];
-                $babySittingTotal = 0;
+                $babyByPayment = [];
                 foreach ($bookings as $table) {
                     foreach ($table as $booking) {
+                        $pid = (string) ($booking['payment_id'] ?? '');
+                        if ($pid !== '') {
+                            $babyByPayment[$pid] = max(
+                                (int) ($babyByPayment[$pid] ?? 0),
+                                \App\Models\DonationBooking::babySittingForBookingEntry((array) $booking)
+                            );
+                        }
                         if (($booking['type'] ?? '') === 'seats') {
-                            $babySittingTotal += \App\Models\DonationBooking::babySittingForBookingEntry((array) $booking);
                             foreach (($booking['seat_types'] ?? []) as $type => $qty) {
                                 if (\App\Models\DonationBooking::isBabySittingType((string) $type)) {
                                     continue;
@@ -65,6 +71,7 @@
                         }
                     }
                 }
+                $babySittingTotal = array_sum($babyByPayment);
             @endphp
 
             {{-- MAIN SUMMARY CARDS --}}
@@ -178,7 +185,8 @@
                                     @foreach($tableUsers as $user)
                                         @php
                                             $occupiedSeats = \App\Models\DonationBooking::occupiedSeatsForBookingEntry((array) $user, (int) $event->seats_per_table);
-                                            $babyCount = \App\Models\DonationBooking::babySittingForBookingEntry((array) $user);
+                                            $pid = (string) ($user['payment_id'] ?? '');
+                                            $babyCount = $pid !== '' ? (int) ($babyByPayment[$pid] ?? 0) : \App\Models\DonationBooking::babySittingForBookingEntry((array) $user);
                                         @endphp
                                         <tr class="border-t hover:bg-gray-50">
                                             <td class="px-3 py-2">
