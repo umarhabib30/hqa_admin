@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
+use Illuminate\Support\Str;
 
 class DonationBookingController extends Controller
 {
@@ -105,7 +106,7 @@ class DonationBookingController extends Controller
         
         $request->validate([
             'booking_type' => 'required|in:seats,full_table',
-            'payment_method' => 'required|string',
+            'payment_method' => 'nullable|string',
 
             'first_name' => 'required|string',
             'last_name'  => 'required|string',
@@ -136,26 +137,39 @@ class DonationBookingController extends Controller
 
         try {
             /* ============================
-           1️⃣ STRIPE PAYMENT (TEST)
+           1️⃣ STRIPE PAYMENT (skip if amount = 0)
         ============================ */
-            Stripe::setApiKey(config('services.stripe.secret'));
+            $paidAmount = (float) $request->amount;
+            $paymentId = null;
 
-            $intent = PaymentIntent::create([
-                'amount' => (int) ($request->amount * 100),
-                'currency' => 'usd',
-                'payment_method' => $request->payment_method,
-                'confirm' => true,
-                'metadata' => [
-                    'event_id' => $event->id,
-                    'event_title' => $event->event_title,
-                    'booking_type' => $request->booking_type,
-                    'customer_email' => $request->email,
-                ],
-            ]);
+            if ($paidAmount > 0) {
+                if (empty($request->payment_method)) {
+                    throw new \Exception('payment_method is required when amount > 0');
+                }
 
+                Stripe::setApiKey(config('services.stripe.secret'));
 
-            if ($intent->status !== 'succeeded') {
-                throw new \Exception('Payment failed');
+                $intent = PaymentIntent::create([
+                    'amount' => (int) round($paidAmount * 100),
+                    'currency' => 'usd',
+                    'payment_method' => $request->payment_method,
+                    'confirm' => true,
+                    'metadata' => [
+                        'event_id' => $event->id,
+                        'event_title' => $event->event_title,
+                        'booking_type' => $request->booking_type,
+                        'customer_email' => $request->email,
+                    ],
+                ]);
+
+                if ($intent->status !== 'succeeded') {
+                    throw new \Exception('Payment failed');
+                }
+
+                $paymentId = $intent->id;
+            } else {
+                // Free booking (no card/Stripe)
+                $paymentId = (string) Str::uuid();
             }
 
             /* ============================
@@ -189,8 +203,8 @@ class DonationBookingController extends Controller
                             'seat_types' => [],
                             'total_seats' => $event->seats_per_table,
                             'baby_sitting' => 0,
-                            'paid_amount' => $request->amount,
-                            'payment_id' => $intent->id,
+                            'paid_amount' => $paidAmount,
+                            'payment_id' => $paymentId,
                             'booked_at'  => now(),
                             'checked_in_at' => null,
                         ];
@@ -240,8 +254,8 @@ class DonationBookingController extends Controller
                         'seat_types' => $seatTypesForTables,
                         'total_seats' => $allocate,
                         'baby_sitting' => 0,
-                        'paid_amount' => $request->amount,
-                        'payment_id' => $intent->id,
+                        'paid_amount' => $paidAmount,
+                        'payment_id' => $paymentId,
                         'booked_at'  => now(),
                         'checked_in_at' => null,
                     ];

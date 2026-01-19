@@ -74,42 +74,56 @@ class DonationBookingApiController extends Controller
                 'last_name'      => 'required|string',
                 'email'          => 'required|email',
                 'phone'          => 'required|string',
-                'amount'         => 'required|numeric|min:1',
-                'payment_method' => 'required|string', // From React
+                'amount'         => 'required|numeric|min:0',
+                'payment_method' => 'nullable|string', // From React (required only if amount > 0)
             ]);
 
             $event = DonationBooking::findOrFail($id);
 
             /* -----------------------------------------------------
-               💳 STRIPE PAYMENT PROCESSING
+               💳 STRIPE PAYMENT PROCESSING (skip if amount = 0)
             ----------------------------------------------------- */
-            Stripe::setApiKey(config('services.stripe.secret'));
+            $paidAmount = (float) $validated['amount'];
+            $paymentId = null;
+            $paymentStatus = 'paid';
 
-            $intent = PaymentIntent::create([
-                'amount' => $validated['amount'] * 100, // Cents
-                'currency' => 'usd',
-                'payment_method' => $validated['payment_method'],
-                'confirm' => true,
-                'automatic_payment_methods' => [
-                    'enabled' => true,
-                    'allow_redirects' => 'never',
-                ],
-                'description' => "Booking for " . $event->event_title,
-                'receipt_email' => $validated['email'],
-            ]);
+            if ($paidAmount > 0) {
+                if (empty($validated['payment_method'])) {
+                    return response()->json(['success' => false, 'message' => 'payment_method is required when amount > 0'], 422);
+                }
 
-            if ($intent->status !== 'succeeded') {
-                return response()->json(['success' => false, 'message' => 'Payment failed.'], 400);
+                Stripe::setApiKey(config('services.stripe.secret'));
+
+                $intent = PaymentIntent::create([
+                    'amount' => (int) round($paidAmount * 100), // Cents
+                    'currency' => 'usd',
+                    'payment_method' => $validated['payment_method'],
+                    'confirm' => true,
+                    'automatic_payment_methods' => [
+                        'enabled' => true,
+                        'allow_redirects' => 'never',
+                    ],
+                    'description' => "Booking for " . $event->event_title,
+                    'receipt_email' => $validated['email'],
+                ]);
+
+                if ($intent->status !== 'succeeded') {
+                    return response()->json(['success' => false, 'message' => 'Payment failed.'], 400);
+                }
+
+                $paymentId = $intent->id;
+                $paymentStatus = 'paid';
+            } else {
+                // Free booking (no card/Stripe)
+                $paymentId = (string) Str::uuid();
+                $paymentStatus = 'free';
             }
-
-            $paymentId = $intent->id;
 
             /* -----------------------------------------------------
                💾 DATABASE ALLOCATION LOGIC
             ----------------------------------------------------- */
             $bookings = $event->table_bookings ?? [];
             $assignedTables = [];
-            $paidAmount = $validated['amount'];
             $fullTablesCount = $event->full_tables_booked;
 
             if ($validated['booking_type'] === 'full_table') {
@@ -241,8 +255,9 @@ class DonationBookingApiController extends Controller
             $event->update([
                 'table_bookings'           => $bookings,
                 'full_tables_booked'       => $fullTablesCount,
-                'stripe_payment_intent_id' => $paymentId,
-                'payment_status'           => 'paid',
+                // note: these fields are stored on the event record in this codebase
+                'stripe_payment_intent_id' => $paidAmount > 0 ? $paymentId : null,
+                'payment_status'           => $paymentStatus,
             ]);
 
             /* -----------------------------------------------------
