@@ -64,6 +64,7 @@ class DonationBookingApiController extends Controller
     ===================================================== */
     public function bookSeat(Request $request, $id): JsonResponse
     {
+        Log::info('Booking request received', ['request' => $request->all()]);
         try {
             $validated = $request->validate([
                 'booking_type'   => 'required|in:full_table,seats',
