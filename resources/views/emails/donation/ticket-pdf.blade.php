@@ -372,8 +372,8 @@
                             <div class="kicker">Ticket Type</div>
                             <div class="type">{{ $typeLabel }}</div>
                             <div class="meta">
-                                <strong>Tables:</strong> {{ $tablesLabel }}
-                                &nbsp;&nbsp;•&nbsp;&nbsp;
+                                {{-- <strong>Tables:</strong> {{ $tablesLabel }}
+                                &nbsp;&nbsp;•&nbsp;&nbsp; --}}
                                 <strong>Paid:</strong> {{ $paidLabel }}
                                 &nbsp;&nbsp;•&nbsp;&nbsp;
                                 <strong>Baby Sitting:</strong> {{ $babySitting }}
