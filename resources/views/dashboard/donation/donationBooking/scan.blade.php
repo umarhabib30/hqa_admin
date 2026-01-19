@@ -242,10 +242,39 @@
     }
   };
 
+  // QR codes may contain the full check-in URL (e.g. https://site.com/donation-booking/check-in?qr_token=XXX)
+  // Extract qr_token reliably; otherwise fallback to the raw scanned value.
+  const extractQrToken = (scannedText) => {
+    const raw = String(scannedText || '').trim();
+    if (!raw) return '';
+
+    // Try URL parsing (works for absolute URLs and also relative URLs with a base)
+    try {
+      const u = new URL(raw, window.location.origin);
+      const t = u.searchParams.get('qr_token');
+      if (t) return t.trim();
+    } catch (e) {
+      // ignore
+    }
+
+    // Fallback: querystring-like
+    const m = raw.match(/[?&]qr_token=([^&#]+)/i);
+    if (m && m[1]) {
+      try { return decodeURIComponent(m[1]).trim(); } catch (e) { return m[1].trim(); }
+    }
+
+    return raw;
+  };
+
   const onScanSuccess = (decodedText) => {
     if (!decodedText || !scanner) return;
     scanner.pause(true);
-    sendCheckIn(decodedText);
+    const token = extractQrToken(decodedText);
+    if (!token) {
+      showError('Invalid QR code (missing token).');
+      return;
+    }
+    sendCheckIn(token);
   };
 
   const startScanner = async () => {
