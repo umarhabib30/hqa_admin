@@ -69,6 +69,7 @@ class DonationBookingApiController extends Controller
             $validated = $request->validate([
                 'booking_type'   => 'required|in:full_table,seats',
                 'seat_types'     => 'nullable|array',
+                'table_count'    => 'nullable|required_if:booking_type,full_table|integer|min:1',
                 'first_name'     => 'required|string',
                 'last_name'      => 'required|string',
                 'email'          => 'required|email',
@@ -112,38 +113,48 @@ class DonationBookingApiController extends Controller
             $fullTablesCount = $event->full_tables_booked;
 
             if ($validated['booking_type'] === 'full_table') {
-                $tableNo = null;
+                $tableCount = (int) ($validated['table_count'] ?? 1);
+                $emptyTables = [];
                 for ($i = 1; $i <= $event->total_tables; $i++) {
                     $tableBookings = $bookings[$i] ?? [];
                     $bookedSeats = collect($tableBookings)->sum(function ($entry) use ($event) {
                         return DonationBooking::occupiedSeatsForBookingEntry((array) $entry, (int) $event->seats_per_table);
                     });
                     if ($bookedSeats === 0) {
-                        $tableNo = $i;
-                        break;
+                        $emptyTables[] = $i;
+                        if (count($emptyTables) >= $tableCount) {
+                            break;
+                        }
                     }
                 }
 
-                if (!$tableNo) {
-                    return response()->json(['success' => false, 'message' => 'No empty table available'], 400);
+                if (count($emptyTables) < $tableCount) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Not enough empty tables available'
+                    ], 400);
                 }
 
-                $bookings[$tableNo][] = [
-                    'type'          => 'full_table',
-                    'first_name'    => $validated['first_name'],
-                    'last_name'     => $validated['last_name'],
-                    'email'         => $validated['email'],
-                    'phone'         => $validated['phone'],
-                    'seat_types'    => [],
-                    'total_seats'   => $event->seats_per_table,
-                    'booked_at'     => now()->toDateTimeString(),
-                    'payment_id'    => $paymentId,
-                    'paid_amount'   => $paidAmount,
-                    'checked_in_at' => null,
-                ];
-                $fullTablesCount++;
-                $successMessage = 'Full table booked successfully';
-                $assignedTables[] = $tableNo;
+                foreach ($emptyTables as $tableNo) {
+                    $bookings[$tableNo][] = [
+                        'type'          => 'full_table',
+                        'first_name'    => $validated['first_name'],
+                        'last_name'     => $validated['last_name'],
+                        'email'         => $validated['email'],
+                        'phone'         => $validated['phone'],
+                        'seat_types'    => [],
+                        'total_seats'   => $event->seats_per_table,
+                        'baby_sitting'  => 0,
+                        'booked_at'     => now()->toDateTimeString(),
+                        'payment_id'    => $paymentId,
+                        'paid_amount'   => $paidAmount,
+                        'checked_in_at' => null,
+                    ];
+                    $assignedTables[] = $tableNo;
+                }
+
+                $fullTablesCount += $tableCount;
+                $successMessage = $tableCount > 1 ? 'Full tables booked successfully' : 'Full table booked successfully';
             } else {
                 $seatTypes = $validated['seat_types'] ?? [];
                 $babySitting = DonationBooking::countBabySittingFromSeatTypes($seatTypes);
@@ -232,7 +243,9 @@ class DonationBookingApiController extends Controller
                 'phone'       => $validated['phone'],
                 'seat_types'  => $validated['booking_type'] === 'full_table' ? [] : ($seatTypesForTables ?? []),
                 'baby_sitting' => $validated['booking_type'] === 'full_table' ? 0 : ($babySitting ?? 0),
-                'total_seats' => $validated['booking_type'] === 'full_table' ? $event->seats_per_table : ($totalSeatsRequested ?? 0),
+                'total_seats' => $validated['booking_type'] === 'full_table'
+                    ? ($event->seats_per_table * (int) ($validated['table_count'] ?? 1))
+                    : ($totalSeatsRequested ?? 0),
                 'tables'      => array_unique($assignedTables),
             ];
 
@@ -256,7 +269,8 @@ class DonationBookingApiController extends Controller
                 'success' => true,
                 'message' => $successMessage,
                 'payment_id' => $paymentId,
-                'mail_sent' => $mailSent
+                'mail_sent' => $mailSent,
+                'tables' => array_values(array_unique($assignedTables)),
             ], 200);
         } catch (Throwable $e) {
             Log::error('Booking error', ['error' => $e->getMessage()]);
