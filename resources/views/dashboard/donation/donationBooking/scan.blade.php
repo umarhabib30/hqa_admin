@@ -1,6 +1,6 @@
 @extends('layouts.layout')
 @section('content')
-<div class="max-w-4xl mx-auto px-4 py-6 space-y-6">
+<div class="max-w-7xl mx-auto px-4 py-6 space-y-6">
     <div class="flex items-center justify-between">
         <div>
             <h1 class="text-2xl font-bold text-gray-800">Donation Booking Check-in</h1>
@@ -37,54 +37,80 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-gray-700" id="booking-details"></div>
     </div>
 
-    {{-- CHECKED-IN LIST --}}
+    {{-- BOOKINGS LIST --}}
     <div class="bg-white rounded-xl shadow border border-gray-100 overflow-hidden">
         <div class="p-4 sm:p-5 flex items-start sm:items-center justify-between gap-3">
             <div>
-                <h2 class="text-lg font-semibold text-gray-800">Checked-in People</h2>
-                <p class="text-xs text-gray-500 mt-0.5">Live updates as you scan tickets.</p>
+                <h2 class="text-lg font-semibold text-gray-800">Bookings</h2>
+                <p class="text-xs text-gray-500 mt-0.5">All bookings (scan to check-in). One row per payment.</p>
             </div>
             <div class="shrink-0 text-sm text-gray-600 bg-gray-50 border border-gray-200 px-3 py-1.5 rounded-lg">
-                Total: <span id="checkedin-count" class="font-semibold">{{ count($checkedIn ?? []) }}</span>
+                Total: <span id="bookings-count" class="font-semibold">{{ count($bookingsList ?? []) }}</span>
             </div>
         </div>
 
         {{-- Desktop/tablet: table --}}
         <div class="hidden md:block">
             <div class="overflow-x-auto">
-                <table class="min-w-full text-sm">
+                <table class="w-full text-sm">
                     <thead class="bg-gray-50 sticky top-0">
                         <tr class="text-xs uppercase tracking-wide text-gray-600">
-                            <th class="px-4 py-3 text-left border-t border-b">Checked-in</th>
-                            <th class="px-4 py-3 text-left border-t border-b">Table</th>
+                            <th class="px-4 py-3 text-left border-t border-b">Status</th>
+                            <th class="px-4 py-3 text-left border-t border-b">Check-in Time</th>
+                            <th class="px-4 py-3 text-left border-t border-b">Tables</th>
                             <th class="px-4 py-3 text-left border-t border-b">Attendee</th>
                             <th class="px-4 py-3 text-left border-t border-b">Email</th>
+                            <th class="px-4 py-3 text-left border-t border-b">Phone</th>
                             <th class="px-4 py-3 text-left border-t border-b">Type</th>
                             <th class="px-4 py-3 text-left border-t border-b">Seats</th>
                             <th class="px-4 py-3 text-left border-t border-b">Baby Sitting</th>
                         </tr>
                     </thead>
-                    <tbody id="checkedin-body" class="divide-y">
-                        @forelse(($checkedIn ?? []) as $row)
-                            <tr class="hover:bg-gray-50" data-key="{{ ($row['payment_id'] ?? '') }}-{{ ($row['table_no'] ?? '') }}">
+                    <tbody id="bookings-body" class="divide-y">
+                        @forelse(($bookingsList ?? []) as $row)
+                            <tr class="hover:bg-gray-50" data-key="{{ ($row['payment_id'] ?? '') }}">
+                                <td class="px-4 py-3 whitespace-nowrap text-gray-700">
+                                    @if(!empty($row['checked_in']))
+                                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+                                            Checked In
+                                        </span>
+                                    @else
+                                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700">
+                                            Not Checked In
+                                        </span>
+                                    @endif
+                                </td>
                                 <td class="px-4 py-3 whitespace-nowrap text-gray-700">
                                     @if(!empty($row['checked_in_at']))
                                         {{ \Carbon\Carbon::parse($row['checked_in_at'])->format('d:m:Y g:i A') }}
+                                    @else
+                                        <span class="text-gray-400">—</span>
                                     @endif
                                 </td>
-                                <td class="px-4 py-3 whitespace-nowrap">
-                                    <span class="inline-flex items-center justify-center px-2.5 py-1 rounded-full bg-[#00285E]/10 text-[#00285E] font-semibold">
-                                        {{ $row['table_no'] ?? '' }}
-                                    </span>
+                                <td class="px-4 py-3">
+                                    @php $tables = (array) ($row['tables'] ?? []); @endphp
+                                    @if(count($tables))
+                                        <div class="flex flex-wrap gap-1">
+                                            @foreach($tables as $tNo)
+                                                <span class="inline-flex items-center justify-center px-2.5 py-1 rounded-full bg-[#00285E]/10 text-[#00285E] font-semibold">
+                                                    {{ $tNo }}
+                                                </span>
+                                            @endforeach
+                                        </div>
+                                    @else
+                                        <span class="text-gray-400">—</span>
+                                    @endif
                                 </td>
                                 <td class="px-4 py-3">
                                     <div class="font-semibold text-gray-800">
                                         {{ ($row['first_name'] ?? '') }} {{ ($row['last_name'] ?? '') }}
                                     </div>
-                                    <div class="text-xs text-gray-500">{{ $row['phone'] ?? '' }}</div>
                                 </td>
                                 <td class="px-4 py-3 break-all text-gray-700">
                                     {{ $row['email'] ?? '' }}
+                                </td>
+                                <td class="px-4 py-3 whitespace-nowrap text-gray-700">
+                                    {{ $row['phone'] ?? '' }}
                                 </td>
                                 <td class="px-4 py-3 whitespace-nowrap">
                                     @php $t = strtolower($row['type'] ?? 'seats'); @endphp
@@ -109,9 +135,9 @@
                                 </td>
                             </tr>
                         @empty
-                            <tr id="checkedin-empty-row">
-                                <td colspan="7" class="px-4 py-10 text-center text-gray-500">
-                                    No one has checked in yet.
+                            <tr id="bookings-empty-row">
+                                <td colspan="9" class="px-4 py-10 text-center text-gray-500">
+                                    No bookings found yet.
                                 </td>
                             </tr>
                         @endforelse
@@ -122,19 +148,26 @@
 
         {{-- Mobile: card list --}}
         <div class="md:hidden border-t border-gray-100">
-            <div id="checkedin-cards" class="divide-y">
-                @forelse(($checkedIn ?? []) as $row)
-                    <div class="p-4" data-key="{{ ($row['payment_id'] ?? '') }}-{{ ($row['table_no'] ?? '') }}">
+            <div id="bookings-cards" class="divide-y">
+                @forelse(($bookingsList ?? []) as $row)
+                    <div class="p-4" data-key="{{ ($row['payment_id'] ?? '') }}">
                         <div class="flex items-start justify-between gap-3">
                             <div>
                                 <div class="font-semibold text-gray-800">
                                     {{ ($row['first_name'] ?? '') }} {{ ($row['last_name'] ?? '') }}
                                 </div>
                                 <div class="text-xs text-gray-500 break-all">{{ $row['email'] ?? '' }}</div>
+                                <div class="text-xs text-gray-500">{{ $row['phone'] ?? '' }}</div>
                             </div>
-                            <span class="inline-flex items-center justify-center px-2.5 py-1 rounded-full bg-[#00285E]/10 text-[#00285E] font-semibold">
-                                Table {{ $row['table_no'] ?? '' }}
-                            </span>
+                            @if(!empty($row['checked_in']))
+                                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+                                    Checked In
+                                </span>
+                            @else
+                                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700">
+                                    Not Checked In
+                                </span>
+                            @endif
                         </div>
 
                         <div class="mt-3 flex flex-wrap gap-2">
@@ -152,13 +185,21 @@
                             <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-gray-50 text-gray-600 text-xs font-semibold">
                                 @if(!empty($row['checked_in_at']))
                                     {{ \Carbon\Carbon::parse($row['checked_in_at'])->format('d:m:Y g:i A') }}
+                                @else
+                                    —
                                 @endif
                             </span>
+                            @php $tables = (array) ($row['tables'] ?? []); @endphp
+                            @if(count($tables))
+                                <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-[#00285E]/10 text-[#00285E] text-xs font-semibold">
+                                    Tables: {{ implode(', ', $tables) }}
+                                </span>
+                            @endif
                         </div>
                     </div>
                 @empty
-                    <div id="checkedin-empty-card" class="p-6 text-center text-gray-500">
-                        No one has checked in yet.
+                    <div id="bookings-empty-card" class="p-6 text-center text-gray-500">
+                        No bookings found yet.
                     </div>
                 @endforelse
             </div>
@@ -181,9 +222,9 @@
   const detailsEl = document.getElementById('booking-details');
   const scanAgainBtn = document.getElementById('scan-again');
   const enableBtn = document.getElementById('enable-camera');
-  const checkedInBody = document.getElementById('checkedin-body');
-  const checkedInCards = document.getElementById('checkedin-cards');
-  const checkedInCount = document.getElementById('checkedin-count');
+  const bookingsBody = document.getElementById('bookings-body');
+  const bookingsCards = document.getElementById('bookings-cards');
+  const bookingsCount = document.getElementById('bookings-count');
 
   let scanner = null;
   let starting = false;
@@ -298,85 +339,75 @@
     return raw;
   };
 
-  const upsertCheckedInRows = (payload) => {
+  const upsertBookingRow = (payload) => {
     const bookings = payload.bookings || [];
-    if (!checkedInBody || !checkedInCount || !bookings.length) return;
+    if (!bookingsBody || !bookingsCount || !bookings.length) return;
 
-    let added = 0;
-    bookings.forEach((b) => {
-      const key = `${payload.payment_id || ''}-${b.table_no || ''}`;
-      if (!key.trim()) return;
+    const paymentId = String(payload.payment_id || '').trim();
+    if (!paymentId) return;
 
-      // If row exists, don't duplicate
-      const existsInTable = checkedInBody.querySelector(`tr[data-key="${CSS.escape(key)}"]`);
-      const existsInCards = checkedInCards ? checkedInCards.querySelector(`div[data-key="${CSS.escape(key)}"]`) : null;
-      if (existsInTable || existsInCards) return;
+    const first = bookings[0] || {};
+    const tables = [...new Set(bookings.map(b => b.table_no).filter(Boolean))].sort((a, b) => a - b);
+    const totalSeats = bookings.reduce((sum, b) => sum + (Number(b.total_seats) || 0), 0);
+    const babySitting = bookings.reduce((m, b) => Math.max(m, (Number(b?.baby_sitting ?? 0) || 0)), 0);
+    const checkedInAt = bookings.map(b => b.checked_in_at).filter(Boolean).sort().slice(-1)[0] || '';
 
-      const tr = document.createElement('tr');
-      tr.className = 'hover:bg-gray-50';
-      tr.setAttribute('data-key', key);
-      const type = (b.type || 'seats').toString();
-      const isFull = type.toLowerCase() === 'full_table';
-      const typeHtml = isFull
-        ? '<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">Full Table</span>'
-        : '<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">Seats</span>';
-      const babyHtml = (Number(b.baby_sitting ?? 0) || 0) > 0
-        ? `<span class="inline-flex items-center px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 font-semibold">${escapeHtml(b.baby_sitting)}</span>`
-        : `<span class="text-gray-400">—</span>`;
-      tr.innerHTML = `
-        <td class="px-4 py-3 whitespace-nowrap text-gray-700">${escapeHtml(formatCheckIn(b.checked_in_at || ''))}</td>
-        <td class="px-4 py-3 whitespace-nowrap">
-          <span class="inline-flex items-center justify-center px-2.5 py-1 rounded-full bg-[#00285E]/10 text-[#00285E] font-semibold">${escapeHtml(b.table_no || '')}</span>
-        </td>
+    const type = (first.type || 'seats').toString();
+    const isFull = type.toLowerCase() === 'full_table';
+    const typeHtml = isFull
+      ? '<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">Full Table</span>'
+      : '<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">Seats</span>';
+
+    const statusHtml = '<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">Checked In</span>';
+    const checkinTimeHtml = checkedInAt ? escapeHtml(formatCheckIn(checkedInAt)) : '—';
+
+    const tablesHtml = tables.length
+      ? tables.map(t => `<span class="inline-flex items-center justify-center px-2.5 py-1 rounded-full bg-[#00285E]/10 text-[#00285E] font-semibold">${escapeHtml(t)}</span>`).join(' ')
+      : '<span class="text-gray-400">—</span>';
+
+    const seatsHtml = `<span class="inline-flex items-center px-2.5 py-1 rounded-full bg-gray-100 text-gray-800 font-semibold">${escapeHtml(totalSeats)}</span>`;
+    const babyHtml = babySitting > 0
+      ? `<span class="inline-flex items-center px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 font-semibold">${escapeHtml(babySitting)}</span>`
+      : `<span class="text-gray-400">—</span>`;
+
+    const existingTr = bookingsBody.querySelector(`tr[data-key="${CSS.escape(paymentId)}"]`);
+    if (existingTr) {
+      existingTr.innerHTML = `
+        <td class="px-4 py-3 whitespace-nowrap">${statusHtml}</td>
+        <td class="px-4 py-3 whitespace-nowrap text-gray-700">${checkinTimeHtml}</td>
+        <td class="px-4 py-3"><div class="flex flex-wrap gap-1">${tablesHtml}</div></td>
         <td class="px-4 py-3">
-          <div class="font-semibold text-gray-800">${escapeHtml((b.first_name || '') + ' ' + (b.last_name || ''))}</div>
-          <div class="text-xs text-gray-500">${escapeHtml(b.phone || '')}</div>
+          <div class="font-semibold text-gray-800">${escapeHtml((first.first_name || '') + ' ' + (first.last_name || ''))}</div>
         </td>
-        <td class="px-4 py-3 break-all text-gray-700">${escapeHtml(b.email || '')}</td>
+        <td class="px-4 py-3 break-all text-gray-700">${escapeHtml(first.email || '')}</td>
+        <td class="px-4 py-3 whitespace-nowrap text-gray-700">${escapeHtml(first.phone || '')}</td>
         <td class="px-4 py-3 whitespace-nowrap">${typeHtml}</td>
-        <td class="px-4 py-3 whitespace-nowrap">
-          <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-gray-100 text-gray-800 font-semibold">${escapeHtml(b.total_seats ?? 0)}</span>
-        </td>
+        <td class="px-4 py-3 whitespace-nowrap">${seatsHtml}</td>
         <td class="px-4 py-3 whitespace-nowrap">${babyHtml}</td>
       `;
+    }
 
-      // Insert at top (after header/empty row)
-      const emptyRow = document.getElementById('checkedin-empty-row');
-      if (emptyRow) emptyRow.remove();
-      checkedInBody.insertBefore(tr, checkedInBody.firstChild);
-
-      if (checkedInCards) {
-        const emptyCard = document.getElementById('checkedin-empty-card');
-        if (emptyCard) emptyCard.remove();
-
-        const card = document.createElement('div');
-        card.className = 'p-4';
-        card.setAttribute('data-key', key);
-        card.innerHTML = `
+    if (bookingsCards) {
+      const existingCard = bookingsCards.querySelector(`div[data-key="${CSS.escape(paymentId)}"]`);
+      if (existingCard) {
+        existingCard.innerHTML = `
           <div class="flex items-start justify-between gap-3">
             <div>
-              <div class="font-semibold text-gray-800">${escapeHtml((b.first_name || '') + ' ' + (b.last_name || ''))}</div>
-              <div class="text-xs text-gray-500 break-all">${escapeHtml(b.email || '')}</div>
+              <div class="font-semibold text-gray-800">${escapeHtml((first.first_name || '') + ' ' + (first.last_name || ''))}</div>
+              <div class="text-xs text-gray-500 break-all">${escapeHtml(first.email || '')}</div>
+              <div class="text-xs text-gray-500">${escapeHtml(first.phone || '')}</div>
             </div>
-            <span class="inline-flex items-center justify-center px-2.5 py-1 rounded-full bg-[#00285E]/10 text-[#00285E] font-semibold">
-              Table ${escapeHtml(b.table_no || '')}
-            </span>
+            ${statusHtml}
           </div>
           <div class="mt-3 flex flex-wrap gap-2">
             ${typeHtml}
-            <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-gray-100 text-gray-800 text-xs font-semibold">Seats: ${escapeHtml(b.total_seats ?? 0)}</span>
-            <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 text-xs font-semibold">Baby Sitting: ${escapeHtml(b.baby_sitting ?? 0)}</span>
-            <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-gray-50 text-gray-600 text-xs font-semibold">${escapeHtml(formatCheckIn(b.checked_in_at || ''))}</span>
+            <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-gray-100 text-gray-800 text-xs font-semibold">Seats: ${escapeHtml(totalSeats)}</span>
+            <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 text-xs font-semibold">Baby Sitting: ${escapeHtml(babySitting)}</span>
+            <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-gray-50 text-gray-600 text-xs font-semibold">${escapeHtml(formatCheckIn(checkedInAt))}</span>
+            ${tables.length ? `<span class="inline-flex items-center px-2.5 py-1 rounded-full bg-[#00285E]/10 text-[#00285E] text-xs font-semibold">Tables: ${escapeHtml(tables.join(', '))}</span>` : ''}
           </div>
         `;
-        checkedInCards.insertBefore(card, checkedInCards.firstChild);
       }
-
-      added += 1;
-    });
-
-    if (added > 0) {
-      checkedInCount.textContent = String((Number(checkedInCount.textContent) || 0) + added);
     }
   };
 
@@ -396,7 +427,7 @@
         return;
       }
       renderDetails(data.data || {});
-      upsertCheckedInRows(data.data || {});
+      upsertBookingRow(data.data || {});
     } catch (e) {
       hideStatus();
       showError('Network error. Please try again.');

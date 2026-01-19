@@ -301,58 +301,70 @@ class DonationBookingController extends Controller
     public function scanPage()
     {
         $event = DonationBooking::latest()->first();
-        $checkedIn = [];
+        $bookingsList = [];
 
         if ($event) {
             $bookings = $event->table_bookings ?? [];
-            $babyByPayment = [];
+            $byPayment = [];
+
             foreach ($bookings as $tableNo => $tableBookings) {
                 foreach ($tableBookings as $booking) {
-                    if (empty($booking['checked_in_at'])) {
+                    $pid = (string) ($booking['payment_id'] ?? '');
+                    if ($pid === '') {
                         continue;
                     }
 
-                    $pid = (string) ($booking['payment_id'] ?? '');
-                    if ($pid !== '') {
-                        $babyByPayment[$pid] = max(
-                            (int) ($babyByPayment[$pid] ?? 0),
-                            DonationBooking::babySittingForBookingEntry((array) $booking)
-                        );
+                    if (!isset($byPayment[$pid])) {
+                        $byPayment[$pid] = [
+                            'payment_id' => $pid,
+                            'type' => $booking['type'] ?? 'seats',
+                            'first_name' => $booking['first_name'] ?? '',
+                            'last_name' => $booking['last_name'] ?? '',
+                            'email' => $booking['email'] ?? '',
+                            'phone' => $booking['phone'] ?? '',
+                            'tables' => [],
+                            'total_seats' => 0,
+                            'baby_sitting' => 0,
+                            'checked_in' => false,
+                            'checked_in_at' => null,
+                            'booked_at' => $booking['booked_at'] ?? null,
+                        ];
                     }
 
-                    $checkedIn[] = [
-                        'table_no' => $tableNo,
-                        'payment_id' => $booking['payment_id'] ?? '',
-                        'type' => $booking['type'] ?? 'seats',
-                        'first_name' => $booking['first_name'] ?? '',
-                        'last_name' => $booking['last_name'] ?? '',
-                        'email' => $booking['email'] ?? '',
-                        'phone' => $booking['phone'] ?? '',
-                        'seat_types' => $booking['seat_types'] ?? [],
-                        // Seats that consume TABLE capacity (exclude baby sitting; backwards compatible)
-                        'total_seats' => DonationBooking::occupiedSeatsForBookingEntry((array) $booking, (int) $event->seats_per_table),
-                        // will be normalized per payment_id below
-                        'baby_sitting' => DonationBooking::babySittingForBookingEntry((array) $booking),
-                        'checked_in_at' => $booking['checked_in_at'],
-                    ];
+                    $byPayment[$pid]['tables'][$tableNo] = true;
+                    $byPayment[$pid]['total_seats'] += DonationBooking::occupiedSeatsForBookingEntry((array) $booking, (int) $event->seats_per_table);
+                    $byPayment[$pid]['baby_sitting'] = max(
+                        (int) $byPayment[$pid]['baby_sitting'],
+                        DonationBooking::babySittingForBookingEntry((array) $booking)
+                    );
+
+                    if (!empty($booking['checked_in_at'])) {
+                        $byPayment[$pid]['checked_in'] = true;
+                        $ts = (string) $booking['checked_in_at'];
+                        $cur = (string) ($byPayment[$pid]['checked_in_at'] ?? '');
+                        if ($cur === '' || strcmp($ts, $cur) > 0) {
+                            $byPayment[$pid]['checked_in_at'] = $ts;
+                        }
+                    }
                 }
             }
 
-            // Normalize baby_sitting so it displays consistently for multi-table bookings
-            foreach ($checkedIn as &$row) {
-                $pid = (string) ($row['payment_id'] ?? '');
-                if ($pid !== '' && isset($babyByPayment[$pid])) {
-                    $row['baby_sitting'] = (int) $babyByPayment[$pid];
-                }
+            $bookingsList = array_values($byPayment);
+            foreach ($bookingsList as &$row) {
+                $row['tables'] = array_map('intval', array_keys($row['tables'] ?? []));
+                sort($row['tables']);
             }
             unset($row);
 
-            usort($checkedIn, function ($a, $b) {
-                return strcmp((string) ($b['checked_in_at'] ?? ''), (string) ($a['checked_in_at'] ?? ''));
+            usort($bookingsList, function ($a, $b) {
+                // newest first (fallback to checked_in_at)
+                $aKey = (string) ($a['booked_at'] ?? $a['checked_in_at'] ?? '');
+                $bKey = (string) ($b['booked_at'] ?? $b['checked_in_at'] ?? '');
+                return strcmp($bKey, $aKey);
             });
         }
 
-        return view('dashboard.donation.donationBooking.scan', compact('event', 'checkedIn'));
+        return view('dashboard.donation.donationBooking.scan', compact('event', 'bookingsList'));
     }
 
     public function update(Request $request, $id)
