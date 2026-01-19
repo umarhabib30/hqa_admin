@@ -67,7 +67,9 @@
                         @forelse(($checkedIn ?? []) as $row)
                             <tr class="hover:bg-gray-50" data-key="{{ ($row['payment_id'] ?? '') }}-{{ ($row['table_no'] ?? '') }}">
                                 <td class="px-4 py-3 whitespace-nowrap text-gray-700">
-                                    {{ $row['checked_in_at'] ?? '' }}
+                                    @if(!empty($row['checked_in_at']))
+                                        {{ \Carbon\Carbon::parse($row['checked_in_at'])->format('d:m:Y g:i A') }}
+                                    @endif
                                 </td>
                                 <td class="px-4 py-3 whitespace-nowrap">
                                     <span class="inline-flex items-center justify-center px-2.5 py-1 rounded-full bg-[#00285E]/10 text-[#00285E] font-semibold">
@@ -135,7 +137,9 @@
                                 Seats: {{ $row['total_seats'] ?? 0 }}
                             </span>
                             <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-gray-50 text-gray-600 text-xs font-semibold">
-                                {{ $row['checked_in_at'] ?? '' }}
+                                @if(!empty($row['checked_in_at']))
+                                    {{ \Carbon\Carbon::parse($row['checked_in_at'])->format('d:m:Y g:i A') }}
+                                @endif
                             </span>
                         </div>
                     </div>
@@ -228,7 +232,7 @@
       <div><span class="font-semibold">Seats:</span> ${booking.total_seats ?? 0}</div>
       <div><span class="font-semibold">Seat Types:</span> ${seatSummary}</div>
       <div><span class="font-semibold">Payment ID:</span> ${payload.payment_id || ''}</div>
-      <div><span class="font-semibold">Checked In At:</span> ${booking.checked_in_at || 'Just now'}</div>
+      <div><span class="font-semibold">Checked In At:</span> ${booking.checked_in_at ? formatCheckIn(booking.checked_in_at) : 'Just now'}</div>
       <div><span class="font-semibold">Already Checked In:</span> ${booking.already_checked_in ? 'Yes' : 'No'}</div>
     `;
     resultCard.classList.remove('hidden');
@@ -237,6 +241,45 @@
   const escapeHtml = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   }[c]));
+
+  // Format "YYYY-MM-DD HH:MM:SS" (or ISO) into "DD:MM:YYYY H:MM AM/PM"
+  const formatCheckIn = (dt) => {
+    const raw = String(dt ?? '').trim();
+    if (!raw) return '';
+
+    const pad2 = (n) => String(n).padStart(2, '0');
+
+    // Common Laravel format: "YYYY-MM-DD HH:MM:SS"
+    const m = raw.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/);
+    if (m) {
+      const yyyy = m[1];
+      const mm = m[2];
+      const dd = m[3];
+      let hh24 = parseInt(m[4], 10);
+      const min = m[5];
+
+      const ampm = hh24 >= 12 ? 'PM' : 'AM';
+      let hh12 = hh24 % 12;
+      if (hh12 === 0) hh12 = 12;
+      return `${dd}:${mm}:${yyyy} ${hh12}:${min} ${ampm}`;
+    }
+
+    // Fallback: Date parsing
+    const d = new Date(raw);
+    if (!isNaN(d.getTime())) {
+      const dd = pad2(d.getDate());
+      const mm = pad2(d.getMonth() + 1);
+      const yyyy = String(d.getFullYear());
+      let hh24 = d.getHours();
+      const min = pad2(d.getMinutes());
+      const ampm = hh24 >= 12 ? 'PM' : 'AM';
+      let hh12 = hh24 % 12;
+      if (hh12 === 0) hh12 = 12;
+      return `${dd}:${mm}:${yyyy} ${hh12}:${min} ${ampm}`;
+    }
+
+    return raw;
+  };
 
   const upsertCheckedInRows = (payload) => {
     const bookings = payload.bookings || [];
@@ -261,7 +304,7 @@
         ? '<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">Full Table</span>'
         : '<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">Seats</span>';
       tr.innerHTML = `
-        <td class="px-4 py-3 whitespace-nowrap text-gray-700">${escapeHtml(b.checked_in_at || '')}</td>
+        <td class="px-4 py-3 whitespace-nowrap text-gray-700">${escapeHtml(formatCheckIn(b.checked_in_at || ''))}</td>
         <td class="px-4 py-3 whitespace-nowrap">
           <span class="inline-flex items-center justify-center px-2.5 py-1 rounded-full bg-[#00285E]/10 text-[#00285E] font-semibold">${escapeHtml(b.table_no || '')}</span>
         </td>
@@ -301,7 +344,7 @@
           <div class="mt-3 flex flex-wrap gap-2">
             ${typeHtml}
             <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-gray-100 text-gray-800 text-xs font-semibold">Seats: ${escapeHtml(b.total_seats ?? 0)}</span>
-            <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-gray-50 text-gray-600 text-xs font-semibold">${escapeHtml(b.checked_in_at || '')}</span>
+            <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-gray-50 text-gray-600 text-xs font-semibold">${escapeHtml(formatCheckIn(b.checked_in_at || ''))}</span>
           </div>
         `;
         checkedInCards.insertBefore(card, checkedInCards.firstChild);
