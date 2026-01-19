@@ -173,7 +173,9 @@ class DonationBookingController extends Controller
 
                 for ($i = 1; $i <= $event->total_tables; $i++) {
                     $tableUsers = $bookings[$i] ?? [];
-                    $usedSeats = collect($tableUsers)->sum('total_seats');
+                    $usedSeats = collect($tableUsers)->sum(function ($entry) use ($event) {
+                        return DonationBooking::occupiedSeatsForBookingEntry((array) $entry, (int) $event->seats_per_table);
+                    });
 
                     if ($usedSeats === 0) {
                         $bookings[$i][] = [
@@ -184,6 +186,7 @@ class DonationBookingController extends Controller
                             'phone'      => $request->phone,
                             'seat_types' => [],
                             'total_seats' => $event->seats_per_table,
+                            'baby_sitting' => 0,
                             'paid_amount' => $request->amount,
                             'payment_id' => $intent->id,
                             'booked_at'  => now(),
@@ -202,14 +205,20 @@ class DonationBookingController extends Controller
                 }
             } else {
                 // SEATS booking
-                $totalSeatsRequested = array_sum($request->seat_types);
+                $seatTypes = $request->seat_types ?? [];
+                $babySitting = DonationBooking::countBabySittingFromSeatTypes($seatTypes);
+                $seatTypesForTables = DonationBooking::stripBabySittingFromSeatTypes($seatTypes);
+                $totalSeatsRequested = array_sum($seatTypesForTables);
                 $remainingSeats = $totalSeatsRequested;
+                $firstEntryPointer = null; // ['table' => int, 'idx' => int]
 
                 for ($i = 1; $i <= $event->total_tables; $i++) {
                     if ($remainingSeats <= 0) break;
 
                     $tableUsers = $bookings[$i] ?? [];
-                    $usedSeats = collect($tableUsers)->sum('total_seats');
+                    $usedSeats = collect($tableUsers)->sum(function ($entry) use ($event) {
+                        return DonationBooking::occupiedSeatsForBookingEntry((array) $entry, (int) $event->seats_per_table);
+                    });
                     $available = $event->seats_per_table - $usedSeats;
 
                     if ($available <= 0) continue;
@@ -222,13 +231,17 @@ class DonationBookingController extends Controller
                         'last_name'  => $request->last_name,
                         'email'      => $request->email,
                         'phone'      => $request->phone,
-                        'seat_types' => $request->seat_types,
+                        'seat_types' => $seatTypesForTables,
                         'total_seats' => $allocate,
+                        'baby_sitting' => 0,
                         'paid_amount' => $request->amount,
                         'payment_id' => $intent->id,
                         'booked_at'  => now(),
                         'checked_in_at' => null,
                     ];
+                    if ($firstEntryPointer === null) {
+                        $firstEntryPointer = ['table' => $i, 'idx' => count($bookings[$i]) - 1];
+                    }
 
                     $remainingSeats -= $allocate;
                     $assignedTables[] = $i;
@@ -236,6 +249,13 @@ class DonationBookingController extends Controller
 
                 if ($remainingSeats > 0) {
                     throw new \Exception('Not enough seats available');
+                }
+
+                // Store baby sitting separately (not part of table seating)
+                if ($babySitting > 0 && $firstEntryPointer !== null) {
+                    $t = $firstEntryPointer['table'];
+                    $idx = $firstEntryPointer['idx'];
+                    $bookings[$t][$idx]['baby_sitting'] = (int) $babySitting;
                 }
             }
 
@@ -294,7 +314,9 @@ class DonationBookingController extends Controller
                         'email' => $booking['email'] ?? '',
                         'phone' => $booking['phone'] ?? '',
                         'seat_types' => $booking['seat_types'] ?? [],
-                        'total_seats' => $booking['total_seats'] ?? 0,
+                        // Seats that consume TABLE capacity (exclude baby sitting; backwards compatible)
+                        'total_seats' => DonationBooking::occupiedSeatsForBookingEntry((array) $booking, (int) $event->seats_per_table),
+                        'baby_sitting' => DonationBooking::babySittingForBookingEntry((array) $booking),
                         'checked_in_at' => $booking['checked_in_at'],
                     ];
                 }
@@ -431,8 +453,9 @@ class DonationBookingController extends Controller
                     'last_name' => $booking['last_name'] ?? '',
                     'email' => $booking['email'] ?? '',
                     'phone' => $booking['phone'] ?? '',
-                    'seat_types' => $booking['seat_types'] ?? [],
-                    'total_seats' => $booking['total_seats'] ?? 0,
+                    'seat_types' => DonationBooking::stripBabySittingFromSeatTypes((array) ($booking['seat_types'] ?? [])),
+                    'total_seats' => DonationBooking::occupiedSeatsForBookingEntry((array) $booking, (int) $event->seats_per_table),
+                    'baby_sitting' => DonationBooking::babySittingForBookingEntry((array) $booking),
                     'checked_in_at' => $checkInTime,
                     'already_checked_in' => $alreadyChecked,
                     'payment_id' => $qrToken,

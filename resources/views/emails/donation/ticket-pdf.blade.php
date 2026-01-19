@@ -308,7 +308,9 @@
     $bookingType = (string) ($booking['type'] ?? 'seats');
     $typeLabel = $bookingType === 'full_table' ? 'FULL TABLE' : 'SEATS';
 
-    $seatTypes = is_array($booking['seat_types'] ?? null) ? $booking['seat_types'] : [];
+    $seatTypesRaw = is_array($booking['seat_types'] ?? null) ? $booking['seat_types'] : [];
+    $babySitting = (int) ($booking['baby_sitting'] ?? \App\Models\DonationBooking::countBabySittingFromSeatTypes($seatTypesRaw));
+    $seatTypes = \App\Models\DonationBooking::stripBabySittingFromSeatTypes($seatTypesRaw);
     $totalSeats = (int) ($booking['total_seats'] ?? 0);
 
     $tables = (array) ($booking['tables'] ?? []);
@@ -373,6 +375,8 @@
                                 <strong>Tables:</strong> {{ $tablesLabel }}
                                 &nbsp;&nbsp;•&nbsp;&nbsp;
                                 <strong>Paid:</strong> {{ $paidLabel }}
+                                &nbsp;&nbsp;•&nbsp;&nbsp;
+                                <strong>Baby Sitting:</strong> {{ $babySitting }}
                             </div>
 
                             <div class="sectionLabel">Primary Attendee</div>
@@ -397,6 +401,9 @@
                                             if ((int) $q > 0) {
                                                 $filteredSeatTypes[$t] = (int) $q;
                                             }
+                                        }
+                                        if ($babySitting > 0) {
+                                            $filteredSeatTypes['Baby Sitting'] = (int) $babySitting;
                                         }
                                         $chunks = array_chunk($filteredSeatTypes, 3, true);
                                     @endphp

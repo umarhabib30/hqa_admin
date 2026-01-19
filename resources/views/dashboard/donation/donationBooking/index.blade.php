@@ -45,14 +45,21 @@
             @php
                 $bookings = $event->table_bookings ?? [];
 
-                $bookedSeats = collect($bookings)->flatten(1)->sum('total_seats');
+                $bookedSeats = collect($bookings)->flatten(1)->sum(function ($entry) use ($event) {
+                    return \App\Models\DonationBooking::occupiedSeatsForBookingEntry((array) $entry, (int) $event->seats_per_table);
+                });
                 $remainingSeats = $event->total_seats - $bookedSeats;
 
                 $seatTypeTotals = [];
+                $babySittingTotal = 0;
                 foreach ($bookings as $table) {
                     foreach ($table as $booking) {
                         if (($booking['type'] ?? '') === 'seats') {
+                            $babySittingTotal += \App\Models\DonationBooking::babySittingForBookingEntry((array) $booking);
                             foreach (($booking['seat_types'] ?? []) as $type => $qty) {
+                                if (\App\Models\DonationBooking::isBabySittingType((string) $type)) {
+                                    continue;
+                                }
                                 $seatTypeTotals[$type] = ($seatTypeTotals[$type] ?? 0) + $qty;
                             }
                         }
@@ -93,8 +100,21 @@
             </div>
 
             {{-- SEAT TYPE SUMMARY --}}
-            @if(count($seatTypeTotals))
+            @if(count($seatTypeTotals) || ($babySittingTotal ?? 0) > 0)
                 <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
+                    @if(($babySittingTotal ?? 0) > 0)
+                        <div class="bg-white shadow rounded-lg p-4 text-center border-t-4 border-amber-500">
+                            <h2 class="text-gray-500 text-xs uppercase">
+                                Baby Sitting
+                            </h2>
+                            <p class="text-3xl font-bold mt-1 text-amber-600">
+                                {{ $babySittingTotal }}
+                            </p>
+                            <p class="text-xs text-gray-400">
+                                Total Baby Sitting
+                            </p>
+                        </div>
+                    @endif
                     @foreach($seatTypeTotals as $type => $total)
                         <div class="bg-white shadow rounded-lg p-4 text-center border-t-4 border-[#00285E]">
                             <h2 class="text-gray-500 text-xs uppercase">
@@ -117,7 +137,9 @@
             @for($i = 1; $i <= $event->total_tables; $i++)
                 @php
                     $tableUsers = $bookings[$i] ?? [];
-                    $tableBookedSeats = collect($tableUsers)->sum('total_seats');
+                    $tableBookedSeats = collect($tableUsers)->sum(function ($entry) use ($event) {
+                        return \App\Models\DonationBooking::occupiedSeatsForBookingEntry((array) $entry, (int) $event->seats_per_table);
+                    });
                     $isFullTable = $i <= $event->full_tables_booked;
                 @endphp
 
@@ -149,10 +171,15 @@
                                         <th class="px-3 py-2 border">Phone</th>
                                         <th class="px-3 py-2 border">Type</th>
                                         <th class="px-3 py-2 border">Seats</th>
+                                        <th class="px-3 py-2 border">Baby Sitting</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     @foreach($tableUsers as $user)
+                                        @php
+                                            $occupiedSeats = \App\Models\DonationBooking::occupiedSeatsForBookingEntry((array) $user, (int) $event->seats_per_table);
+                                            $babyCount = \App\Models\DonationBooking::babySittingForBookingEntry((array) $user);
+                                        @endphp
                                         <tr class="border-t hover:bg-gray-50">
                                             <td class="px-3 py-2">
                                                 {{ $user['first_name'] }} {{ $user['last_name'] }}
@@ -177,16 +204,28 @@
                                             <td class="px-3 py-2 space-x-1">
                                                 @if($user['type'] === 'full_table')
                                                     <span class="bg-green-200 text-green-800 px-2 py-1 rounded-full text-xs">
-                                                        {{ $user['total_seats'] }}
+                                                        {{ $occupiedSeats }}
                                                     </span>
                                                 @else
                                                     @foreach(($user['seat_types'] ?? []) as $type => $qty)
+                                                        @if(\App\Models\DonationBooking::isBabySittingType((string) $type))
+                                                            @continue
+                                                        @endif
                                                         @if($qty > 0)
                                                             <span class="bg-blue-200 text-blue-800 px-2 py-1 rounded-full text-xs">
                                                                 {{ ucfirst($type) }}: {{ $qty }}
                                                             </span>
                                                         @endif
                                                     @endforeach
+                                                @endif
+                                            </td>
+                                            <td class="px-3 py-2">
+                                                @if(($babyCount ?? 0) > 0)
+                                                    <span class="bg-amber-100 text-amber-800 px-2 py-1 rounded-full text-xs font-semibold">
+                                                        {{ $babyCount }}
+                                                    </span>
+                                                @else
+                                                    <span class="text-gray-400 text-xs">—</span>
                                                 @endif
                                             </td>
                                         </tr>

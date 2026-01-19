@@ -61,6 +61,7 @@
                             <th class="px-4 py-3 text-left border-t border-b">Email</th>
                             <th class="px-4 py-3 text-left border-t border-b">Type</th>
                             <th class="px-4 py-3 text-left border-t border-b">Seats</th>
+                            <th class="px-4 py-3 text-left border-t border-b">Baby Sitting</th>
                         </tr>
                     </thead>
                     <tbody id="checkedin-body" class="divide-y">
@@ -97,10 +98,19 @@
                                         {{ $row['total_seats'] ?? 0 }}
                                     </span>
                                 </td>
+                                <td class="px-4 py-3 whitespace-nowrap">
+                                    @if(($row['baby_sitting'] ?? 0) > 0)
+                                        <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 font-semibold">
+                                            {{ $row['baby_sitting'] }}
+                                        </span>
+                                    @else
+                                        <span class="text-gray-400">—</span>
+                                    @endif
+                                </td>
                             </tr>
                         @empty
                             <tr id="checkedin-empty-row">
-                                <td colspan="6" class="px-4 py-10 text-center text-gray-500">
+                                <td colspan="7" class="px-4 py-10 text-center text-gray-500">
                                     No one has checked in yet.
                                 </td>
                             </tr>
@@ -135,6 +145,9 @@
                             </span>
                             <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-gray-100 text-gray-800 text-xs font-semibold">
                                 Seats: {{ $row['total_seats'] ?? 0 }}
+                            </span>
+                            <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 text-xs font-semibold">
+                                Baby Sitting: {{ $row['baby_sitting'] ?? 0 }}
                             </span>
                             <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-gray-50 text-gray-600 text-xs font-semibold">
                                 @if(!empty($row['checked_in_at']))
@@ -222,6 +235,7 @@
     const seatSummary = Object.keys(seatTypes).length
       ? Object.entries(seatTypes).map(([t, q]) => `${t}: ${q}`).join(', ')
       : 'N/A';
+    const babySitting = Number(booking.baby_sitting ?? 0) || 0;
 
     detailsEl.innerHTML = `
       <div><span class="font-semibold">Name:</span> ${booking.first_name || ''} ${booking.last_name || ''}</div>
@@ -230,6 +244,7 @@
       <div><span class="font-semibold">Booking Type:</span> ${booking.type || ''}</div>
       <div><span class="font-semibold">Tables:</span> ${booking.table_no ? booking.table_no : (booking.tables || []).join(', ')}</div>
       <div><span class="font-semibold">Seats:</span> ${booking.total_seats ?? 0}</div>
+      <div><span class="font-semibold">Baby Sitting:</span> ${babySitting}</div>
       <div><span class="font-semibold">Seat Types:</span> ${seatSummary}</div>
       <div><span class="font-semibold">Payment ID:</span> ${payload.payment_id || ''}</div>
       <div><span class="font-semibold">Checked In At:</span> ${booking.checked_in_at ? formatCheckIn(booking.checked_in_at) : 'Just now'}</div>
@@ -303,6 +318,9 @@
       const typeHtml = isFull
         ? '<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">Full Table</span>'
         : '<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">Seats</span>';
+      const babyHtml = (Number(b.baby_sitting ?? 0) || 0) > 0
+        ? `<span class="inline-flex items-center px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 font-semibold">${escapeHtml(b.baby_sitting)}</span>`
+        : `<span class="text-gray-400">—</span>`;
       tr.innerHTML = `
         <td class="px-4 py-3 whitespace-nowrap text-gray-700">${escapeHtml(formatCheckIn(b.checked_in_at || ''))}</td>
         <td class="px-4 py-3 whitespace-nowrap">
@@ -317,6 +335,7 @@
         <td class="px-4 py-3 whitespace-nowrap">
           <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-gray-100 text-gray-800 font-semibold">${escapeHtml(b.total_seats ?? 0)}</span>
         </td>
+        <td class="px-4 py-3 whitespace-nowrap">${babyHtml}</td>
       `;
 
       // Insert at top (after header/empty row)
@@ -344,6 +363,7 @@
           <div class="mt-3 flex flex-wrap gap-2">
             ${typeHtml}
             <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-gray-100 text-gray-800 text-xs font-semibold">Seats: ${escapeHtml(b.total_seats ?? 0)}</span>
+            <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 text-xs font-semibold">Baby Sitting: ${escapeHtml(b.baby_sitting ?? 0)}</span>
             <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-gray-50 text-gray-600 text-xs font-semibold">${escapeHtml(formatCheckIn(b.checked_in_at || ''))}</span>
           </div>
         `;

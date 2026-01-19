@@ -52,6 +52,10 @@
     <li>Booking Type: {{ ucfirst($booking['type'] ?? 'seats') }}</li>
     <li>Paid Amount: ${{ number_format($paidAmount, 2) }}</li>
     <li>Total Seats: {{ $booking['total_seats'] ?? 0 }}</li>
+    <li>
+        Baby Sitting:
+        {{ \App\Models\DonationBooking::babySittingForBookingEntry((array) $booking) }}
+    </li>
 </ul>
 
 <p>
