@@ -39,14 +39,14 @@
 <p>
     The event will be held at {{ $venue }}. Complimentary self-parking will be available for our event, and valet
     parking is also offered at discounted rates by the Westin for your convenience. If you need any assistance or have
-    questions prior to the event, please feel free to contact us at {{ $contact }}.
+    questions prior to the event, please feel free to contact us at 832-762-9212.
 </p>
 
-<p>
+{{-- <p>
     We've attached your PDF ticket with QR code for entry. Please bring it on the event day.
-</p>
+</p> --}}
 
-<p><strong>Your Booking</strong></p>
+{{-- <p><strong>Your Booking</strong></p>
 <ul>
     <li>Payment ID: {{ $paymentIntentId }}</li>
     <li>Booking Type: {{ ucfirst($booking['type'] ?? 'seats') }}</li>
@@ -56,7 +56,7 @@
         Baby Sitting:
         {{ \App\Models\DonationBooking::babySittingForBookingEntry((array) $booking) }}
     </li>
-</ul>
+</ul> --}}
 
 <p>
     May Allah accept our fasts, our efforts, and our intentions, and bless you for your continued support of Islamic

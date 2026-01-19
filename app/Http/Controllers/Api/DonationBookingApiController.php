@@ -114,6 +114,8 @@ class DonationBookingApiController extends Controller
 
             if ($validated['booking_type'] === 'full_table') {
                 $tableCount = (int) ($validated['table_count'] ?? 1);
+                $seatTypes = $validated['seat_types'] ?? [];
+                $babySitting = DonationBooking::countBabySittingFromSeatTypes($seatTypes);
                 $emptyTables = [];
                 for ($i = 1; $i <= $event->total_tables; $i++) {
                     $tableBookings = $bookings[$i] ?? [];
@@ -135,6 +137,7 @@ class DonationBookingApiController extends Controller
                     ], 400);
                 }
 
+                $firstEntryPointer = null; // ['table' => int, 'idx' => int]
                 foreach ($emptyTables as $tableNo) {
                     $bookings[$tableNo][] = [
                         'type'          => 'full_table',
@@ -151,6 +154,16 @@ class DonationBookingApiController extends Controller
                         'checked_in_at' => null,
                     ];
                     $assignedTables[] = $tableNo;
+                    if ($firstEntryPointer === null) {
+                        $firstEntryPointer = ['table' => $tableNo, 'idx' => count($bookings[$tableNo]) - 1];
+                    }
+                }
+
+                // Store baby sitting separately (not part of table seating)
+                if (($babySitting ?? 0) > 0 && $firstEntryPointer !== null) {
+                    $t = $firstEntryPointer['table'];
+                    $idx = $firstEntryPointer['idx'];
+                    $bookings[$t][$idx]['baby_sitting'] = (int) $babySitting;
                 }
 
                 $fullTablesCount += $tableCount;
@@ -242,7 +255,7 @@ class DonationBookingApiController extends Controller
                 'email'       => $validated['email'],
                 'phone'       => $validated['phone'],
                 'seat_types'  => $validated['booking_type'] === 'full_table' ? [] : ($seatTypesForTables ?? []),
-                'baby_sitting' => $validated['booking_type'] === 'full_table' ? 0 : ($babySitting ?? 0),
+                'baby_sitting' => $validated['booking_type'] === 'full_table' ? ($babySitting ?? 0) : ($babySitting ?? 0),
                 'total_seats' => $validated['booking_type'] === 'full_table'
                     ? ($event->seats_per_table * (int) ($validated['table_count'] ?? 1))
                     : ($totalSeatsRequested ?? 0),
@@ -271,6 +284,7 @@ class DonationBookingApiController extends Controller
                 'payment_id' => $paymentId,
                 'mail_sent' => $mailSent,
                 'tables' => array_values(array_unique($assignedTables)),
+                'baby_sitting' => $validated['booking_type'] === 'full_table' ? ($babySitting ?? 0) : ($babySitting ?? 0),
             ], 200);
         } catch (Throwable $e) {
             Log::error('Booking error', ['error' => $e->getMessage()]);

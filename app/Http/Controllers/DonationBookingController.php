@@ -169,6 +169,8 @@ class DonationBookingController extends Controller
                     throw new \Exception('Full table booking not allowed');
                 }
 
+                $seatTypes = $request->seat_types ?? [];
+                $babySitting = DonationBooking::countBabySittingFromSeatTypes($seatTypes);
                 $tableBooked = false;
 
                 for ($i = 1; $i <= $event->total_tables; $i++) {
@@ -192,6 +194,10 @@ class DonationBookingController extends Controller
                             'booked_at'  => now(),
                             'checked_in_at' => null,
                         ];
+
+                        if ($babySitting > 0) {
+                            $bookings[$i][count($bookings[$i]) - 1]['baby_sitting'] = (int) $babySitting;
+                        }
 
                         $event->full_tables_booked += 1;
                         $tableBooked = true;

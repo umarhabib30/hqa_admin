@@ -230,12 +230,13 @@
   };
 
   const renderDetails = (payload) => {
-    const booking = payload.bookings?.[0] || {};
+    const bookings = payload.bookings || [];
+    const booking = bookings?.[0] || {};
     const seatTypes = booking.seat_types || {};
     const seatSummary = Object.keys(seatTypes).length
       ? Object.entries(seatTypes).map(([t, q]) => `${t}: ${q}`).join(', ')
       : 'N/A';
-    const babySitting = Number(booking.baby_sitting ?? 0) || 0;
+    const babySitting = bookings.reduce((sum, b) => sum + (Number(b?.baby_sitting ?? 0) || 0), 0);
 
     detailsEl.innerHTML = `
       <div><span class="font-semibold">Name:</span> ${booking.first_name || ''} ${booking.last_name || ''}</div>
