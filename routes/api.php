@@ -27,6 +27,7 @@ use App\Http\Controllers\Api\VideoApiController;
 use App\Http\Controllers\Api\SponserPackageApiController;
 use App\Http\Controllers\Api\DonationBookingApiController as DonationBookingCheckInController;
 use App\Http\Controllers\Api\ApplyCouponController;
+use App\Http\Controllers\Api\GeneralDonationController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ContactSponserController;
@@ -137,3 +138,7 @@ Route::post('/contactSponser', [ContactSponserController::class, 'store']);
 
 // Apply Coupon
 Route::post('/apply-coupon', [ApplyCouponController::class, 'apply']);
+
+//Gernal Donation 
+Route::post('/process-general-donation', [GeneralDonationController::class, 'processDonation']);
+Route::post('/confirm-general-donation', [GeneralDonationController::class, 'confirmDonation']);

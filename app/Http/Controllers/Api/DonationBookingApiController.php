@@ -75,7 +75,7 @@ class DonationBookingApiController extends Controller
                 'email'          => 'required|email',
                 'phone'          => 'required|string',
                 'amount'         => 'required|numeric|min:0',
-                'payment_method' => 'nullable|string', // From React (required only if amount > 0)
+                'payment_method' => 'nullable|string', 
             ]);
 
             $event = DonationBooking::findOrFail($id);
