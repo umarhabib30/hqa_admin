@@ -29,7 +29,7 @@ class AuthController extends Controller
             ]);
         }
         
-        return redirect()->route('dashboard.index');
+        // return redirect()->route('dashboard.index');
         $user = Auth::user();
         Auth::logout(); // login after OTP only
 
