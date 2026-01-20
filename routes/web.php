@@ -38,7 +38,7 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Artisan;
 use App\Http\Controllers\ContactSponserController;
-
+use App\Http\Controllers\DonationAdminController;
 
 Route::get('/link-storage', function () {
     Artisan::call('storage:link');
@@ -91,6 +91,8 @@ Route::get(
     [DonationBookingController::class, 'checkIn']
 )->name('donationBooking.checkIn');
 
+// Donation Admin Log Route
+Route::get('/admin/donations', [DonationAdminController::class, 'index'])->name('admin.donations.index');
 //Pto Events Pages Routes 
 Route::resource('ptoEvents', PtoEventsController::class);
 Route::resource('easy-joins', EasyJoinController::class);
