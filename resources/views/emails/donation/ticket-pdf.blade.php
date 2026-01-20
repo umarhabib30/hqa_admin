@@ -35,8 +35,8 @@
 
         /* Outer wrapper */
         .card {
-            width: 100%;
-            max-width: 100%;
+            width: 98%;
+            max-width: 98%;
             /* IMPORTANT: prevents overflow/clipping */
             margin: 0 auto;
             background: #ffffff;
