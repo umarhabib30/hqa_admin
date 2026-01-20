@@ -43,6 +43,7 @@
             border: 1px solid #e2e8f0;
             border-radius: 24px;
             overflow: hidden;
+            margin-top: 10px;
         }
 
         /* Header */
