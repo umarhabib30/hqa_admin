@@ -78,7 +78,7 @@
 
         .badge {
             display: inline-block;
-            background: #4f46e5;
+            background: white;
             width: 56px;
             height: 56px;
             border-radius: 14px;
