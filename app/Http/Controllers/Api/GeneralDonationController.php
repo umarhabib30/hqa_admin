@@ -8,6 +8,7 @@ use Illuminate\Http\JsonResponse;
 use Stripe\Stripe;
 use Stripe\PaymentIntent;
 use App\Models\GeneralDonation; 
+use App\Models\FundRaisa;
 use Illuminate\Support\Facades\Log;
 
 class GeneralDonationController extends Controller
@@ -53,15 +54,20 @@ class GeneralDonationController extends Controller
             'name'       => 'required|string',
             'email'      => 'required|email',
             'amount'     => 'required|numeric',
-            'payment_id' => 'required|string', 
+            'donation_mode' => 'nullable|in:paid_now,pledged',
+            'payment_id' => 'required_if:donation_mode,paid_now|nullable|string',
         ]);
 
         try {
+            $latestGoalId = FundRaisa::latest('id')->value('id');
+
             $donation = GeneralDonation::create([
+                'fund_raisa_id' => $latestGoalId,
                 'name'       => $validated['name'],
                 'email'      => $validated['email'],
                 'amount'     => $validated['amount'],
-                'payment_id' => $validated['payment_id'],
+                'payment_id' => $validated['payment_id'] ?? null,
+                'donation_mode' => $validated['donation_mode'] ?? 'paid_now',
             ]);
 
             return response()->json([

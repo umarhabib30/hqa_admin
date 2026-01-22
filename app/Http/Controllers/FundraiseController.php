@@ -20,13 +20,18 @@ class FundraiseController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
-            'starting_goal' => 'required|numeric|min:0',
-            'ending_goal'   => 'required|numeric|min:0',
-            'total_donors'  => 'required|numeric|min:0',
+        $validated = $request->validate([
+            'goal_name' => 'nullable|string|max:255',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
+            'starting_goal' => 'nullable|numeric|min:0',
+            'ending_goal' => 'nullable|numeric|min:0',
         ]);
 
-        FundRaisa::create($request->all());
+        // Keep total_donors in DB but don't take it from form
+        $validated['total_donors'] = 0;
+
+        FundRaisa::create($validated);
 
         return redirect()
             ->route('fundRaise.index')
@@ -43,13 +48,16 @@ class FundraiseController extends Controller
     {
         $fundRaise = FundRaisa::findOrFail($id);
 
-        $request->validate([
-            'starting_goal' => 'required|numeric|min:0',
-            'ending_goal'   => 'required|numeric|min:0',
-            'total_donors'  => 'required|numeric|min:0',
+        $validated = $request->validate([
+            'goal_name' => 'nullable|string|max:255',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
+            'starting_goal' => 'nullable|numeric|min:0',
+            'ending_goal' => 'nullable|numeric|min:0',
         ]);
 
-        $fundRaise->update($request->all());
+        // total_donors remains unchanged via edit form
+        $fundRaise->update($validated);
 
         return redirect()
             ->route('fundRaise.index')

@@ -35,6 +35,9 @@
             <thead class="bg-gray-100 text-sm text-gray-600">
                 <tr>
                     <th class="px-6 py-4 text-left">ID</th>
+                    <th class="px-6 py-4 text-left">Goal Name</th>
+                    <th class="px-6 py-4 text-left">Start Date</th>
+                    <th class="px-6 py-4 text-left">End Date</th>
                     <th class="px-6 py-4 text-left">Starting Goal</th>
                     <th class="px-6 py-4 text-left">Ending Goal</th>
                     <th class="px-6 py-4 text-left">Total Donors</th>
@@ -46,8 +49,11 @@
                 @forelse($fundRaises as $fund)
                 <tr class="hover:bg-gray-50 transition">
                     <td class="px-6 py-4">{{ $fund->id }}</td>
-                    <td class="px-6 py-4">Rs {{ number_format($fund->starting_goal) }}</td>
-                    <td class="px-6 py-4">Rs {{ number_format($fund->ending_goal) }}</td>
+                    <td class="px-6 py-4">{{ $fund->goal_name ?: '—' }}</td>
+                    <td class="px-6 py-4">{{ $fund->start_date ? $fund->start_date->format('M d, Y') : '—' }}</td>
+                    <td class="px-6 py-4">{{ $fund->end_date ? $fund->end_date->format('M d, Y') : '—' }}</td>
+                    <td class="px-6 py-4">{{ $fund->starting_goal !== null ? ('Rs ' . number_format($fund->starting_goal)) : '—' }}</td>
+                    <td class="px-6 py-4">{{ $fund->ending_goal !== null ? ('Rs ' . number_format($fund->ending_goal)) : '—' }}</td>
                     <td class="px-6 py-4">{{ $fund->total_donors }}</td>
 
                     <td class="px-6 py-4 text-right">
@@ -57,14 +63,16 @@
                                 Edit
                             </a>
 
-                            <form method="POST" action="{{ route('fundRaise.destroy', $fund->id) }}">
+                            <form method="POST" action="{{ route('fundRaise.destroy', $fund->id) }}" class="delete-form">
                                 @csrf
                                 @method('DELETE')
                                 <button
-                                    class="px-4 py-2 rounded-lg
+                                    type="submit"
+                                    class="delete-btn px-4 py-2 rounded-lg
                                            border border-red-500 text-red-500
                                            hover:bg-red-500 hover:text-white
-                                           transition active:scale-95">
+                                           transition active:scale-95"
+                                    data-name="{{ $fund->goal_name ?: ('Fund #' . $fund->id) }}">
                                     Delete
                                 </button>
                             </form>
@@ -73,7 +81,7 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="5" class="px-6 py-8 text-center text-gray-500">
+                    <td colspan="8" class="px-6 py-8 text-center text-gray-500">
                         No fund raise goals found.
                     </td>
                 </tr>
@@ -100,8 +108,11 @@
             </div>
 
             <div class="text-sm text-gray-700 space-y-1">
-                <p><strong>Starting:</strong> Rs {{ number_format($fund->starting_goal) }}</p>
-                <p><strong>Ending:</strong> Rs {{ number_format($fund->ending_goal) }}</p>
+                <p><strong>Goal Name:</strong> {{ $fund->goal_name ?: '—' }}</p>
+                <p><strong>Start Date:</strong> {{ $fund->start_date ? $fund->start_date->format('M d, Y') : '—' }}</p>
+                <p><strong>End Date:</strong> {{ $fund->end_date ? $fund->end_date->format('M d, Y') : '—' }}</p>
+                <p><strong>Starting:</strong> {{ $fund->starting_goal !== null ? ('Rs ' . number_format($fund->starting_goal)) : '—' }}</p>
+                <p><strong>Ending:</strong> {{ $fund->ending_goal !== null ? ('Rs ' . number_format($fund->ending_goal)) : '—' }}</p>
             </div>
 
             <div class="flex gap-2 pt-2">
@@ -110,14 +121,16 @@
                     Edit
                 </a>
 
-                <form method="POST" action="{{ route('fundRaise.destroy', $fund->id) }}" class="flex-1">
+                <form method="POST" action="{{ route('fundRaise.destroy', $fund->id) }}" class="delete-form flex-1">
                     @csrf
                     @method('DELETE')
                     <button
-                        class="w-full px-4 py-2 rounded-lg
+                        type="submit"
+                        class="delete-btn w-full px-4 py-2 rounded-lg
                                border border-red-500 text-red-500
                                hover:bg-red-500 hover:text-white
-                               transition active:scale-95">
+                               transition active:scale-95"
+                        data-name="{{ $fund->goal_name ?: ('Fund #' . $fund->id) }}">
                         Delete
                     </button>
                 </form>

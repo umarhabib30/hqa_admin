@@ -51,11 +51,11 @@
                     e.preventDefault();
                     
                     const button = form.querySelector('.delete-btn');
-                    const managerName = button ? button.getAttribute('data-name') : 'this manager';
+                    const itemName = button ? button.getAttribute('data-name') : 'this item';
                     
                     Swal.fire({
                         title: 'Are you sure?',
-                        text: `You want to delete ${managerName}? This action cannot be undone!`,
+                        text: `You want to delete ${itemName}? This action cannot be undone!`,
                         icon: 'warning',
                         showCancelButton: true,
                         confirmButtonColor: '#d33',

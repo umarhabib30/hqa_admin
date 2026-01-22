@@ -13,10 +13,12 @@ return new class extends Migration
     {
         Schema::create('general_donations', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
-            $table->string('email');
-            $table->decimal('amount', 10, 2);
-            $table->string('payment_id')->unique(); 
+            $table->foreignId('fund_raisa_id')->nullable()->constrained('fund_raisas')->nullOnDelete();
+            $table->string('name')->nullable();
+            $table->string('email')->nullable();
+            $table->decimal('amount', 10, 2)->nullable();
+            $table->string('payment_id')->nullable()->unique();
+            $table->enum('donation_mode', ['paid_now', 'pledged'])->nullable()->default('paid_now');
             $table->timestamps();
         });
     }

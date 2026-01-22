@@ -36,6 +36,51 @@
 
             @csrf
 
+            <!-- GOAL NAME -->
+            <div>
+                <label class="block text-sm font-medium text-gray-600 mb-1">
+                    Goal Name
+                </label>
+                <input type="text"
+                    name="goal_name"
+                    value="{{ old('goal_name') }}"
+                    placeholder="Optional"
+                    class="w-full px-4 py-3 rounded-lg
+                              border border-gray-300
+                              focus:ring-2 focus:ring-[#00285E]
+                              focus:outline-none">
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- START DATE -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-600 mb-1">
+                        Start Date
+                    </label>
+                    <input type="date"
+                        name="start_date"
+                        value="{{ old('start_date') }}"
+                        class="w-full px-4 py-3 rounded-lg
+                                  border border-gray-300
+                                  focus:ring-2 focus:ring-[#00285E]
+                                  focus:outline-none">
+                </div>
+
+                <!-- END DATE -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-600 mb-1">
+                        End Date
+                    </label>
+                    <input type="date"
+                        name="end_date"
+                        value="{{ old('end_date') }}"
+                        class="w-full px-4 py-3 rounded-lg
+                                  border border-gray-300
+                                  focus:ring-2 focus:ring-[#00285E]
+                                  focus:outline-none">
+                </div>
+            </div>
+
             <!-- STARTING GOAL -->
             <div>
                 <label class="block text-sm font-medium text-gray-600 mb-1">
@@ -43,6 +88,7 @@
                 </label>
                 <input type="number"
                     name="starting_goal"
+                    value="{{ old('starting_goal') }}"
                     placeholder="e.g. 100000"
                     class="w-full px-4 py-3 rounded-lg
                               border border-gray-300
@@ -57,23 +103,8 @@
                 </label>
                 <input type="number"
                     name="ending_goal"
+                    value="{{ old('ending_goal') }}"
                     placeholder="e.g. 500000"
-                    class="w-full px-4 py-3 rounded-lg
-                              border border-gray-300
-                            focus:ring-2 focus:ring-#00285E
-                              focus:outline-none">
-            </div>
-
-           
-
-            <!-- TOTAL DONORS -->
-            <div>
-                <label class="block text-sm font-medium text-gray-600 mb-1">
-                    Total Donors
-                </label>
-                <input type="number"
-                    name="total_donors"
-                    placeholder="e.g. 120"
                     class="w-full px-4 py-3 rounded-lg
                               border border-gray-300
                               focus:ring-2 focus:ring-[#00285E]

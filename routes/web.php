@@ -93,6 +93,10 @@ Route::get(
 
 // Donation Admin Log Route
 Route::get('/admin/donations', [DonationAdminController::class, 'index'])->name('admin.donations.index');
+Route::post('/admin/donations', [DonationAdminController::class, 'store'])->name('admin.donations.store');
+Route::get('/admin/donations/{donation}/edit', [DonationAdminController::class, 'edit'])->name('admin.donations.edit');
+Route::put('/admin/donations/{donation}', [DonationAdminController::class, 'update'])->name('admin.donations.update');
+Route::delete('/admin/donations/{donation}', [DonationAdminController::class, 'destroy'])->name('admin.donations.destroy');
 //Pto Events Pages Routes 
 Route::resource('ptoEvents', PtoEventsController::class);
 Route::resource('easy-joins', EasyJoinController::class);

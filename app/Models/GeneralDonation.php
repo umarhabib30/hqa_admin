@@ -3,8 +3,14 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class GeneralDonation extends Model
 {
-    protected $fillable = ['name', 'email', 'amount', 'payment_id'];
+    protected $fillable = ['fund_raisa_id', 'name', 'email', 'amount', 'payment_id', 'donation_mode'];
+
+    public function goal(): BelongsTo
+    {
+        return $this->belongsTo(FundRaisa::class, 'fund_raisa_id');
+    }
 }
