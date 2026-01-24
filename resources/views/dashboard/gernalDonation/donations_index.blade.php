@@ -14,7 +14,7 @@
 
             <div class="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-end">
                 <div class="bg-green-100 text-green-700 px-6 py-3 rounded-xl border-2 border-green-500 font-bold text-lg">
-                    Total Received: ${{ number_format($donations->where('donation_mode', 'paid_now')->sum('amount'), 2) }}
+                    Total Received: ${{ number_format($donations->sum('amount'), 2) }}
                 </div>
 
                 <button type="button" @click="showAdd = !showAdd"
@@ -44,7 +44,8 @@
         <div class="mb-6 bg-white rounded-xl shadow-sm p-4 md:p-6" x-show="showAdd" x-cloak>
             <h2 class="text-lg font-semibold text-gray-800 mb-4">Add Manual Donation</h2>
 
-            <form method="POST" action="{{ route('admin.donations.store') }}" class="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <form method="POST" action="{{ route('admin.donations.store') }}"
+                class="grid grid-cols-1 md:grid-cols-4 gap-4">
                 @csrf
 
                 <div class="md:col-span-1">
@@ -79,13 +80,7 @@
                     </select>
                 </div>
 
-                <div class="md:col-span-1">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Payment ID</label>
-                    <input name="payment_id" value="{{ old('payment_id') }}" placeholder="Optional / Stripe ID"
-                        class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#00285E] focus:border-transparent @error('payment_id') border-red-500 @enderror" />
-                </div>
-
-                <div class="md:col-span-5 flex justify-end">
+                <div class="md:col-span-4 flex">
                     <button type="submit"
                         class="px-8 py-3 border-2 border-[#00285E] text-[#00285E] rounded-lg hover:bg-[#00285E] hover:text-white transition">
                         Save Donation
@@ -94,8 +89,8 @@
             </form>
         </div>
 
-        <div class="hidden md:block bg-white rounded-xl shadow-sm overflow-hidden">
-            <table class="w-full text-left border-collapse">
+        <div class="bg-white rounded-xl shadow-sm overflow-x-auto">
+            <table class="w-full text-left border-collapse min-w-[1050px]">
                 <thead>
                     <tr class="bg-gray-100 text-gray-600 text-sm uppercase">
                         <th class="px-6 py-4">ID</th>
@@ -180,60 +175,6 @@
                     @endforelse
                 </tbody>
             </table>
-        </div>
-
-        <div class="md:hidden space-y-4">
-            @forelse($donations as $donation)
-                <div class="bg-white rounded-xl shadow-sm p-4 space-y-3 border-l-4 border-green-500">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <h3 class="font-semibold text-gray-800">{{ $donation->name }}</h3>
-                            <p class="text-sm text-gray-500">{{ $donation->email }}</p>
-                            <p class="text-xs text-gray-500 mt-1">
-                                <strong>Goal:</strong>
-                                @php($goal = $donation->goal)
-                                {{ $goal?->goal_name ?: ($donation->fund_raisa_id ? ('Fund #' . $donation->fund_raisa_id) : '—') }}
-                            </p>
-                            <p class="text-xs text-gray-500 mt-1">
-                                <strong>Mode:</strong> {{ ($donation->donation_mode ?? 'paid_now') === 'pledged' ? 'Pledged' : 'Cash' }}
-                            </p>
-                        </div>
-                        <span class="px-3 py-1 text-sm rounded-full bg-green-100 text-green-700 font-semibold">
-                            ${{ number_format($donation->amount, 2) }}
-                        </span>
-                    </div>
-
-                    <div class="flex justify-between items-center text-xs text-gray-500 pt-2 border-t border-gray-100">
-                        <span><strong>ID:</strong> #{{ $donation->id }}</span>
-                        <span>{{ $donation->created_at->format('M d, Y h:i A') }}</span>
-                    </div>
-
-                    <div class="text-[10px] text-gray-400 truncate">
-                        PAYMENT ID: {{ $donation->payment_id ?: '-' }}
-                    </div>
-
-                    <div class="pt-2 border-t border-gray-100 flex items-center justify-end gap-2">
-                        <a href="{{ route('admin.donations.edit', $donation->id) }}"
-                            class="px-3 py-2 text-xs border rounded-lg hover:bg-gray-50 transition">
-                            Edit
-                        </a>
-                        <form method="POST" action="{{ route('admin.donations.destroy', $donation->id) }}"
-                            class="delete-form">
-                            @csrf
-                            @method('DELETE')
-                            <button type="submit"
-                                class="delete-btn px-3 py-2 text-xs border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition"
-                                data-name="{{ $donation->name ?: 'Donation #' . $donation->id }}">
-                                Delete
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            @empty
-                <div class="text-center text-gray-500 py-8">
-                    No donations recorded yet.
-                </div>
-            @endforelse
         </div>
     </div>
 @endsection

@@ -32,11 +32,9 @@ class FundraiseApiController extends Controller
             /** @var Collection<int, \App\Models\GeneralDonation> $donations */
             $donations = $goal->generalDonations ?? collect();
 
-            // Only "paid_now" counts as collected amount.
-            $paidDonations = $donations->filter(fn ($d) => ($d->donation_mode ?? 'paid_now') === 'paid_now');
-
-            $totalCollected = (float) $paidDonations->sum('amount');
-            $totalDonors = (int) $paidDonations->count();
+            // Sum all donations (stripe/cash/etc).
+            $totalCollected = (float) $donations->sum('amount');
+            $totalDonors = (int) $donations->count();
 
             $goalEnd = (float) ($goal->ending_goal ?? 0);
             $remaining = max($goalEnd - $totalCollected, 0);

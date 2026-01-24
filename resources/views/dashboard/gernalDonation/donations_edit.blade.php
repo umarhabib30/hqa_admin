@@ -78,7 +78,7 @@
                     @enderror
                 </div>
 
-                <div class="md:col-span-2">
+                {{-- <div class="md:col-span-2">
                     <label class="block text-sm font-medium text-gray-700 mb-2">Payment ID</label>
                     <input type="text" name="payment_id" value="{{ old('payment_id', $donation->payment_id) }}"
                         class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#00285E] focus:border-transparent @error('payment_id') border-red-500 @enderror"
@@ -86,7 +86,7 @@
                     @error('payment_id')
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                     @enderror
-                </div>
+                </div> --}}
             </div>
 
             <div class="flex justify-end gap-4 pt-4 border-t">
