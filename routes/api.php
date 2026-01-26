@@ -148,3 +148,8 @@ Route::post('/confirm-general-donation', [GeneralDonationController::class, 'con
 Route::post('/sponserSubscriber', [SponserApiSubscriber::class, 'store']);
 // Create subscription after SetupIntent
 Route::post('/create-subscription', [GeneralDonationController::class, 'createSubscription']);
+// Route to get the Client Secret
+Route::post('/sponserIntent', [SponserApiSubscriber::class, 'createIntent']);
+
+// Route to save the data after payment
+Route::post('/sponserSubscriber', [SponserApiSubscriber::class, 'store']);

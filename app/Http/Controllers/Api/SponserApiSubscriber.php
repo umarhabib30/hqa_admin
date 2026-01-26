@@ -9,42 +9,99 @@ use App\Models\SponserPackageSubscriber;
 use App\Models\SponsorPackage;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Stripe\Stripe;
+use Stripe\PaymentIntent;
 
 class SponserApiSubscriber extends Controller
 {
-    public function store(Request $request)
+
+    public function createIntent(Request $request)
     {
-        $image = null;
-        if ($request->hasFile('image')) {
-            $image = $request->file('image')->store('sponsor_package_subscribers', 'public');
-        }
-        $package_id = SponsorPackage::where('title', $request->sponsor_type)->first()->id;
-        $subscriber = SponserPackageSubscriber::create([
-            'user_name' => $request->user_name,
-            'user_email' => $request->user_email,
-            'user_phone' => $request->user_phone,
-            'sponsor_package_id' => $package_id,
-            'sponsor_type' => $request->sponsor_type,
-            'image' => $image,
-            'amount' => $request->amount,
-            'payment_id' => $request->payment_id,
+        $request->validate([
+            'amount' => 'required|numeric',
+            'user_email' => 'required|email',
+            'sponsor_type' => 'required|string',
         ]);
 
-        // Notify admin on each new subscriber (do not block API if mail fails)
         try {
-            $subscriber->load('package');
-            Mail::to('mumarhabibrb102@gmail.com')->send(new SponsorSubscriberCreatedMail($subscriber));
-        } catch (\Throwable $e) {
-            Log::warning('Sponsor subscriber email failed', [
-                'subscriber_id' => $subscriber->id ?? null,
-                'error' => $e->getMessage(),
-            ]);
-        }
+            Stripe::setApiKey(config('services.stripe.secret'));
 
-        return response()->json([
-            'status' => true,
-            'message' => 'Subscriber created successfully',
-            'data' => $subscriber
-        ], 201);
+            $intent = PaymentIntent::create([
+                'amount' => (int) round($request->amount * 100),
+                'currency' => 'usd',
+                'metadata' => [
+                    'email' => $request->user_email,
+                    'sponsor_type' => $request->sponsor_type,
+                ],
+            ]);
+
+            return response()->json([
+                'status' => true,
+                'clientSecret' => $intent->client_secret,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Stripe Intent Error: ' . $e->getMessage());
+            return response()->json([
+                'status' => false,
+                'message' => 'Could not initialize payment: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+
+    public function store(Request $request)
+    {
+        $request->validate([
+            'user_name' => 'required|string',
+            'user_email' => 'required|email',
+            'payment_id' => 'required|string',
+        ]);
+
+        try {
+            $image = null;
+            if ($request->hasFile('image')) {
+                $image = $request->file('image')->store('sponsor_package_subscribers', 'public');
+            }
+
+            $package = SponsorPackage::where('title', $request->sponsor_type)->first();
+
+            if (!$package) {
+                return response()->json(['status' => false, 'message' => 'Package not found'], 404);
+            }
+
+            $subscriber = SponserPackageSubscriber::create([
+                'user_name' => $request->user_name,
+                'user_email' => $request->user_email,
+                'user_phone' => $request->user_phone,
+                'sponsor_package_id' => $package->id,
+                'sponsor_type' => $request->sponsor_type,
+                'image' => $image,
+                'amount' => $request->amount,
+                'payment_id' => $request->payment_id,
+                'status' => 'paid',
+            ]);
+
+            try {
+                $subscriber->load('package');
+                Mail::to('mumarhabibrb102@gmail.com')->send(new SponsorSubscriberCreatedMail($subscriber));
+            } catch (\Throwable $e) {
+                Log::warning('Sponsor subscriber email failed', [
+                    'subscriber_id' => $subscriber->id ?? null,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Sponsorship confirmed and recorded successfully',
+                'data' => $subscriber
+            ], 201);
+        } catch (\Exception $e) {
+            Log::error('Database Error: ' . $e->getMessage());
+            return response()->json([
+                'status' => false,
+                'message' => 'Database error: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }
