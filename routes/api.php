@@ -142,3 +142,5 @@ Route::post('/apply-coupon', [ApplyCouponController::class, 'apply']);
 //Gernal Donation 
 Route::post('/process-general-donation', [GeneralDonationController::class, 'processDonation']);
 Route::post('/confirm-general-donation', [GeneralDonationController::class, 'confirmDonation']);
+// Create subscription after SetupIntent
+Route::post('/create-subscription', [GeneralDonationController::class, 'createSubscription']);
