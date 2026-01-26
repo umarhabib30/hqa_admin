@@ -31,6 +31,7 @@ use App\Http\Controllers\SearchController;
 use App\Http\Controllers\VideoController;
 use App\Http\Controllers\ManagerController;
 use App\Http\Controllers\SponsorPackageController;
+use App\Http\Controllers\SponsorPackageSubscriberController;
 use App\Http\Controllers\CouponController;
 use App\Http\Controllers\PermissionController;
 use App\Models\PtoLetterGuide;
@@ -172,6 +173,8 @@ Route::middleware(['auth'])->group(function () {
 
 // Sponsor Packages Routes
 Route::resource('sponsor-packages', SponsorPackageController::class);
+Route::get('sponsor-package-subscribers/{subscriber}', [SponsorPackageSubscriberController::class, 'show'])
+    ->name('sponsor-package-subscribers.show');
 
 // Coupons Routes
 Route::resource('coupons', CouponController::class);

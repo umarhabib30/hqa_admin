@@ -9,7 +9,16 @@ class FundraiseController extends Controller
 {
     public function index()
     {
-        $fundRaises = FundRaisa::latest()->get();
+        $fundRaises = FundRaisa::query()
+            ->withCount([
+                // Donors are derived from GeneralDonation records.
+                'generalDonations as donors_count',
+            ])
+            ->withSum([
+                'generalDonations as collected_amount',
+            ], 'amount')
+            ->latest()
+            ->get();
         return view('dashboard.donation.fundraiserGoals.index', compact('fundRaises'));
     }
 

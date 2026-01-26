@@ -7,6 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     @vite('resources/css/app.css')
+    @stack('styles')
     <!-- Toastr CDN -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" integrity="sha512-vKM265s8gK9QicfEoG7knrFt0EuV6bJm73PvvrLpzjAU6YewsGmmIOzBSSMSmc5QwDFi1Cdm42HcAUy3xZf5xg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 </head>

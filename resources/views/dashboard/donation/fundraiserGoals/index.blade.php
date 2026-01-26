@@ -40,6 +40,7 @@
                     <th class="px-6 py-4 text-left">End Date</th>
                     <th class="px-6 py-4 text-left">Starting Goal</th>
                     <th class="px-6 py-4 text-left">Ending Goal</th>
+                    <th class="px-6 py-4 text-left">Total Collected</th>
                     <th class="px-6 py-4 text-left">Total Donors</th>
                     <th class="px-6 py-4 text-right">Actions</th>
                 </tr>
@@ -54,7 +55,10 @@
                     <td class="px-6 py-4">{{ $fund->end_date ? $fund->end_date->format('M d, Y') : '—' }}</td>
                     <td class="px-6 py-4">{{ $fund->starting_goal !== null ? ('Rs ' . number_format($fund->starting_goal)) : '—' }}</td>
                     <td class="px-6 py-4">{{ $fund->ending_goal !== null ? ('Rs ' . number_format($fund->ending_goal)) : '—' }}</td>
-                    <td class="px-6 py-4">{{ $fund->total_donors }}</td>
+                    <td class="px-6 py-4">
+                        {{ 'Rs ' . number_format((float) ($fund->collected_amount ?? 0), 2) }}
+                    </td>
+                    <td class="px-6 py-4">{{ $fund->donors_count ?? 0 }}</td>
 
                     <td class="px-6 py-4 text-right">
                         <div class="flex justify-end gap-2">
@@ -81,7 +85,7 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="8" class="px-6 py-8 text-center text-gray-500">
+                    <td colspan="9" class="px-6 py-8 text-center text-gray-500">
                         No fund raise goals found.
                     </td>
                 </tr>
@@ -102,9 +106,14 @@
                     Fund #{{ $fund->id }}
                 </h3>
 
-                <span class="text-sm font-medium text-gray-600">
-                    Donors: {{ $fund->total_donors }}
-                </span>
+                <div class="text-right">
+                    <div class="text-sm font-medium text-gray-600">
+                        Donors: {{ $fund->donors_count ?? 0 }}
+                    </div>
+                    <div class="text-xs text-gray-500">
+                        Collected: {{ 'Rs ' . number_format((float) ($fund->collected_amount ?? 0), 2) }}
+                    </div>
+                </div>
             </div>
 
             <div class="text-sm text-gray-700 space-y-1">

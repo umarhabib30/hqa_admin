@@ -31,6 +31,7 @@ use App\Http\Controllers\Api\GeneralDonationController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ContactSponserController;
+use App\Http\Controllers\Api\SponserApiSubscriber;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -142,5 +143,8 @@ Route::post('/apply-coupon', [ApplyCouponController::class, 'apply']);
 //Gernal Donation 
 Route::post('/process-general-donation', [GeneralDonationController::class, 'processDonation']);
 Route::post('/confirm-general-donation', [GeneralDonationController::class, 'confirmDonation']);
+
+// Sponser Subscriber
+Route::post('/sponserSubscriber', [SponserApiSubscriber::class, 'store']);
 // Create subscription after SetupIntent
 Route::post('/create-subscription', [GeneralDonationController::class, 'createSubscription']);

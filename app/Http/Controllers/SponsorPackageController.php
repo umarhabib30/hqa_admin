@@ -4,16 +4,33 @@ namespace App\Http\Controllers;
 
 use App\Models\SponsorPackage;
 use Illuminate\Http\Request;
+use App\Models\SponserPackageSubscriber;
 
 class SponsorPackageController extends Controller
 {
     /**
      * Display a listing of the sponsor packages.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $packages = SponsorPackage::latest()->get();
-        return view('dashboard.sponsor-packages.index', compact('packages'));
+        $packages = SponsorPackage::query()
+            ->withCount('subscribers')
+            ->latest()
+            ->get();
+
+        $activePackageId = $request->query('package_id', 'all');
+
+        $subscribersQuery = SponserPackageSubscriber::query()
+            ->with('package')
+            ->latest();
+
+        if ($activePackageId !== 'all' && $activePackageId !== null && $activePackageId !== '') {
+            $subscribersQuery->where('sponsor_package_id', $activePackageId);
+        }
+
+        $subscribers = $subscribersQuery->get();
+
+        return view('dashboard.sponsor-packages.index', compact('packages', 'subscribers', 'activePackageId'));
     }
 
     /**
