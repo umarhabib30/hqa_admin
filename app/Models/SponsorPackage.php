@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class SponsorPackage extends Model
 {
@@ -16,4 +17,9 @@ class SponsorPackage extends Model
         'benefits' => 'array',
         'price_per_year' => 'decimal:2',
     ];
+
+    public function subscribers(): HasMany
+    {
+        return $this->hasMany(SponserPackageSubscriber::class, 'sponsor_package_id');
+    }
 }
