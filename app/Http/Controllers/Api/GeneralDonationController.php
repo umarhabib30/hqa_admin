@@ -3,39 +3,43 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
+use App\Models\GeneralDonation;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use Stripe\Stripe;
 use Stripe\Customer;
-use Stripe\Subscription;
 use Stripe\PaymentIntent;
 use Stripe\Price;
 use Stripe\SetupIntent;
-use App\Models\GeneralDonation;
+use Stripe\Stripe;
+use Stripe\Subscription;
 
 class GeneralDonationController extends Controller
 {
     public function processDonation(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'name'      => 'required|string|max:255',
-            'email'     => 'required|email',
-            'amount'    => 'required|numeric|min:0.50',
+            'name' => 'required|string|max:255',
+            'email' => 'required|email',
+            'amount' => 'required|numeric|min:0.50',
             'frequency' => 'required|in:once,month,year',
         ]);
 
         try {
             Stripe::setApiKey(config('services.stripe.secret'));
+
             $amountInCents = (int) round($validated['amount'] * 100);
 
-            // 1. Handle Customer
+            // 1) Handle Customer
             $customers = Customer::all(['email' => $validated['email'], 'limit' => 1]);
             $customer = count($customers->data) > 0
                 ? $customers->data[0]
-                : Customer::create(['email' => $validated['email'], 'name' => $validated['name']]);
+                : Customer::create([
+                    'email' => $validated['email'],
+                    'name' => $validated['name'],
+                ]);
 
-            // 2. One-Time Flow
+            // 2) One-Time Payment (unchanged)
             if ($validated['frequency'] === 'once') {
                 $pi = PaymentIntent::create([
                     'amount' => $amountInCents,
@@ -52,25 +56,44 @@ class GeneralDonationController extends Controller
                 ]);
             }
 
-            // 3. Recurring Setup Flow
-            $si = SetupIntent::create([
-                'customer' => $customer->id,
-                'payment_method_types' => ['card'],
-            ]);
-
+            // 3) Recurring: create subscription FIRST and pay first invoice via PaymentIntent
+            // Create a Price dynamically (recommended: create Prices in Stripe Dashboard and reuse instead)
             $price = Price::create([
                 'unit_amount' => $amountInCents,
                 'currency' => 'usd',
-                'recurring' => ['interval' => $validated['frequency']],
-                'product_data' => ['name' => 'General Donation (' . ucfirst($validated['frequency']) . ')'],
+                'recurring' => ['interval' => $validated['frequency']],  // month|year
+                'product_data' => [
+                    'name' => 'General Donation (' . ucfirst($validated['frequency']) . ')',
+                ],
             ]);
+
+            $subscription = Subscription::create([
+                'customer' => $customer->id,
+                'items' => [['price' => $price->id]],
+                'payment_behavior' => 'default_incomplete',
+                'payment_settings' => [
+                    // When the first invoice payment succeeds, Stripe saves it as default for future charges
+                    'save_default_payment_method' => 'on_subscription',
+                ],
+                'expand' => ['latest_invoice.payment_intent'],
+            ]);
+
+            $clientSecret = null;
+            if (
+                isset($subscription->latest_invoice) &&
+                isset($subscription->latest_invoice->payment_intent) &&
+                isset($subscription->latest_invoice->payment_intent->client_secret)
+            ) {
+                $clientSecret = $subscription->latest_invoice->payment_intent->client_secret;
+            }
 
             return response()->json([
                 'success' => true,
-                'paymentType' => 'recurring_setup',
-                'clientSecret' => $si->client_secret,
+                'paymentType' => 'recurring_first_payment',
                 'customerId' => $customer->id,
                 'priceId' => $price->id,
+                'subscriptionId' => $subscription->id,
+                'clientSecret' => $clientSecret,  // frontend confirms this to pay the first invoice
             ]);
         } catch (\Throwable $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
@@ -113,7 +136,7 @@ class GeneralDonationController extends Controller
             return response()->json([
                 'success' => true,
                 'subscriptionId' => $subscription->id,
-                'clientSecret' => $clientSecret, 
+                'clientSecret' => $clientSecret,
             ]);
         } catch (\Throwable $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
