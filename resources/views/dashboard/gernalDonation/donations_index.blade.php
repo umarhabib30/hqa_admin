@@ -126,10 +126,14 @@
                                     <span class="px-3 py-1 rounded-full bg-yellow-100 text-yellow-800 font-semibold">
                                         Pledged
                                     </span>
-                                @else
+                                @elseif($mode === 'paid_now')
                                     <span class="px-3 py-1 rounded-full bg-green-100 text-green-800 font-semibold">
                                         Cash
                                     </span>
+                                @else
+                                <span class="px-3 py-1 rounded-full bg-green-100 text-green-800 font-semibold">
+                                    Online
+                                </span>
                                 @endif
                             </td>
                             <td class="px-6 py-4">

@@ -24,7 +24,7 @@ return new class extends Migration
             $table->string('status')->default('active');
 
 
-            $table->enum('donation_mode', ['paid_now', 'pledged'])->nullable()->default('paid_now');
+            $table->enum('donation_mode', ['paid_now', 'pledged', 'stripe'])->nullable()->default('paid_now');
             $table->timestamps();
         });
     }

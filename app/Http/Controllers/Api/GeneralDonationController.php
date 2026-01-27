@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\FundRaisa;
 use App\Models\GeneralDonation;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -12,253 +13,292 @@ use Stripe\Invoice;
 use Stripe\PaymentIntent;
 use Stripe\Price;
 use Stripe\Stripe;
+use Stripe\StripeClient;
 use Stripe\Subscription;
 
 class GeneralDonationController extends Controller
 {
-    public function processDonation(Request $request): JsonResponse
+    public function show()
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
+        return view('subscribe_dynamic');
+    }
+
+    // recurring donation
+    public function recurringDonation(Request $request)
+    {
+        $request->validate([
+            'payment_method' => 'required|string',
             'email' => 'required|email',
-            'amount' => 'required|numeric|min:0.50',
-            'frequency' => 'required|in:once,month,year',
+            'name' => 'nullable|string',
+            'amount' => 'required|integer|min:50',
+            'interval' => 'required|string|in:month,year',
         ]);
 
-        try {
-            Stripe::setApiKey(config('services.stripe.secret'));
+        $stripe = new StripeClient(config('services.stripe.secret'));
+        // Customer
+        $customer = $stripe->customers->create([
+            'email' => $request->email,
+            'name' => $request->name,
+        ]);
 
-            $amountInCents = (int) round(((float)$validated['amount']) * 100);
+        // Attach PM
+        $stripe->paymentMethods->attach($request->payment_method, [
+            'customer' => $customer->id,
+        ]);
 
-            Log::info('Donation initiated', [
-                'email' => $validated['email'],
-                'amount' => $validated['amount'],
-                'frequency' => $validated['frequency'],
-            ]);
+        // Default PM
+        $stripe->customers->update($customer->id, [
+            'invoice_settings' => [
+                'default_payment_method' => $request->payment_method,
+            ],
+        ]);
 
-            // 1) Handle Customer
-            $customers = Customer::all(['email' => $validated['email'], 'limit' => 1]);
-            $customer = count($customers->data) > 0
-                ? $customers->data[0]
-                : Customer::create([
-                    'email' => $validated['email'],
-                    'name'  => $validated['name'],
-                ]);
+        // Product
+        $product = $stripe->products->create([
+            'name' => 'HQA Funding',
+        ]);
 
-            Log::info('Stripe customer resolved', [
-                'customer_id' => $customer->id,
-            ]);
+        // Price
+        $price = $stripe->prices->create([
+            'unit_amount' => (int) $request->amount,
+            'currency' => 'usd',
+            'recurring' => ['interval' => $request->interval],
+            'product' => $product->id,
+        ]);
 
-            // 2) One-Time Payment
-            if ($validated['frequency'] === 'once') {
-                $pi = PaymentIntent::create([
-                    'amount' => $amountInCents,
-                    'currency' => 'usd',
-                    'customer' => $customer->id,
-                    'payment_method_types' => ['card'],
-                ]);
+        // Subscription
+        $subscription = $stripe->subscriptions->create([
+            'customer' => $customer->id,
+            'items' => [
+                ['price' => $price->id],
+            ],
+            'collection_method' => 'charge_automatically',
+            'payment_behavior' => 'default_incomplete',
+            'payment_settings' => [
+                'save_default_payment_method' => 'on_subscription',
+                'payment_method_types' => ['card'],
+            ],
+            'expand' => ['latest_invoice'],
+        ]);
 
-                Log::info('One-time PaymentIntent created', [
-                    'payment_intent_id' => $pi->id,
-                ]);
+        $invoiceId = is_string($subscription->latest_invoice)
+            ? $subscription->latest_invoice
+            : ($subscription->latest_invoice->id ?? null);
 
-                return response()->json([
-                    'success' => true,
-                    'paymentType' => 'once',
-                    'clientSecret' => $pi->client_secret,
-                    'customerId' => $customer->id,
-                ]);
-            }
-
-            // 3) Recurring Flow
-            $price = Price::create([
-                'unit_amount' => $amountInCents,
-                'currency' => 'usd',
-                'recurring' => ['interval' => $validated['frequency']], // month|year
-                'product_data' => [
-                    'name' => 'General Donation (' . ucfirst($validated['frequency']) . ')',
-                ],
-            ]);
-
-            Log::info('Stripe price created', [
-                'price_id' => $price->id,
-            ]);
-
-            $subscription = Subscription::create([
-                'customer' => $customer->id,
-                'items' => [['price' => $price->id]],
-                'collection_method' => 'charge_automatically',
-                'payment_behavior' => 'default_incomplete',
-                'payment_settings' => [
-                    'payment_method_types' => ['card'],
-                    'save_default_payment_method' => 'on_subscription',
-                ],
-                // expand invoice and its PI up-front (best)
-                'expand' => ['latest_invoice.payment_intent'],
-            ]);
-
-            Log::info('Stripe subscription created', [
+        if (!$invoiceId) {
+            return response()->json([
+                'message' => 'No latest_invoice found on subscription.',
                 'subscription_id' => $subscription->id,
-                'subscription_status' => $subscription->status ?? null,
-            ]);
-
-            // Try to get client secret from expanded subscription response first
-            $clientSecret = $subscription->latest_invoice->payment_intent->client_secret ?? null;
-
-            // If still missing, retrieve invoice with payment_intent expanded and handle PI as string/object
-            if (!$clientSecret) {
-                $invoiceId = null;
-
-                if (is_string($subscription->latest_invoice)) {
-                    $invoiceId = $subscription->latest_invoice;
-                } elseif (isset($subscription->latest_invoice->id)) {
-                    $invoiceId = $subscription->latest_invoice->id;
-                }
-
-                Log::warning('No clientSecret on subscription expand (retrieving invoice)', [
-                    'subscription_id' => $subscription->id,
-                    'invoice_id' => $invoiceId,
-                ]);
-
-                if (!$invoiceId) {
-                    Log::error('No invoiceId found on subscription.latest_invoice', [
-                        'subscription_id' => $subscription->id,
-                    ]);
-
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Unable to initialize recurring invoice',
-                    ], 500);
-                }
-
-                // Retrieve invoice and expand payment_intent
-                $invoice = Invoice::retrieve([
-                    'id' => $invoiceId,
-                    'expand' => ['payment_intent'],
-                ]);
-
-                $piFieldType = 'null';
-                if (isset($invoice->payment_intent)) {
-                    $piFieldType = is_string($invoice->payment_intent) ? 'string' : 'object';
-                }
-
-                Log::info('Invoice retrieved', [
-                    'invoice_id' => $invoiceId,
-                    'invoice_status' => $invoice->status ?? null,
-                    'collection_method' => $invoice->collection_method ?? null,
-                    'amount_due' => $invoice->amount_due ?? null,
-                    'payment_intent_type' => $piFieldType,
-                ]);
-
-                // Case A: expanded PI object
-                if (isset($invoice->payment_intent) && is_object($invoice->payment_intent)) {
-                    $clientSecret = $invoice->payment_intent->client_secret ?? null;
-                }
-
-                // Case B: PI is string ID (rare after expand, but safe)
-                if (!$clientSecret && isset($invoice->payment_intent) && is_string($invoice->payment_intent)) {
-                    $pi = PaymentIntent::retrieve($invoice->payment_intent);
-                    $clientSecret = $pi->client_secret ?? null;
-
-                    Log::info('PaymentIntent retrieved from invoice.payment_intent string', [
-                        'payment_intent_id' => $pi->id ?? $invoice->payment_intent,
-                    ]);
-                }
-            }
-
-            if (!$clientSecret) {
-                Log::error('No client secret found for first recurring payment', [
-                    'subscription_id' => $subscription->id,
-                    'latest_invoice' => isset($subscription->latest_invoice->id)
-                        ? $subscription->latest_invoice->id
-                        : (is_string($subscription->latest_invoice) ? $subscription->latest_invoice : null),
-                ]);
-
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Unable to initialize first recurring payment',
-                ], 500);
-            }
-
-            return response()->json([
-                'success' => true,
-                'paymentType' => 'recurring_first_payment',
-                'customerId' => $customer->id,
-                'priceId' => $price->id,
-                'subscriptionId' => $subscription->id,
-                'clientSecret' => $clientSecret,
-            ]);
-
-        } catch (\Throwable $e) {
-            Log::error('processDonation failed', [
-                'message' => $e->getMessage(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-                'trace' => $e->getTraceAsString(),
-                'request' => $request->except(['card', 'payment_method']),
-            ]);
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Payment initialization failed',
-            ], 500);
+                'subscription_status' => $subscription->status,
+            ], 200);
         }
+
+        // Helper: always re-fetch invoice with expansions
+        $getInvoice = function () use ($stripe, $invoiceId) {
+            return $stripe->invoices->retrieve($invoiceId, [
+                'expand' => ['payment_intent', 'charge'],
+            ]);
+        };
+
+        $invoice = $getInvoice();
+
+        // If draft, finalize
+        if (($invoice->status ?? null) === 'draft') {
+            $stripe->invoices->finalizeInvoice($invoiceId, []);
+            $invoice = $getInvoice();
+        }
+
+        // If open and still unpaid, pay now
+        if (($invoice->status ?? null) === 'open') {
+            // Try to pay using the PM we just attached
+            $stripe->invoices->pay($invoiceId, [
+                'payment_method' => $request->payment_method,
+            ]);
+            $invoice = $getInvoice();
+        }
+
+        // Re-fetch subscription to get updated status (important)
+        $subscriptionFresh = $stripe->subscriptions->retrieve($subscription->id, []);
+
+        // ✅ Case A: Invoice is PAID (no client_secret needed)
+        if (($invoice->status ?? null) === 'paid') {
+            $goal = FundRaisa::latest()->first();
+
+            // Store donation (initial)
+            $donation = GeneralDonation::create([
+                'fund_raisa_id' => $goal->id,  // add to validation if required
+                'name' => $request->name,
+                'email' => $request->email,
+                'amount' => (int) $request->amount,
+                'payment_id' => $invoiceId,  // or $subscription->id, see note below
+                'donation_mode' => 'stripe',
+                'frequency' => $request->interval,  // month/year
+                'stripe_customer_id' => $customer->id,
+                'stripe_subscription_id' => $subscription->id,
+                'status' => 'paid',
+            ]);
+
+            return response()->json([
+                'paid' => true,
+                'customer_id' => $customer->id,
+                'product_id' => $product->id,
+                'price_id' => $price->id,
+                'subscription_id' => $subscription->id,
+                'subscription_status' => $subscriptionFresh->status ?? $subscription->status,
+                'latest_invoice_id' => $invoiceId,
+                'invoice_status' => $invoice->status ?? null,
+                'amount_due' => $invoice->amount_due ?? null,
+                'total' => $invoice->total ?? null,
+                // Sometimes charge exists even if payment_intent isn't present in invoice
+                'charge_id' => $invoice->charge->id ?? $invoice->charge ?? null,
+                'message' => 'Invoice is already paid. No client_secret required.',
+            ], 200);
+        }
+
+        // ✅ Case B: We have a PaymentIntent → return client_secret
+        // payment_intent can be an object (expanded) or an ID string (depending)
+        $pi = $invoice->payment_intent ?? null;
+
+        if (is_string($pi)) {
+            $pi = $stripe->paymentIntents->retrieve($pi, []);
+        }
+
+        if ($pi && isset($pi->client_secret)) {
+            return response()->json([
+                'paid' => false,
+                'customer_id' => $customer->id,
+                'product_id' => $product->id,
+                'price_id' => $price->id,
+                'subscription_id' => $subscription->id,
+                'subscription_status' => $subscriptionFresh->status ?? $subscription->status,
+                'latest_invoice_id' => $invoiceId,
+                'invoice_status' => $invoice->status ?? null,
+                'client_secret' => $pi->client_secret,
+                'pi_status' => $pi->status,
+            ], 200);
+        }
+
+        // ✅ Case C: Still no PI and not paid → return debug
+        return response()->json([
+            'paid' => false,
+            'customer_id' => $customer->id,
+            'product_id' => $product->id,
+            'price_id' => $price->id,
+            'subscription_id' => $subscription->id,
+            'subscription_status' => $subscriptionFresh->status ?? $subscription->status,
+            'latest_invoice_id' => $invoiceId,
+            'invoice_status' => $invoice->status ?? null,
+            'amount_due' => $invoice->amount_due ?? null,
+            'total' => $invoice->total ?? null,
+            'message' => 'Invoice not paid and no payment_intent found. Check invoice in Stripe dashboard.',
+        ], 200);
     }
 
-    public function createSubscription(Request $request): JsonResponse
+    // one time donation
+    public function oneTimeDonation(Request $request): \Illuminate\Http\JsonResponse
     {
-        // Deprecated for new flow
-        try {
-            Log::warning('Deprecated createSubscription endpoint called', [
-                'request' => $request->all(),
-            ]);
+        $request->validate([
+            'payment_method' => 'required|string',
+            'email'          => 'required|email',
+            'name'           => 'nullable|string',
+            'amount'         => 'required|integer|min:50', // cents
+        ]);
+
+        $stripe = new StripeClient(config('services.stripe.secret'));
+
+        // 1) Create customer
+        $customer = $stripe->customers->create([
+            'email' => $request->email,
+            'name'  => $request->name,
+        ]);
+
+        // 2) Attach payment method to customer
+        $stripe->paymentMethods->attach($request->payment_method, [
+            'customer' => $customer->id,
+        ]);
+
+        // Optional but good practice: set default PM for invoices/future usage
+        $stripe->customers->update($customer->id, [
+            'invoice_settings' => [
+                'default_payment_method' => $request->payment_method,
+            ],
+        ]);
+
+        // 3) Create + confirm PaymentIntent
+        // ✅ Do NOT send confirmation_method when using automatic_payment_methods
+        $pi = $stripe->paymentIntents->create([
+            'amount'   => (int) $request->amount,
+            'currency' => 'usd',
+
+            'customer'       => $customer->id,
+            'payment_method' => $request->payment_method,
+
+            'confirm'       => true,   // attempt to pay now
+            'off_session'   => false,  // user is present
+            'receipt_email' => $request->email,
+
+            'description' => 'One-time donation',
+            'metadata'    => [
+                'type' => 'general_donation_one_time',
+            ],
+
+            // ✅ Fix return_url error by blocking redirects
+            'automatic_payment_methods' => [
+                'enabled'         => true,
+                'allow_redirects' => 'never',
+            ],
+        ]);
+
+        $goal = FundRaisa::latest()->first();
+
+        // 4) Save donation as pending first
+        $donation = GeneralDonation::create([
+            'fund_raisa_id'          => $goal?->id,
+            'name'                   => $request->name,
+            'email'                  => $request->email,
+            'amount'                 => (int) $request->amount,
+            'payment_id'             => $pi->id, // PaymentIntent id
+            'donation_mode'          => 'stripe',
+            'frequency'              => 'one_time',
+            'stripe_customer_id'     => $customer->id,
+            'stripe_subscription_id' => null,
+            'status'                 => 'pending',
+        ]);
+
+        // 5) Handle statuses
+        if (($pi->status ?? null) === 'succeeded') {
+            $donation->update(['status' => 'paid']);
 
             return response()->json([
-                'success' => false,
-                'message' => 'Deprecated endpoint. Use processDonation recurring flow.',
-            ], 400);
-        } catch (\Throwable $e) {
-            Log::error('createSubscription failed', [
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-                'request' => $request->all(),
-            ]);
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Invalid endpoint',
-            ], 400);
+                'paid'             => true,
+                'donation_id'       => $donation->id,
+                'payment_intent_id' => $pi->id,
+                'pi_status'         => $pi->status,
+                'message'           => 'Paid successfully (no 3DS required).',
+            ], 200);
         }
-    }
 
-    public function confirmDonation(Request $request): JsonResponse
-    {
-        try {
-            $donation = GeneralDonation::create($request->all());
-
-            Log::info('Donation stored in DB', [
-                'donation_id' => $donation->id,
-                'payment_id' => $request->payment_id ?? null,
-                'subscription_id' => $request->stripe_subscription_id ?? null,
-            ]);
-
+        // 3DS required -> client must confirm using client_secret
+        if (in_array($pi->status, ['requires_action', 'requires_confirmation'], true)) {
             return response()->json([
-                'success' => true,
-                'data' => $donation,
-            ]);
-        } catch (\Throwable $e) {
-            Log::error('confirmDonation failed', [
-                'message' => $e->getMessage(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-                'trace' => $e->getTraceAsString(),
-                'request' => $request->all(),
-            ]);
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to store donation',
-            ], 500);
+                'paid'             => false,
+                'donation_id'       => $donation->id,
+                'payment_intent_id' => $pi->id,
+                'client_secret'     => $pi->client_secret,
+                'pi_status'         => $pi->status,
+                'message'           => '3DS required. Please confirm payment on client. DB saved as pending.',
+            ], 200);
         }
+
+        // Any other status = failed for this flow
+        $donation->update(['status' => 'failed']);
+
+        return response()->json([
+            'paid'             => false,
+            'donation_id'       => $donation->id,
+            'payment_intent_id' => $pi->id,
+            'pi_status'         => $pi->status ?? null,
+            'message'           => 'Payment failed.',
+        ], 400);
     }
 }

@@ -7,6 +7,7 @@ use App\Http\Controllers\alumniHustonController;
 use App\Http\Controllers\alumniImageController;
 use App\Http\Controllers\AlumniMailController;
 use App\Http\Controllers\alumniPostController;
+use App\Http\Controllers\Api\GeneralDonationController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\CalendarController;
@@ -40,6 +41,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Artisan;
 use App\Http\Controllers\ContactSponserController;
 use App\Http\Controllers\DonationAdminController;
+use App\Http\Controllers\DynamicSubscriptionController;
 
 Route::get('/link-storage', function () {
     Artisan::call('storage:link');
@@ -193,3 +195,8 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/permissions/update-role', [PermissionController::class, 'updateRolePermissions'])->name('permissions.update-role');
 });
 
+
+// test urls for recurring and one time donation
+Route::get('/subscribe', [GeneralDonationController::class, 'show'])->name('dynsub.show');
+Route::post('/subscribe', [GeneralDonationController::class, 'recurringDonation'])->name('dynsub.store');
+Route::post('one-time-donation', [GeneralDonationController::class, 'oneTimeDonation'])->name('one-time-donation');

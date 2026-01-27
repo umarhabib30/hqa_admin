@@ -144,6 +144,10 @@ Route::post('/apply-coupon', [ApplyCouponController::class, 'apply']);
 Route::post('/process-general-donation', [GeneralDonationController::class, 'processDonation']);
 Route::post('/confirm-general-donation', [GeneralDonationController::class, 'confirmDonation']);
 
+Route::post('/recurring-donation', [GeneralDonationController::class, 'recurringDonation']);
+Route::post('/one-time-donation', [GeneralDonationController::class, 'oneTimeDonation']);
+
+
 // Sponser Subscriber
 Route::post('/sponserSubscriber', [SponserApiSubscriber::class, 'store']);
 // Create subscription after SetupIntent
