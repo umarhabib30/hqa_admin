@@ -93,8 +93,8 @@ class GeneralDonationController extends Controller
                     'payment_method_types' => ['card'],
                     'save_default_payment_method' => 'on_subscription',
                 ],
-                // expand latest_invoice so we can get invoice id reliably
-                'expand' => ['latest_invoice'],
+                // expand invoice and its PI up-front (best)
+                'expand' => ['latest_invoice.payment_intent'],
             ]);
 
             Log::info('Stripe subscription created', [
@@ -102,55 +102,76 @@ class GeneralDonationController extends Controller
                 'subscription_status' => $subscription->status ?? null,
             ]);
 
-            // Get invoice id
-            $invoiceId = null;
-            if (is_string($subscription->latest_invoice)) {
-                $invoiceId = $subscription->latest_invoice;
-            } elseif (isset($subscription->latest_invoice->id)) {
-                $invoiceId = $subscription->latest_invoice->id;
-            }
+            // Try to get client secret from expanded subscription response first
+            $clientSecret = $subscription->latest_invoice->payment_intent->client_secret ?? null;
 
-            if (!$invoiceId) {
-                Log::error('No invoiceId found on subscription.latest_invoice', [
+            // If still missing, retrieve invoice with payment_intent expanded and handle PI as string/object
+            if (!$clientSecret) {
+                $invoiceId = null;
+
+                if (is_string($subscription->latest_invoice)) {
+                    $invoiceId = $subscription->latest_invoice;
+                } elseif (isset($subscription->latest_invoice->id)) {
+                    $invoiceId = $subscription->latest_invoice->id;
+                }
+
+                Log::warning('No clientSecret on subscription expand (retrieving invoice)', [
                     'subscription_id' => $subscription->id,
+                    'invoice_id' => $invoiceId,
                 ]);
 
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Unable to initialize recurring invoice',
-                ], 500);
-            }
+                if (!$invoiceId) {
+                    Log::error('No invoiceId found on subscription.latest_invoice', [
+                        'subscription_id' => $subscription->id,
+                    ]);
 
-            // Retrieve invoice and read client secret from either:
-            // - invoice.payment_intent.client_secret (older)
-            // - invoice.confirmation_secret.client_secret (newer API behavior)
-            $invoice = Invoice::retrieve($invoiceId);
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Unable to initialize recurring invoice',
+                    ], 500);
+                }
 
-            Log::info('Invoice retrieved', [
-                'invoice_id' => $invoiceId,
-                'invoice_status' => $invoice->status ?? null,
-                'collection_method' => $invoice->collection_method ?? null,
-                'amount_due' => $invoice->amount_due ?? null,
-            ]);
+                // Retrieve invoice and expand payment_intent
+                $invoice = Invoice::retrieve([
+                    'id' => $invoiceId,
+                    'expand' => ['payment_intent'],
+                ]);
 
-            $clientSecret = null;
+                $piFieldType = 'null';
+                if (isset($invoice->payment_intent)) {
+                    $piFieldType = is_string($invoice->payment_intent) ? 'string' : 'object';
+                }
 
-            // Older behavior: payment_intent exists
-            if (isset($invoice->payment_intent) && is_object($invoice->payment_intent)) {
-                $clientSecret = $invoice->payment_intent->client_secret ?? null;
-            }
-
-            // Newer behavior: confirmation_secret exists (preferred fallback)
-            if (!$clientSecret && isset($invoice->confirmation_secret) && is_object($invoice->confirmation_secret)) {
-                $clientSecret = $invoice->confirmation_secret->client_secret ?? null;
-            }
-
-            if (!$clientSecret) {
-                Log::error('No client secret found on invoice (payment_intent and confirmation_secret both missing)', [
-                    'subscription_id' => $subscription->id,
+                Log::info('Invoice retrieved', [
                     'invoice_id' => $invoiceId,
                     'invoice_status' => $invoice->status ?? null,
                     'collection_method' => $invoice->collection_method ?? null,
+                    'amount_due' => $invoice->amount_due ?? null,
+                    'payment_intent_type' => $piFieldType,
+                ]);
+
+                // Case A: expanded PI object
+                if (isset($invoice->payment_intent) && is_object($invoice->payment_intent)) {
+                    $clientSecret = $invoice->payment_intent->client_secret ?? null;
+                }
+
+                // Case B: PI is string ID (rare after expand, but safe)
+                if (!$clientSecret && isset($invoice->payment_intent) && is_string($invoice->payment_intent)) {
+                    $pi = PaymentIntent::retrieve($invoice->payment_intent);
+                    $clientSecret = $pi->client_secret ?? null;
+
+                    Log::info('PaymentIntent retrieved from invoice.payment_intent string', [
+                        'payment_intent_id' => $pi->id ?? $invoice->payment_intent,
+                    ]);
+                }
+            }
+
+            if (!$clientSecret) {
+                Log::error('No client secret found for first recurring payment', [
+                    'subscription_id' => $subscription->id,
+                    'latest_invoice' => isset($subscription->latest_invoice->id)
+                        ? $subscription->latest_invoice->id
+                        : (is_string($subscription->latest_invoice) ? $subscription->latest_invoice : null),
                 ]);
 
                 return response()->json([
@@ -165,7 +186,6 @@ class GeneralDonationController extends Controller
                 'customerId' => $customer->id,
                 'priceId' => $price->id,
                 'subscriptionId' => $subscription->id,
-                'invoiceId' => $invoiceId,
                 'clientSecret' => $clientSecret,
             ]);
 
@@ -187,7 +207,7 @@ class GeneralDonationController extends Controller
 
     public function createSubscription(Request $request): JsonResponse
     {
-        // Not needed for the new flow; keep for backward compatibility.
+        // Deprecated for new flow
         try {
             Log::warning('Deprecated createSubscription endpoint called', [
                 'request' => $request->all(),
@@ -197,7 +217,6 @@ class GeneralDonationController extends Controller
                 'success' => false,
                 'message' => 'Deprecated endpoint. Use processDonation recurring flow.',
             ], 400);
-
         } catch (\Throwable $e) {
             Log::error('createSubscription failed', [
                 'message' => $e->getMessage(),
@@ -227,7 +246,6 @@ class GeneralDonationController extends Controller
                 'success' => true,
                 'data' => $donation,
             ]);
-
         } catch (\Throwable $e) {
             Log::error('confirmDonation failed', [
                 'message' => $e->getMessage(),
