@@ -29,6 +29,7 @@ return new class extends Migration
             $table->boolean('is_used')->default(false);
             $table->string('used_by_email')->nullable();
             $table->timestamp('used_at')->nullable();
+            $table->boolean('is_copied')->default(false);
             $table->timestamps();
         });
     }

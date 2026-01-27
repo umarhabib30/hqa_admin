@@ -12,10 +12,12 @@ class CouponCode extends Model
         'is_used',
         'used_by_email',
         'used_at',
+        'is_copied',
     ];
 
     protected $casts = [
         'is_used' => 'boolean',
+        'is_copied' => 'boolean',
         'used_at' => 'datetime',
     ];
 

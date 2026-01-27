@@ -129,7 +129,7 @@ class ManagerController extends Controller
         // Prevent non-super-admin from deleting super_admin
         if (!$manager->isSuperAdmin() && !auth()->user()->isSuperAdmin()) {
             // Allow admins to delete managers
-        } elseif ($manager->isSuperAdmin() && !auth()->user()->isSuperAdmin()) {
+        } elseif ($manager->role === 'super_admin') {
             return back()->with('error', 'You cannot delete a super admin account.');
         }
 

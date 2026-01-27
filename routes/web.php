@@ -179,6 +179,8 @@ Route::get('sponsor-package-subscribers/{subscriber}', [SponsorPackageSubscriber
 // Coupons Routes
 Route::resource('coupons', CouponController::class);
 Route::get('/coupons/{id}/codes', [CouponController::class, 'showCodes'])->name('coupons.codes');
+Route::post('/coupon-codes/mark-copied', [CouponController::class, 'markAsCopied'])->name('coupon-codes.mark-copied');
+
 
 // Contact Sponser Routes
 Route::get('contact-sponser', [ContactSponserController::class, 'index'])->name('contact-sponser.index');

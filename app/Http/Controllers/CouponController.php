@@ -13,10 +13,10 @@ class CouponController extends Controller
      */
     public function index()
     {
-        $coupons = Coupon::withCount(['couponCodes as total_codes', 'couponCodes as used_codes' => function($query) {
+        $coupons = Coupon::withCount(['couponCodes as total_codes', 'couponCodes as used_codes' => function ($query) {
             $query->where('is_used', true);
         }])->latest()->get();
-        
+
         return view('dashboard.coupons.index', compact('coupons'));
     }
 
@@ -101,8 +101,18 @@ class CouponController extends Controller
     public function showCodes($id)
     {
         $coupon = Coupon::with('couponCodes')->findOrFail($id);
-        $codes = $coupon->couponCodes()->orderBy('is_used')->orderBy('created_at')->get();
-        
+        $codes = $coupon
+            ->couponCodes()
+            ->orderByRaw('
+                CASE
+                    WHEN is_used = 0 AND is_copied = 0 THEN 1
+                    WHEN is_used = 0 AND is_copied = 1 THEN 2
+                    WHEN is_used = 1 THEN 3
+                END
+            ')
+            ->orderBy('created_at')
+            ->get();
+
         return view('dashboard.coupons.codes', compact('coupon', 'codes'));
     }
 
@@ -112,10 +122,10 @@ class CouponController extends Controller
     public function edit($id)
     {
         $coupon = Coupon::findOrFail($id);
-        
+
         // Don't allow editing quantity if codes already exist
         $existingCodes = $coupon->couponCodes()->count();
-        
+
         return view('dashboard.coupons.edit', compact('coupon', 'existingCodes'));
     }
 
@@ -151,10 +161,33 @@ class CouponController extends Controller
     public function destroy($id)
     {
         $coupon = Coupon::findOrFail($id);
-        $coupon->delete(); // This will cascade delete all coupon codes
+        $coupon->delete();  // This will cascade delete all coupon codes
 
         return redirect()
             ->route('coupons.index')
             ->with('success', 'Coupon deleted successfully.');
+    }
+
+    /**
+     * Mark coupon code as copied
+     */
+    public function markAsCopied(Request $request)
+    {
+        $request->validate([
+            'code_id' => 'required|exists:coupon_codes,id',
+        ]);
+
+        $code = CouponCode::findOrFail($request->code_id);
+
+        // Only update if not already copied
+        if (!$code->is_copied) {
+            $code->update([
+                'is_copied' => true,
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+        ]);
     }
 }
