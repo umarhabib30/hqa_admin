@@ -10,7 +10,6 @@ use Illuminate\Support\Facades\Log;
 use Stripe\Customer;
 use Stripe\PaymentIntent;
 use Stripe\Price;
-use Stripe\SetupIntent;
 use Stripe\Stripe;
 use Stripe\Subscription;
 
@@ -30,6 +29,12 @@ class GeneralDonationController extends Controller
 
             $amountInCents = (int) round($validated['amount'] * 100);
 
+            Log::info('Donation initiated', [
+                'email' => $validated['email'],
+                'amount' => $validated['amount'],
+                'frequency' => $validated['frequency'],
+            ]);
+
             // 1) Handle Customer
             $customers = Customer::all(['email' => $validated['email'], 'limit' => 1]);
             $customer = count($customers->data) > 0
@@ -39,13 +44,21 @@ class GeneralDonationController extends Controller
                     'name' => $validated['name'],
                 ]);
 
-            // 2) One-Time Payment (unchanged)
+            Log::info('Stripe customer resolved', [
+                'customer_id' => $customer->id,
+            ]);
+
+            // 2) One-Time Payment
             if ($validated['frequency'] === 'once') {
                 $pi = PaymentIntent::create([
                     'amount' => $amountInCents,
                     'currency' => 'usd',
                     'customer' => $customer->id,
                     'payment_method_types' => ['card'],
+                ]);
+
+                Log::info('One-time PaymentIntent created', [
+                    'payment_intent' => $pi->id,
                 ]);
 
                 return response()->json([
@@ -56,15 +69,18 @@ class GeneralDonationController extends Controller
                 ]);
             }
 
-            // 3) Recurring: create subscription FIRST and pay first invoice via PaymentIntent
-            // Create a Price dynamically (recommended: create Prices in Stripe Dashboard and reuse instead)
+            // 3) Recurring Subscription Flow
             $price = Price::create([
                 'unit_amount' => $amountInCents,
                 'currency' => 'usd',
-                'recurring' => ['interval' => $validated['frequency']],  // month|year
+                'recurring' => ['interval' => $validated['frequency']],
                 'product_data' => [
                     'name' => 'General Donation (' . ucfirst($validated['frequency']) . ')',
                 ],
+            ]);
+
+            Log::info('Stripe price created', [
+                'price_id' => $price->id,
             ]);
 
             $subscription = Subscription::create([
@@ -72,19 +88,21 @@ class GeneralDonationController extends Controller
                 'items' => [['price' => $price->id]],
                 'payment_behavior' => 'default_incomplete',
                 'payment_settings' => [
-                    // When the first invoice payment succeeds, Stripe saves it as default for future charges
                     'save_default_payment_method' => 'on_subscription',
                 ],
                 'expand' => ['latest_invoice.payment_intent'],
             ]);
 
-            $clientSecret = null;
-            if (
-                isset($subscription->latest_invoice) &&
-                isset($subscription->latest_invoice->payment_intent) &&
-                isset($subscription->latest_invoice->payment_intent->client_secret)
-            ) {
-                $clientSecret = $subscription->latest_invoice->payment_intent->client_secret;
+            Log::info('Stripe subscription created', [
+                'subscription_id' => $subscription->id,
+            ]);
+
+            $clientSecret = $subscription->latest_invoice->payment_intent->client_secret ?? null;
+
+            if (!$clientSecret) {
+                Log::warning('Subscription created without PaymentIntent', [
+                    'subscription_id' => $subscription->id,
+                ]);
             }
 
             return response()->json([
@@ -93,53 +111,41 @@ class GeneralDonationController extends Controller
                 'customerId' => $customer->id,
                 'priceId' => $price->id,
                 'subscriptionId' => $subscription->id,
-                'clientSecret' => $clientSecret,  // frontend confirms this to pay the first invoice
+                'clientSecret' => $clientSecret,
             ]);
+
         } catch (\Throwable $e) {
-            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+            Log::error('processDonation failed', [
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+                'request' => $request->except(['card', 'payment_method']),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Payment initialization failed',
+            ], 500);
         }
     }
 
     public function createSubscription(Request $request): JsonResponse
     {
-        $validated = $request->validate([
-            'customerId' => 'required|string',
-            'priceId' => 'required|string',
-            'paymentMethodId' => 'required|string',
-        ]);
-
         try {
-            Stripe::setApiKey(config('services.stripe.secret'));
-
-            // Set default payment method
-            $pm = \Stripe\PaymentMethod::retrieve($validated['paymentMethodId']);
-            $pm->attach(['customer' => $validated['customerId']]);
-            Customer::update($validated['customerId'], [
-                'invoice_settings' => ['default_payment_method' => $pm->id],
+            throw new \Exception(
+                'createSubscription endpoint is deprecated and should not be used.'
+            );
+        } catch (\Throwable $e) {
+            Log::error('createSubscription called unexpectedly', [
+                'message' => $e->getMessage(),
+                'request' => $request->all(),
             ]);
-
-            // Create subscription and expand the latest invoice
-            $subscription = Subscription::create([
-                'customer' => $validated['customerId'],
-                'items' => [['price' => $validated['priceId']]],
-                'payment_behavior' => 'default_incomplete',
-                'payment_settings' => ['save_default_payment_method' => 'on_subscription'],
-                'expand' => ['latest_invoice.payment_intent'],
-            ]);
-
-            // --- THE FIX FOR THE "NULL" ERROR ---
-            $clientSecret = null;
-            if (isset($subscription->latest_invoice->payment_intent)) {
-                $clientSecret = $subscription->latest_invoice->payment_intent->client_secret;
-            }
 
             return response()->json([
-                'success' => true,
-                'subscriptionId' => $subscription->id,
-                'clientSecret' => $clientSecret,
-            ]);
-        } catch (\Throwable $e) {
-            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+                'success' => false,
+                'message' => 'Invalid endpoint',
+            ], 400);
         }
     }
 
@@ -147,9 +153,30 @@ class GeneralDonationController extends Controller
     {
         try {
             $donation = GeneralDonation::create($request->all());
-            return response()->json(['success' => true, 'data' => $donation]);
+
+            Log::info('Donation stored in DB', [
+                'donation_id' => $donation->id,
+                'payment_id' => $request->payment_id ?? null,
+                'subscription_id' => $request->stripe_subscription_id ?? null,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'data' => $donation,
+            ]);
         } catch (\Throwable $e) {
-            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+            Log::error('confirmDonation failed', [
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+                'request' => $request->all(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to store donation',
+            ], 500);
         }
     }
 }
