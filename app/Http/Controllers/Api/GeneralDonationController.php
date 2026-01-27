@@ -8,6 +8,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Stripe\Customer;
+use Stripe\Invoice;
 use Stripe\PaymentIntent;
 use Stripe\Price;
 use Stripe\Stripe;
@@ -27,7 +28,7 @@ class GeneralDonationController extends Controller
         try {
             Stripe::setApiKey(config('services.stripe.secret'));
 
-            $amountInCents = (int) round($validated['amount'] * 100);
+            $amountInCents = (int) round(((float)$validated['amount']) * 100);
 
             Log::info('Donation initiated', [
                 'email' => $validated['email'],
@@ -36,7 +37,11 @@ class GeneralDonationController extends Controller
             ]);
 
             // 1) Handle Customer
-            $customers = Customer::all(['email' => $validated['email'], 'limit' => 1]);
+            $customers = Customer::all([
+                'email' => $validated['email'],
+                'limit' => 1
+            ]);
+
             $customer = count($customers->data) > 0
                 ? $customers->data[0]
                 : Customer::create([
@@ -58,7 +63,7 @@ class GeneralDonationController extends Controller
                 ]);
 
                 Log::info('One-time PaymentIntent created', [
-                    'payment_intent' => $pi->id,
+                    'payment_intent_id' => $pi->id,
                 ]);
 
                 return response()->json([
@@ -69,11 +74,11 @@ class GeneralDonationController extends Controller
                 ]);
             }
 
-            // 3) Recurring Subscription Flow
+            // 3) Recurring Subscription Flow (FIXED)
             $price = Price::create([
                 'unit_amount' => $amountInCents,
                 'currency' => 'usd',
-                'recurring' => ['interval' => $validated['frequency']],
+                'recurring' => ['interval' => $validated['frequency']], // month|year
                 'product_data' => [
                     'name' => 'General Donation (' . ucfirst($validated['frequency']) . ')',
                 ],
@@ -86,10 +91,19 @@ class GeneralDonationController extends Controller
             $subscription = Subscription::create([
                 'customer' => $customer->id,
                 'items' => [['price' => $price->id]],
+
+                // ensure Stripe tries to charge automatically
+                'collection_method' => 'charge_automatically',
+
+                // create invoice + PI requiring confirmation
                 'payment_behavior' => 'default_incomplete',
+
+                // force card + save it for future renewals
                 'payment_settings' => [
+                    'payment_method_types' => ['card'],
                     'save_default_payment_method' => 'on_subscription',
                 ],
+
                 'expand' => ['latest_invoice.payment_intent'],
             ]);
 
@@ -99,10 +113,56 @@ class GeneralDonationController extends Controller
 
             $clientSecret = $subscription->latest_invoice->payment_intent->client_secret ?? null;
 
+            // Fallback: finalize invoice if PI is missing
             if (!$clientSecret) {
-                Log::warning('Subscription created without PaymentIntent', [
+                $invoiceId = is_string($subscription->latest_invoice)
+                    ? $subscription->latest_invoice
+                    : ($subscription->latest_invoice->id ?? null);
+
+                Log::warning('Subscription created without PaymentIntent (attempting finalize)', [
                     'subscription_id' => $subscription->id,
+                    'invoice_id' => $invoiceId,
                 ]);
+
+                if ($invoiceId) {
+                    $invoice = Invoice::retrieve([
+                        'id' => $invoiceId,
+                        'expand' => ['payment_intent'],
+                    ]);
+
+                    Log::info('Invoice retrieved', [
+                        'invoice_id' => $invoiceId,
+                        'invoice_status' => $invoice->status ?? null,
+                        'collection_method' => $invoice->collection_method ?? null,
+                    ]);
+
+                    // If draft, finalize it (usually creates PI)
+                    if (($invoice->status ?? null) === 'draft') {
+                        $invoice = Invoice::finalizeInvoice($invoiceId, [
+                            'expand' => ['payment_intent'],
+                        ]);
+
+                        Log::info('Invoice finalized', [
+                            'invoice_id' => $invoiceId,
+                            'invoice_status' => $invoice->status ?? null,
+                        ]);
+                    }
+
+                    $clientSecret = $invoice->payment_intent->client_secret ?? null;
+
+                    if (!$clientSecret) {
+                        Log::error('Invoice still has no PaymentIntent after finalize', [
+                            'subscription_id' => $subscription->id,
+                            'invoice_id' => $invoiceId,
+                            'invoice_status' => $invoice->status ?? null,
+                            'collection_method' => $invoice->collection_method ?? null,
+                        ]);
+                    }
+                } else {
+                    Log::error('No invoiceId found on subscription.latest_invoice', [
+                        'subscription_id' => $subscription->id,
+                    ]);
+                }
             }
 
             return response()->json([
@@ -132,13 +192,21 @@ class GeneralDonationController extends Controller
 
     public function createSubscription(Request $request): JsonResponse
     {
+        // This endpoint is no longer needed for the updated recurring flow.
+        // Keep it for backward compatibility but log if it is called.
         try {
-            throw new \Exception(
-                'createSubscription endpoint is deprecated and should not be used.'
-            );
+            Log::warning('Deprecated createSubscription endpoint called', [
+                'request' => $request->all(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'This endpoint is deprecated. Use processDonation recurring flow.',
+            ], 400);
         } catch (\Throwable $e) {
-            Log::error('createSubscription called unexpectedly', [
+            Log::error('createSubscription failed', [
                 'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
                 'request' => $request->all(),
             ]);
 
