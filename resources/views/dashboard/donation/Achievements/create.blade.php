@@ -15,7 +15,7 @@
 
 
             <!-- MAIN TITLE -->
-            <div>
+            {{-- <div>
                 <label class="block text-sm font-medium text-gray-600 mb-1">
                     Main Title
                 </label>
@@ -38,7 +38,7 @@
                            border border-gray-300
                            focus:ring-2 focus:ring-[#00285E]
                            focus:outline-none"></textarea>
-            </div>
+            </div> --}}
 
             <!-- DIVIDER -->
             <hr class="my-6">

@@ -42,14 +42,14 @@
                 </div>
 
                 <!-- Video Link -->
-                <div class="mb-4">
+                {{-- <div class="mb-4">
                     <label class="block text-sm font-medium mb-1">Video Link</label>
                     <input type="text" name="video_link" value="{{ $news->video_link }}"
                         class="w-full border rounded-lg px-4 py-2">
-                </div>
+                </div> --}}
 
                 <!-- Social Links -->
-                <div class="mb-6">
+                {{-- <div class="mb-6">
                     <label class="block text-sm font-medium mb-2">Social Links</label>
 
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -62,7 +62,7 @@
 
                         <input type="text" name="social_links[youtube]" value="{{ $news->social_links['youtube'] ?? '' }}"
                             class="border rounded-lg px-4 py-2" placeholder="YouTube">
-                    </div>
+                    </div> --}}
                 </div>
 
                 <!-- Submit -->

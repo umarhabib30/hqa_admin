@@ -10,11 +10,11 @@
         @csrf
         @method('PUT')
 
-        <input name="title" value="{{ $memory->title }}"
+        {{-- <input name="title" value="{{ $memory->title }}"
             class="w-full border p-3 rounded">
 
         <textarea name="desc"
-            class="w-full border p-3 rounded">{{ $memory->desc }}</textarea>
+            class="w-full border p-3 rounded">{{ $memory->desc }}</textarea> --}}
 
         <textarea name="quote"
             class="w-full border p-3 rounded italic">{{ $memory->quote }}</textarea>

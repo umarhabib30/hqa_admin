@@ -11,7 +11,7 @@
 
             <input name="title" value="{{ $video->title }}" class="w-full border p-3 rounded" required>
 
-            <textarea name="desc" class="w-full border p-3 rounded h-32">{{ $video->desc }}</textarea>
+            {{-- <textarea name="desc" class="w-full border p-3 rounded h-32">{{ $video->desc }}</textarea> --}}
 
             <div>
                 <label class="block font-medium mb-2">Current Thumbnail</label>

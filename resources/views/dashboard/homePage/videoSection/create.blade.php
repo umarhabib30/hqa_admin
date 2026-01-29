@@ -9,7 +9,7 @@
 
             <input name="title" placeholder="Video Title" class="w-full border p-3 rounded" required>
 
-            <textarea name="desc" placeholder="Description (optional)" class="w-full border p-3 rounded h-32"></textarea>
+            {{-- <textarea name="desc" placeholder="Description (optional)" class="w-full border p-3 rounded h-32"></textarea> --}}
 
             <div>
                 <label class="block font-medium mb-2">Thumbnail Image *</label>

@@ -9,11 +9,11 @@
         class="space-y-4">
         @csrf
 
-        <input name="title" placeholder="Title"
+        {{-- <input name="title" placeholder="Title"
             class="w-full border p-3 rounded">
 
         <textarea name="desc" placeholder="Description"
-            class="w-full border p-3 rounded"></textarea>
+            class="w-full border p-3 rounded"></textarea> --}}
 
         <textarea name="quote" placeholder="Quote"
             class="w-full border p-3 rounded italic"></textarea>
