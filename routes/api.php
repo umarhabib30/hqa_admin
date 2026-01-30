@@ -162,6 +162,5 @@ Route::post('/sponserIntent', [SponserApiSubscriber::class, 'createIntent']);
 Route::post('/sponserSubscriber', [SponserApiSubscriber::class, 'store']);
 
 // PTO Event Attendees
-
-Route::post('/pto-event-attendees', action: [PtoEventAttendeeController::class, 'store']); // submit form
-Route::get('/pto-event-attendees', [PtoEventAttendeeController::class, 'index']);   // fetch all attendees
+Route::post('/pto-event-attendees', [PtoEventAttendeeController::class, 'store']);
+Route::get('/pto-event-attendees', [PtoEventAttendeeController::class, 'index']);

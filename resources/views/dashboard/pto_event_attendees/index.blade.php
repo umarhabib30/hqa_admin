@@ -1,14 +1,30 @@
 @extends('layouts.layout')
 
 @section('content')
-    <div>
+    <div class="max-w-7xl mx-auto px-4 py-8">
 
         <!-- HEADER -->
         <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-            <h1 class="text-[24px] md:text-[28px] font-semibold text-gray-800">
-                PTO Event Attendees
-            </h1>
+            <h1 class="text-2xl md:text-3xl font-bold text-gray-800">PTO Event Attendees</h1>
+
+            <!-- EVENT FILTER -->
+            <form method="GET" action="{{ route('admin.pto-event-attendees.index') }}" class="flex gap-2 items-center">
+                <label for="event_id" class="text-gray-700 font-medium">Filter by Event:</label>
+                <select name="event_id" id="event_id" onchange="this.form.submit()" class="border p-2 rounded">
+                    <option value="">All Events</option>
+                    @foreach ($events as $event)
+                        <option value="{{ $event->id }}" {{ request('event_id') == $event->id ? 'selected' : '' }}>
+                            {{ $event->title }} ({{ $attendeeCounts[$event->id] ?? 0 }})
+                        </option>
+                    @endforeach
+                </select>
+            </form>
         </div>
+
+        <!-- SUCCESS MESSAGE -->
+        @if (session('success'))
+            <div class="mb-4 p-4 bg-green-100 text-green-800 rounded">{{ session('success') }}</div>
+        @endif
 
         <!-- DESKTOP TABLE -->
         <div class="hidden md:block bg-white rounded-xl shadow overflow-hidden">
@@ -20,9 +36,9 @@
                         <th class="p-4 text-left">Name</th>
                         <th class="p-4 text-left">Email</th>
                         <th class="p-4 text-left">Phone</th>
-                        <th class="p-4 text-center">Will Attend</th>
                         <th class="p-4 text-center">Guests</th>
                         <th class="p-4 text-center">Created</th>
+                        <th class="p-4 text-center">Event</th>
                         <th class="p-4 text-center">Actions</th>
                     </tr>
                 </thead>
@@ -47,17 +63,9 @@
                             <td class="p-4 font-medium">{{ $attendee->first_name }} {{ $attendee->last_name }}</td>
                             <td class="p-4">{{ $attendee->email }}</td>
                             <td class="p-4">{{ $attendee->phone }}</td>
-
-                            <td class="p-4 text-center">
-                                @if ($attendee->will_attend)
-                                    <span class="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">Yes</span>
-                                @else
-                                    <span class="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs">No</span>
-                                @endif
-                            </td>
-
                             <td class="p-4 text-center">{{ $attendee->number_of_guests }}</td>
                             <td class="p-4 text-center">{{ $attendee->created_at->format('d M Y') }}</td>
+                            <td class="p-4 text-center">{{ $attendee->event->title ?? 'N/A' }}</td>
 
                             <td class="p-4 text-center">
                                 <form action="{{ route('admin.pto-event-attendees.destroy', $attendee->id) }}"
@@ -96,21 +104,14 @@
                             </div>
                         @endif
 
-                        <div>
+                        <div class="flex-1">
                             <h3 class="font-semibold text-gray-800">
                                 {{ $attendee->first_name }} {{ $attendee->last_name }}
                             </h3>
                             <p class="text-sm text-gray-600">{{ $attendee->email }}</p>
                             <p class="text-sm text-gray-600">{{ $attendee->phone }}</p>
-                            {{-- <p class="text-sm">
-                                Will Attend:
-                                @if ($attendee->will_attend)
-                                    <span class="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">Yes</span>
-                                @else
-                                    <span class="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs">No</span>
-                                @endif
-                            </p> --}}
                             <p class="text-sm">Guests: {{ $attendee->number_of_guests }}</p>
+                            <p class="text-sm text-gray-500">Event: {{ $attendee->event->title ?? 'N/A' }}</p>
                             <p class="text-sm text-gray-500">Created: {{ $attendee->created_at->format('d M Y') }}</p>
                         </div>
                     </div>
