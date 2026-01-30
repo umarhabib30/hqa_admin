@@ -112,4 +112,9 @@ class alumniFormController extends Controller
 
         return back()->with('success', 'Form deleted');
     }
+    public function show($id)
+    {
+        $form = AlumniForm::findOrFail($id); // fetch the alumni form
+        return view('dashboard.alumni.quranForm.details', compact('form'));
+    }
 }

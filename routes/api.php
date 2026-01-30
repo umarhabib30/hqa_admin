@@ -28,6 +28,8 @@ use App\Http\Controllers\Api\SponserPackageApiController;
 use App\Http\Controllers\Api\DonationBookingApiController as DonationBookingCheckInController;
 use App\Http\Controllers\Api\ApplyCouponController;
 use App\Http\Controllers\Api\GeneralDonationController;
+use App\Http\Controllers\Api\JobApplicationApiController;
+use App\Http\Controllers\Api\PtoEventAttendeeController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ContactSponserController;
@@ -110,6 +112,7 @@ Route::get('/calendarEvents', [CalendarApiController::class, 'index']);
 
 // TEACHER JOB POST 
 Route::get('/jobPosts', [JobPostApiController::class, 'index']);
+Route::post('/job-apply', action: [JobApplicationApiController::class, 'store']);
 
 
 //ALUMNI Huston Info
@@ -157,3 +160,8 @@ Route::post('/sponserIntent', [SponserApiSubscriber::class, 'createIntent']);
 
 // Route to save the data after payment
 Route::post('/sponserSubscriber', [SponserApiSubscriber::class, 'store']);
+
+// PTO Event Attendees
+
+Route::post('/pto-event-attendees', action: [PtoEventAttendeeController::class, 'store']); // submit form
+Route::get('/pto-event-attendees', [PtoEventAttendeeController::class, 'index']);   // fetch all attendees

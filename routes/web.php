@@ -8,6 +8,7 @@ use App\Http\Controllers\alumniImageController;
 use App\Http\Controllers\AlumniMailController;
 use App\Http\Controllers\alumniPostController;
 use App\Http\Controllers\Api\GeneralDonationController;
+use App\Http\Controllers\PtoEventAttendeeController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\CalendarController;
@@ -102,8 +103,17 @@ Route::put('/admin/donations/{donation}', [DonationAdminController::class, 'upda
 Route::delete('/admin/donations/{donation}', [DonationAdminController::class, 'destroy'])->name('admin.donations.destroy');
 //Pto Events Pages Routes 
 Route::resource('ptoEvents', PtoEventsController::class);
-Route::resource('easy-joins', EasyJoinController::class);
+Route::resource('easy-joins', controller: EasyJoinController::class);
 Route::resource('fee', FeePersonPriceController::class);
+// PTO Event Attendees Admin Routes
+Route::prefix('admin')->group(function () {
+    Route::get('/pto-event-attendees', [PtoEventAttendeeController::class, 'index'])
+        ->name('admin.pto-event-attendees.index');
+
+    Route::delete('/pto-event-attendees/{id}', [PtoEventAttendeeController::class, 'destroy'])
+        ->name('admin.pto-event-attendees.destroy');
+});
+
 
 //Pto  SubscribeMails Pages Routes 
 Route::resource('ptoSubscribemails', PtoSubscribeMailController::class);

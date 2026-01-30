@@ -157,10 +157,10 @@
                 'pto.view',
                 'pto.events',
                 'pto.subscribe',
-                'pto.images',
+                // 'pto.images',
                 'pto.letter_guide',
-                'pto.easy_join',
-                'pto.fee',
+                // 'pto.easy_join',
+                // 'pto.fee',
             ]) || $user->isSuperAdmin())
             <div x-data="{ open: {{ request()->routeIs('ptoEvents.*') || request()->routeIs('ptoSubscribemails.*') || request()->routeIs('ptoImages.*') || request()->routeIs('ptoLetterGuide.*') ? 'true' : 'false' }} }" class="space-y-1">
                 <button @click="open = !open"
@@ -191,17 +191,25 @@
                             class="block py-2.5 px-4 rounded-lg text-sm font-medium text-gray-600 transition-all {{ request()->routeIs('ptoSubscribemails.*') ? 'bg-blue-200 text-[#00285E] font-bold' : 'hover:bg-gray-200' }}">PTO
                             Subscribe Mails</a>
                     @endif
-                    @if ($user->hasPermission('pto.images') || $user->isSuperAdmin())
+                    @if ($user->hasPermission('pto.attendees') || $user->isSuperAdmin())
+                        <a href="{{ route('admin.pto-event-attendees.index') }}"
+                            class="block py-2.5 px-4 rounded-lg text-sm font-medium text-gray-600 transition-all 
+        {{ request()->routeIs('admin.pto-event-attendees.*') ? 'bg-blue-200 text-[#00285E] font-bold' : 'hover:bg-gray-200' }}">
+                            PTO Attendees
+                        </a>
+                    @endif
+
+                    {{-- @if ($user->hasPermission('pto.images') || $user->isSuperAdmin())
                         <a href="{{ route('ptoImages.index') }}"
                             class="block py-2.5 px-4 rounded-lg text-sm font-medium text-gray-600 transition-all {{ request()->routeIs('ptoImages.*') ? 'bg-blue-200 text-[#00285E] font-bold' : 'hover:bg-gray-200' }}">PTO
                             Images</a>
-                    @endif
+                    @endif --}}
                     @if ($user->hasPermission('pto.letter_guide') || $user->isSuperAdmin())
                         <a href="{{ route('ptoLetterGuide.index') }}"
                             class="block py-2.5 px-4 rounded-lg text-sm font-medium text-gray-600 transition-all {{ request()->routeIs('ptoLetterGuide.*') ? 'bg-blue-200 text-[#00285E] font-bold' : 'hover:bg-gray-200' }}">PTO
                             Letter Guide Download</a>
                     @endif
-                    @if ($user->hasPermission('pto.easy_join') || $user->isSuperAdmin())
+                    {{-- @if ($user->hasPermission('pto.easy_join') || $user->isSuperAdmin())
                         <a href="{{ route('easy-joins.index') }}"
                             class="block py-2.5 px-4 rounded-lg text-sm font-medium text-gray-600 transition-all {{ request()->routeIs('easy-joins.*') ? 'bg-blue-200 text-[#00285E] font-bold' : 'hover:bg-gray-200' }}">PTO
                             Easy Join</a>
@@ -210,7 +218,8 @@
                         <a href="{{ route('fee.index') }}"
                             class="block py-2.5 px-4 rounded-lg text-sm font-medium text-gray-600 transition-all {{ request()->routeIs('fee.*') ? 'bg-blue-200 text-[#00285E] font-bold' : 'hover:bg-gray-200' }}">PTO
                             Fee Person</a>
-                    @endif
+                    @endif --}}
+
                 </div>
             </div>
         @endif
@@ -304,9 +313,9 @@
                 'alumni.huston',
                 'alumni.events',
                 'alumni.posts',
-                'alumni.images',
+                // 'alumni.images',
                 'alumni.forms',
-                'alumni.mails',
+                // 'alumni.mails',
             ]) || $user->isSuperAdmin())
             <div x-data="{ open: {{ request()->routeIs('alumniHuston.*') || request()->routeIs('alumniEvent.*') || request()->routeIs('alumniPosts.*') || request()->routeIs('alumniImages.*') || request()->routeIs('alumniForm.*') ? 'true' : 'false' }} }" class="space-y-1">
                 <button @click="open = !open"
@@ -342,21 +351,21 @@
                             class="block py-2.5 px-4 rounded-lg text-sm font-medium text-gray-600 transition-all {{ request()->routeIs('alumniPosts.*') ? 'bg-blue-200 text-[#00285E] font-bold' : 'hover:bg-gray-200' }}">Alumni
                             Posts</a>
                     @endif
-                    @if ($user->hasPermission('alumni.images') || $user->isSuperAdmin())
+                    {{-- @if ($user->hasPermission('alumni.images') || $user->isSuperAdmin())
                         <a href="{{ route('alumniImages.index') }}"
                             class="block py-2.5 px-4 rounded-lg text-sm font-medium text-gray-600 transition-all {{ request()->routeIs('alumniImages.*') ? 'bg-blue-200 text-[#00285E] font-bold' : 'hover:bg-gray-200' }}">Alumni
                             Images</a>
-                    @endif
+                    @endif --}}
                     @if ($user->hasPermission('alumni.forms') || $user->isSuperAdmin())
                         <a href="{{ route('alumniForm.index') }}"
                             class="block py-2.5 px-4 rounded-lg text-sm font-medium text-gray-600 transition-all {{ request()->routeIs('alumniForm.*') ? 'bg-blue-200 text-[#00285E] font-bold' : 'hover:bg-gray-200' }}">Alumni
                             Form</a>
                     @endif
-                    @if ($user->hasPermission('alumni.mails') || $user->isSuperAdmin())
+                    {{-- @if ($user->hasPermission('alumni.mails') || $user->isSuperAdmin())
                         <a href="{{ route('alumniMail.index') }}"
                             class="block py-2.5 px-4 rounded-lg text-sm font-medium text-gray-600 transition-all {{ request()->routeIs('alumniMail.*') ? 'bg-blue-200 text-[#00285E] font-bold' : 'hover:bg-gray-200' }}">Alumni
                             Mail</a>
-                    @endif
+                    @endif --}}
                 </div>
             </div>
         @endif

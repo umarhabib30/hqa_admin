@@ -5,10 +5,10 @@
     <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
         <h1 class="text-2xl font-bold">Job Applications</h1>
 
-        <a href="{{ route('jobApp.create') }}" class="px-5 py-2 bg-[#00285E] text-white rounded-lg
+        {{-- <a href="{{ route('jobApp.create') }}" class="px-5 py-2 bg-[#00285E] text-white rounded-lg
                    hover:bg-[#001c42] transition w-fit">
             + New Application
-        </a>
+        </a> --}}
     </div>
 
     {{-- ===================== DESKTOP / TABLET TABLE ===================== --}}
