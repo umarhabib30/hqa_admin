@@ -16,6 +16,8 @@ return new class extends Migration
             $table->string('email');
             $table->string('phone');
             $table->integer('number_of_guests')->default(0);
+            $table->decimal('amount', 10, 2); // Added
+            $table->string('payment_id');      // Added
             $table->string('profile_pic')->nullable();
             $table->timestamps();
         });
@@ -25,7 +27,4 @@ return new class extends Migration
     {
         Schema::dropIfExists('pto_event_attendees');
     }
-    
-
-    
 };

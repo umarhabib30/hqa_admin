@@ -213,12 +213,12 @@
                         <a href="{{ route('easy-joins.index') }}"
                             class="block py-2.5 px-4 rounded-lg text-sm font-medium text-gray-600 transition-all {{ request()->routeIs('easy-joins.*') ? 'bg-blue-200 text-[#00285E] font-bold' : 'hover:bg-gray-200' }}">PTO
                             Easy Join</a>
-                    @endif
+                    @endif --}}
                     @if ($user->hasPermission('pto.fee') || $user->isSuperAdmin())
                         <a href="{{ route('fee.index') }}"
                             class="block py-2.5 px-4 rounded-lg text-sm font-medium text-gray-600 transition-all {{ request()->routeIs('fee.*') ? 'bg-blue-200 text-[#00285E] font-bold' : 'hover:bg-gray-200' }}">PTO
                             Fee Person</a>
-                    @endif --}}
+                    @endif
 
                 </div>
             </div>

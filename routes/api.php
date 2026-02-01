@@ -164,3 +164,5 @@ Route::post('/sponserSubscriber', [SponserApiSubscriber::class, 'store']);
 // PTO Event Attendees
 Route::post('/pto-event-attendees', [PtoEventAttendeeController::class, 'store']);
 Route::get('/pto-event-attendees', [PtoEventAttendeeController::class, 'index']);
+Route::post('/pto-event-intent', [PtoEventAttendeeController::class, 'createIntent']);
+Route::post('/pto-event-attendees', [PtoEventAttendeeController::class, 'store']);

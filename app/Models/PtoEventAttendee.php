@@ -16,6 +16,8 @@ class PtoEventAttendee extends Model
         'email',
         'phone',
         'number_of_guests',
+        'amount',      // Added
+        'payment_id',   // Added
         'profile_pic',
     ];
 
