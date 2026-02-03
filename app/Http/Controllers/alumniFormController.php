@@ -28,6 +28,7 @@ class alumniFormController extends Controller
             'status' => 'required',
             'email' => 'required|email|unique:alumni_forms,email',
             'phone' => 'required',
+            'password' => 'nullable|string|min:8|confirmed',
             'address' => 'required',
             'city' => 'required',
             'state' => 'required',
@@ -47,6 +48,10 @@ class alumniFormController extends Controller
 
         if ($request->hasFile('document')) {
             $data['document'] = $request->file('document')->store('alumni/documents', 'public');
+        }
+
+        if (empty($data['password'])) {
+            unset($data['password']);
         }
 
         AlumniForm::create($data);
@@ -72,6 +77,7 @@ class alumniFormController extends Controller
             'status' => 'required',
             'email' => 'required|email|unique:alumni_forms,email,' . $form->id,
             'phone' => 'required',
+            'password' => 'nullable|string|min:8|confirmed',
             'address' => 'required',
             'city' => 'required',
             'state' => 'required',
@@ -93,6 +99,10 @@ class alumniFormController extends Controller
         if ($request->hasFile('document')) {
             if ($form->document) Storage::disk('public')->delete($form->document);
             $data['document'] = $request->file('document')->store('alumni/documents', 'public');
+        }
+
+        if (empty($data['password'])) {
+            unset($data['password']);
         }
 
         $form->update($data);

@@ -74,6 +74,25 @@
             </div>
         </div>
 
+        <!-- ALUMNI PORTAL LOGIN (optional - for alumni portal access) -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 bg-amber-50 rounded-lg border border-amber-200">
+            <div>
+                <label class="block text-sm font-medium text-gray-600 mb-1">Portal Password</label>
+                <input type="password" name="password" autocomplete="new-password"
+                    class="w-full px-4 py-3 rounded-lg border border-gray-300
+                              focus:ring-2 focus:ring-[#00285E] outline-none"
+                    placeholder="Min 8 characters (optional)">
+                <p class="text-xs text-gray-500 mt-1">Used to sign in at /alumni/login</p>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-600 mb-1">Confirm Password</label>
+                <input type="password" name="password_confirmation" autocomplete="new-password"
+                    class="w-full px-4 py-3 rounded-lg border border-gray-300
+                              focus:ring-2 focus:ring-[#00285E] outline-none"
+                    placeholder="Repeat password">
+            </div>
+        </div>
+
         <!-- ADDRESS -->
         <div>
             <label class="block text-sm font-medium text-gray-600 mb-1">Address</label>

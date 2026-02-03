@@ -36,6 +36,8 @@ use App\Http\Controllers\SponsorPackageController;
 use App\Http\Controllers\SponsorPackageSubscriberController;
 use App\Http\Controllers\CouponController;
 use App\Http\Controllers\PermissionController;
+use App\Http\Controllers\AlumniAuthController;
+use App\Http\Controllers\AlumniPortalController;
 use App\Models\PtoLetterGuide;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
@@ -67,6 +69,19 @@ Route::post('/logout', function () {
     return redirect()->route('login');
 })->name('logout');
 
+// Alumni Portal (separate login & layout)
+Route::prefix('alumni')->name('alumni.')->group(function () {
+    Route::get('/login', [AlumniAuthController::class, 'showLogin'])->name('login');
+    Route::post('/login', [AlumniAuthController::class, 'login'])->name('login.store');
+    Route::post('/logout', [AlumniAuthController::class, 'logout'])->name('logout');
+
+    Route::middleware(['alumni.auth'])->group(function () {
+        Route::get('/dashboard', [AlumniPortalController::class, 'dashboard'])->name('dashboard');
+        Route::get('/profile/edit', [AlumniPortalController::class, 'editProfile'])->name('profile.edit');
+        Route::put('/profile', [AlumniPortalController::class, 'updateProfile'])->name('profile.update');
+        Route::put('/profile/password', [AlumniPortalController::class, 'updatePassword'])->name('profile.update-password');
+    });
+});
 
 //dashboard Routes
 Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard.index');
@@ -199,10 +214,11 @@ Route::get('contact-sponser', [ContactSponserController::class, 'index'])->name(
 Route::get('contact-sponser/{id}', [ContactSponserController::class, 'show'])->name('contact-sponser.show');
 Route::delete('contact-sponser/{id}', [ContactSponserController::class, 'destroy'])->name('contact-sponser.destroy');
 
-// Permissions Routes (Super Admin Only)
+// Permissions Routes (Super Admin Only) - user-wise permissions
 Route::middleware(['auth'])->group(function () {
     Route::get('/permissions', [PermissionController::class, 'index'])->name('permissions.index');
-    Route::post('/permissions/update-role', [PermissionController::class, 'updateRolePermissions'])->name('permissions.update-role');
+    Route::get('/permissions/user/{user}', [PermissionController::class, 'editUser'])->name('permissions.edit-user');
+    Route::put('/permissions/user/{user}', [PermissionController::class, 'updateUser'])->name('permissions.update-user');
 });
 
 

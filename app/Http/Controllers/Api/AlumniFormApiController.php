@@ -26,6 +26,7 @@ class AlumniFormApiController extends Controller
                 'status' => 'required',
                 'email' => 'required|email|unique:alumni_forms,email',
                 'phone' => 'required',
+                'password' => 'required|string|min:8',
                 'address' => 'required',
                 'city' => 'required',
                 'state' => 'required',

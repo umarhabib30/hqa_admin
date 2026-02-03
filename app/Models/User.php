@@ -6,7 +6,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Illuminate\Support\Facades\DB;
+use App\Models\Permission;
 use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
@@ -74,20 +74,24 @@ class User extends Authenticatable
     }
 
     /**
-     * Get permissions for this user's role
+     * Permissions assigned directly to this user (user-wise permissions).
      */
-    public function getRolePermissions()
+    public function permissions()
+    {
+        return $this->belongsToMany(Permission::class, 'user_permissions', 'user_id', 'permission_id')
+            ->withTimestamps();
+    }
+
+    /**
+     * Get permission names for this user (user-wise). Super admin has all.
+     */
+    public function getPermissions(): array
     {
         if ($this->isSuperAdmin()) {
-            // Super admin has all permissions
-            return \App\Models\Permission::pluck('name')->toArray();
+            return Permission::pluck('name')->toArray();
         }
 
-        return DB::table('role_permissions')
-            ->join('permissions', 'role_permissions.permission_id', '=', 'permissions.id')
-            ->where('role_permissions.role', $this->role)
-            ->pluck('permissions.name')
-            ->toArray();
+        return $this->permissions()->pluck('name')->toArray();
     }
 
     /**
@@ -96,11 +100,10 @@ class User extends Authenticatable
     public function hasPermission(string $permission): bool
     {
         if ($this->isSuperAdmin()) {
-            return true; // Super admin has all permissions
+            return true;
         }
 
-        $rolePermissions = $this->getRolePermissions();
-        return in_array($permission, $rolePermissions);
+        return in_array($permission, $this->getPermissions());
     }
 
     /**
@@ -112,7 +115,6 @@ class User extends Authenticatable
             return true;
         }
 
-        $rolePermissions = $this->getRolePermissions();
-        return count(array_intersect($permissions, $rolePermissions)) > 0;
+        return count(array_intersect($permissions, $this->getPermissions())) > 0;
     }
 }

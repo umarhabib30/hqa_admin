@@ -15,6 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'manager.role' => \App\Http\Middleware\ManagerRole::class,
             'permission' => \App\Http\Middleware\CheckPermission::class,
+            'alumni.auth' => \App\Http\Middleware\AlumniAuth::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

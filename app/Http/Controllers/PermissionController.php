@@ -3,72 +3,70 @@
 namespace App\Http\Controllers;
 
 use App\Models\Permission;
+use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class PermissionController extends Controller
 {
     /**
-     * Display permissions management page
+     * Display list of users for permission management (Super Admin only).
      */
     public function index()
     {
-        // Check if user is super admin
         if (!auth()->user()->isSuperAdmin()) {
             abort(403, 'Only Super Admin can manage permissions.');
         }
 
-        $permissions = Permission::orderBy('group')->orderBy('display_name')->get();
+        // List all users except super_admin (super admin has all permissions by default)
+        $users = User::where('role', '!=', 'super_admin')
+            ->orderBy('name')
+            ->get();
 
-        // Get permissions grouped by role
-        $rolePermissions = DB::table('role_permissions')
-            ->join('permissions', 'role_permissions.permission_id', '=', 'permissions.id')
-            ->select('role_permissions.role', 'permissions.id as permission_id', 'permissions.name')
-            ->get()
-            ->groupBy('role');
-
-        return view('dashboard.permissions.index', compact('permissions', 'rolePermissions'));
+        return view('dashboard.permissions.index', compact('users'));
     }
 
     /**
-     * Update role permissions
+     * Show form to edit permissions for a specific user.
      */
-    public function updateRolePermissions(Request $request)
+    public function editUser(User $user)
     {
-        // Check if user is super admin
         if (!auth()->user()->isSuperAdmin()) {
             abort(403, 'Only Super Admin can manage permissions.');
         }
 
+        if ($user->isSuperAdmin()) {
+            abort(403, 'Super Admin has all permissions and cannot be edited.');
+        }
+
+        $permissions = Permission::orderBy('group')->orderBy('display_name')->get();
+        $userPermissionIds = $user->permissions()->pluck('permissions.id')->toArray();
+
+        return view('dashboard.permissions.edit-user', compact('user', 'permissions', 'userPermissionIds'));
+    }
+
+    /**
+     * Update permissions for a specific user.
+     */
+    public function updateUser(Request $request, User $user)
+    {
+        if (!auth()->user()->isSuperAdmin()) {
+            abort(403, 'Only Super Admin can manage permissions.');
+        }
+
+        if ($user->isSuperAdmin()) {
+            abort(403, 'Super Admin has all permissions and cannot be edited.');
+        }
+
         $request->validate([
-            'role' => 'required|in:admin,manager',
             'permissions' => 'array',
             'permissions.*' => 'exists:permissions,id',
         ]);
 
-        $role = $request->role;
         $permissionIds = $request->permissions ?? [];
-
-        // Delete existing permissions for this role
-        DB::table('role_permissions')->where('role', $role)->delete();
-
-        // Insert new permissions
-        if (!empty($permissionIds)) {
-            $data = [];
-            foreach ($permissionIds as $permissionId) {
-                $data[] = [
-                    'role' => $role,
-                    'permission_id' => $permissionId,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ];
-            }
-            DB::table('role_permissions')->insert($data);
-        }
+        $user->permissions()->sync($permissionIds);
 
         return redirect()
             ->route('permissions.index')
-            ->with('success', "Permissions updated successfully for {$role} role.")
-            ->with('openRole', $role);
+            ->with('success', "Permissions updated successfully for {$user->name}.");
     }
 }

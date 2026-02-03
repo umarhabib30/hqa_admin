@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 class ManagerController extends Controller
@@ -51,12 +52,20 @@ class ManagerController extends Controller
             'password' => 'required|string|min:8|confirmed',
         ]);
 
-        User::create([
+        $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
             'role' => $request->role ?? 'manager',
             'password' => Hash::make($request->password),
         ]);
+
+        // Copy default permissions from role to user_permissions (super admin can customize later)
+        if (!$user->isSuperAdmin()) {
+            $permissionIds = DB::table('role_permissions')
+                ->where('role', $user->role)
+                ->pluck('permission_id');
+            $user->permissions()->sync($permissionIds);
+        }
 
         return redirect()
             ->route('managers.index')

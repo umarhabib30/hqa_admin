@@ -285,6 +285,37 @@
                             </div>
                         </div>
 
+                        <div
+                            class="form-card bg-amber-50/80 p-10 rounded-[2.5rem] border border-amber-200 shadow-xl shadow-amber-100/40">
+                            <div class="flex items-center gap-4 mb-6">
+                                <div
+                                    class="w-12 h-12 bg-amber-100 rounded-2xl flex items-center justify-center text-amber-700">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                                    </svg>
+                                </div>
+                                <h3 class="text-xl font-extrabold text-gray-900">Alumni Portal Login</h3>
+                            </div>
+                            <p class="text-sm text-gray-600 mb-6">Set or change the password used to sign in at <strong>/alumni/login</strong>. Leave blank to keep current password.</p>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div class="relative">
+                                    <label
+                                        class="text-[10px] font-extrabold text-gray-400 uppercase tracking-widest absolute -top-2 left-4 px-2 bg-amber-50 z-10">New Password</label>
+                                    <input type="password" name="password" autocomplete="new-password"
+                                        class="glass-input w-full px-6 py-4 rounded-2xl border border-amber-200 outline-none font-bold text-gray-700"
+                                        placeholder="Min 8 characters">
+                                </div>
+                                <div class="relative">
+                                    <label
+                                        class="text-[10px] font-extrabold text-gray-400 uppercase tracking-widest absolute -top-2 left-4 px-2 bg-amber-50 z-10">Confirm Password</label>
+                                    <input type="password" name="password_confirmation" autocomplete="new-password"
+                                        class="glass-input w-full px-6 py-4 rounded-2xl border border-amber-200 outline-none font-bold text-gray-700"
+                                        placeholder="Repeat password">
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="pt-10">
                             <button type="submit"
                                 class="animated-gradient w-full cursor-pointer py-6 rounded-2xl text-white text-xl font-extrabold shadow-2xl shadow-blue-900/40 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 tracking-tight">
