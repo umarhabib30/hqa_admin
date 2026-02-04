@@ -9,73 +9,34 @@ use Illuminate\Http\Request;
 class FeePersonPriceApiController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * Get the active price for a specific event.
+     * URL Example: /api/fees?event_id=5
      */
-    public function index()
+    public function index(Request $request)
     {
-        $fee = feePersonPrice::where('is_active', true)->first();
+        $request->validate([
+            'event_id' => 'required|exists:pto_events,id'
+        ]);
+
+        $fee = feePersonPrice::where('event_id', $request->event_id)
+            ->where('is_active', true)
+            ->first();
 
         if (!$fee) {
             return response()->json([
                 'status' => false,
-                'message' => 'No active fee found'
+                'message' => 'No active fee found for this specific event'
             ], 404);
         }
 
         return response()->json([
             'status' => true,
             'data' => [
-                'id' => $fee->id,
-                'title' => $fee->title,
-                'price' => $fee->price,
+                'id'       => $fee->id,
+                'event_id' => $fee->event_id,
+                'title'    => $fee->title,
+                'price'    => (float) $fee->price,
             ]
         ], 200);
-    }
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
-    {
-        //
-    }
-
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
-    {
-        //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(string $id)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, string $id)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(string $id)
-    {
-        //
     }
 }

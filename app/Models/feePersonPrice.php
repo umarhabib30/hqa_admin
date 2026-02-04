@@ -6,10 +6,10 @@ use Illuminate\Database\Eloquent\Model;
 
 class feePersonPrice extends Model
 {
-    protected $guarded = [];
+    protected $fillable = ['event_id', 'title', 'price', 'is_active'];
 
-    public function easyJoins()
+    public function event()
     {
-        return $this->hasMany(EasyJoin::class);
+        return $this->belongsTo(PtoEvents::class, 'event_id');
     }
 }

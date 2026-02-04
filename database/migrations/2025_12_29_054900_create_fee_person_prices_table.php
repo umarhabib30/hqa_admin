@@ -13,8 +13,9 @@ return new class extends Migration
     {
         Schema::create('fee_person_prices', function (Blueprint $table) {
             $table->id();
-            $table->string('title');              // e.g. Alumni Event 2025
-            $table->decimal('price', 10, 2);       // fee per person
+            $table->foreignId('event_id')->constrained('pto_events')->onDelete('cascade'); // Link to events
+            $table->string('title');
+            $table->decimal('price', 10, 2);
             $table->boolean('is_active')->default(true);
             $table->timestamps();
         });
