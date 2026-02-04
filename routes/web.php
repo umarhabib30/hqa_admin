@@ -1,7 +1,7 @@
 <?php
 
 use App\Http\Controllers\AchievementsController;
-use App\Http\Controllers\alumniEventController;
+// use App\Http\Controllers\alumniEventController;
 use App\Http\Controllers\alumniFormController;
 use App\Http\Controllers\alumniHustonController;
 use App\Http\Controllers\alumniImageController;
@@ -37,7 +37,10 @@ use App\Http\Controllers\SponsorPackageSubscriberController;
 use App\Http\Controllers\CouponController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\AlumniAuthController;
+use App\Http\Controllers\AlumniEventsController;
+use App\Http\Controllers\AlumniFeePersonPriceController;
 use App\Http\Controllers\AlumniPortalController;
+use App\Http\Controllers\Api\AlumniEventAttendeeController;
 use App\Models\PtoLetterGuide;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
@@ -145,11 +148,10 @@ Route::resource('ptoLetterGuide', PtoLetterGuideController::class);
 Route::resource('alumniHuston', alumniHustonController::class);
 
 //Alumni  Events Pages Routes 
-Route::resource('alumniEvent', alumniEventController::class);
+Route::resource('alumniEvent', AlumniEventsController::class);
 
 //Alumni  Posts Pages Routes 
-Route::resource('alumniPosts', alumniPostController::class);
-
+Route::resource('alumniPosts', AlumniPostController::class);
 
 //Alumni  image Pages Routes 
 Route::resource('alumniImages', alumniImageController::class);
@@ -226,3 +228,28 @@ Route::middleware(['auth'])->group(function () {
 Route::get('/subscribe', [GeneralDonationController::class, 'show'])->name('dynsub.show');
 Route::post('/subscribe', [GeneralDonationController::class, 'recurringDonation'])->name('dynsub.store');
 Route::post('one-time-donation', [GeneralDonationController::class, 'oneTimeDonation'])->name('one-time-donation');
+
+// Alumni Event Attendees Admin Routes (similar to PTO Event Attendees)
+Route::prefix('admin')->group(function () {
+    // List all alumni event attendees
+    Route::get('/alumni-event-attendees', [AlumniEventAttendeeController::class, 'index'])
+        ->name('admin.alumni-event-attendees.index');
+
+    // Delete an attendee record
+    Route::delete('/alumni-event-attendees/{id}', [AlumniEventAttendeeController::class, 'destroy'])
+        ->name('admin.alumni-event-attendees.destroy');
+});
+
+// Alumni Event Attendees Frontend Routes (for alumni users)
+Route::get('/alumni-event-attendees', [AlumniEventAttendeeController::class, 'index'])
+    ->name('alumni-event-attendees.index'); // For listing/filtering
+
+Route::post('/alumni-event-attendees', [AlumniEventAttendeeController::class, 'store'])
+    ->name('alumni-event-attendees.store'); // For registering new attendee
+
+Route::post('/alumni-event-intent', [AlumniEventAttendeeController::class, 'createIntent'])
+    ->name('alumni-event-attendees.intent'); // For Stripe payment intent
+// Alumni Fee Person Price Routes
+Route::resource('alumniFee', AlumniFeePersonPriceController::class)->parameters([
+    'alumniFee' => 'fee'
+]);

@@ -41,6 +41,7 @@
             </div>
         @endif
 
+        {{-- Add Donation Form --}}
         <div class="mb-6 bg-white rounded-xl shadow-sm p-4 md:p-6" x-show="showAdd" x-cloak>
             <h2 class="text-lg font-semibold text-gray-800 mb-4">Add Manual Donation</h2>
 
@@ -61,22 +62,51 @@
                 </div>
 
                 <div class="md:col-span-1">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Amount <span class="text-red-500">*</span></label>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Amount <span
+                            class="text-red-500">*</span></label>
                     <input name="amount" value="{{ old('amount') }}" type="number" step="0.01" min="0"
                         class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#00285E] focus:border-transparent @error('amount') border-red-500 @enderror"
                         placeholder="e.g. 50" required />
                 </div>
 
                 <div class="md:col-span-1">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Mode <span class="text-red-500">*</span></label>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Mode <span
+                            class="text-red-500">*</span></label>
                     <select name="donation_mode" required
                         class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#00285E] focus:border-transparent @error('donation_mode') border-red-500 @enderror">
                         <option value="paid_now" {{ old('donation_mode', 'paid_now') === 'paid_now' ? 'selected' : '' }}>
-                            Cash
+                            Cash</option>
+                        <option value="pledged" {{ old('donation_mode') === 'pledged' ? 'selected' : '' }}>Pledged (pay
+                            later)</option>
+                    </select>
+                </div>
+
+                {{-- ✅ Donation Purpose --}}
+                <div class="md:col-span-1">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Purpose <span
+                            class="text-red-500">*</span></label>
+                    <select name="donation_for" required
+                        class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#00285E] focus:border-transparent @error('donation_for') border-red-500 @enderror">
+                        <option value="">Select Purpose</option>
+                        <option value="Scholarship-Hafiz"
+                            {{ old('donation_for') === 'Scholarship-Hafiz' ? 'selected' : '' }}>Scholarship-Hafiz</option>
+                        <option value="Katy campus – Maintenance Expenses"
+                            {{ old('donation_for') === 'Katy campus – Maintenance Expenses' ? 'selected' : '' }}>Katy
+                            campus – Maintenance Expenses</option>
+                        <option value="Construction of Richmond Campus"
+                            {{ old('donation_for') === 'Construction of Richmond Campus' ? 'selected' : '' }}>Construction
+                            of Richmond Campus</option>
+                        <option value="HQA Annual fundraiser"
+                            {{ old('donation_for') === 'HQA Annual fundraiser' ? 'selected' : '' }}>HQA Annual fundraiser
                         </option>
-                        <option value="pledged" {{ old('donation_mode') === 'pledged' ? 'selected' : '' }}>
-                            Pledged (pay later)
-                        </option>
+                        <option value="HQA Semi-annual fundraiser"
+                            {{ old('donation_for') === 'HQA Semi-annual fundraiser' ? 'selected' : '' }}>HQA Semi-annual
+                            fundraiser</option>
+                        <option value="Other" {{ old('donation_for') === 'Other' ? 'selected' : '' }}>Other</option>
+                        <option value="In the memory of"
+                            {{ old('donation_for') === 'In the memory of' ? 'selected' : '' }}>In the memory of</option>
+                        <option value="In the honor of" {{ old('donation_for') === 'In the honor of' ? 'selected' : '' }}>
+                            In the honor of</option>
                     </select>
                 </div>
 
@@ -89,6 +119,7 @@
             </form>
         </div>
 
+        {{-- Donations Table --}}
         <div class="bg-white rounded-xl shadow-sm overflow-x-auto">
             <table class="w-full text-left border-collapse min-w-[1050px]">
                 <thead>
@@ -97,6 +128,7 @@
                         <th class="px-6 py-4">Goal</th>
                         <th class="px-6 py-4">Donor Name</th>
                         <th class="px-6 py-4">Email</th>
+                        <th class="px-6 py-4">Purpose</th> {{-- ✅ NEW --}}
                         <th class="px-6 py-4">Amount</th>
                         <th class="px-6 py-4">Mode</th>
                         <th class="px-6 py-4">Payment ID</th>
@@ -111,10 +143,11 @@
                             <td class="px-6 py-4 text-gray-500">#{{ $donation->id }}</td>
                             <td class="px-6 py-4 text-gray-700">
                                 @php($goal = $donation->goal)
-                                {{ $goal?->goal_name ?: ($donation->fund_raisa_id ? ('Fund #' . $donation->fund_raisa_id) : '—') }}
+                                {{ $goal?->goal_name ?: ($donation->fund_raisa_id ? 'Fund #' . $donation->fund_raisa_id : '—') }}
                             </td>
                             <td class="px-6 py-4 font-medium text-gray-800">{{ $donation->name }}</td>
                             <td class="px-6 py-4 text-gray-600">{{ $donation->email }}</td>
+                            <td class="px-6 py-4 text-gray-700">{{ $donation->donation_for }}</td> {{-- ✅ NEW --}}
                             <td class="px-6 py-4">
                                 <span class="px-3 py-1 rounded-full bg-green-100 text-green-700 font-semibold">
                                     ${{ number_format($donation->amount, 2) }}
@@ -131,9 +164,9 @@
                                         Cash
                                     </span>
                                 @else
-                                <span class="px-3 py-1 rounded-full bg-green-100 text-green-800 font-semibold">
-                                    Online
-                                </span>
+                                    <span class="px-3 py-1 rounded-full bg-green-100 text-green-800 font-semibold">
+                                        Online
+                                    </span>
                                 @endif
                             </td>
                             <td class="px-6 py-4">
@@ -172,7 +205,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="9" class="px-6 py-8 text-center text-gray-500">
+                            <td colspan="10" class="px-6 py-8 text-center text-gray-500">
                                 No donations recorded yet.
                             </td>
                         </tr>

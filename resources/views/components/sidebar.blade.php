@@ -341,6 +341,7 @@
                             class="block py-2.5 px-4 rounded-lg text-sm font-medium text-gray-600 transition-all {{ request()->routeIs('alumniHuston.*') ? 'bg-blue-200 text-[#00285E] font-bold' : 'hover:bg-gray-200' }}">Alumni
                             Houston </a>
                     @endif
+
                     @if ($user->hasPermission('alumni.events') || $user->isSuperAdmin())
                         <a href="{{ route('alumniEvent.index') }}"
                             class="block py-2.5 px-4 rounded-lg text-sm font-medium text-gray-600 transition-all {{ request()->routeIs('alumniEvent.*') ? 'bg-blue-200 text-[#00285E] font-bold' : 'hover:bg-gray-200' }}">Alumni
@@ -356,6 +357,22 @@
                             class="block py-2.5 px-4 rounded-lg text-sm font-medium text-gray-600 transition-all {{ request()->routeIs('alumniImages.*') ? 'bg-blue-200 text-[#00285E] font-bold' : 'hover:bg-gray-200' }}">Alumni
                             Images</a>
                     @endif --}}
+
+
+                    @if ($user->hasPermission('alumni.fee') || $user->isSuperAdmin())
+                        <a href="{{ route('alumniFee.index') }}"
+                            class="block py-2.5 px-4 rounded-lg text-sm font-medium text-gray-600 transition-all {{ request()->routeIs('alumniFee.*') ? 'bg-blue-200 text-[#00285E] font-bold' : 'hover:bg-gray-200' }}">
+                            Alumni Fee Per Person
+                        </a>
+                    @endif
+                    @if ($user->hasPermission('alumni.attendees') || $user->isSuperAdmin())
+                        <a href="{{ route('admin.alumni-event-attendees.index') }}"
+                            class="block py-2.5 px-4 rounded-lg text-sm font-medium text-gray-600 transition-all
+        {{ request()->routeIs('admin.alumni-event-attendees.*') ? 'bg-blue-200 text-[#00285E] font-bold' : 'hover:bg-gray-200' }}">
+                            Alumni Event Attendees
+                        </a>
+                    @endif
+
                     @if ($user->hasPermission('alumni.forms') || $user->isSuperAdmin())
                         <a href="{{ route('alumniForm.index') }}"
                             class="block py-2.5 px-4 rounded-lg text-sm font-medium text-gray-600 transition-all {{ request()->routeIs('alumniForm.*') ? 'bg-blue-200 text-[#00285E] font-bold' : 'hover:bg-gray-200' }}">Alumni

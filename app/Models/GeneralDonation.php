@@ -17,7 +17,8 @@ class GeneralDonation extends Model
         'frequency',
         'stripe_customer_id',
         'stripe_subscription_id',
-        'status'
+        'status',
+        'donation_for', // ✅ ADD THIS
     ];
 
     public function goal(): BelongsTo

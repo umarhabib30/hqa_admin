@@ -32,6 +32,7 @@ class GeneralDonationController extends Controller
             'name' => 'nullable|string',
             'amount' => 'required|integer|min:50',
             'interval' => 'required|string|in:month,year',
+            'donation_for' => 'required|string|max:255', // ✅ NEW
         ]);
 
         $stripe = new StripeClient(config('services.stripe.secret'));
@@ -93,7 +94,6 @@ class GeneralDonationController extends Controller
             ], 200);
         }
 
-        // Helper: always re-fetch invoice with expansions
         $getInvoice = function () use ($stripe, $invoiceId) {
             return $stripe->invoices->retrieve($invoiceId, [
                 'expand' => ['payment_intent', 'charge'],
@@ -102,37 +102,33 @@ class GeneralDonationController extends Controller
 
         $invoice = $getInvoice();
 
-        // If draft, finalize
         if (($invoice->status ?? null) === 'draft') {
             $stripe->invoices->finalizeInvoice($invoiceId, []);
             $invoice = $getInvoice();
         }
 
-        // If open and still unpaid, pay now
         if (($invoice->status ?? null) === 'open') {
-            // Try to pay using the PM we just attached
             $stripe->invoices->pay($invoiceId, [
                 'payment_method' => $request->payment_method,
             ]);
             $invoice = $getInvoice();
         }
 
-        // Re-fetch subscription to get updated status (important)
         $subscriptionFresh = $stripe->subscriptions->retrieve($subscription->id, []);
 
-        // ✅ Case A: Invoice is PAID (no client_secret needed)
         if (($invoice->status ?? null) === 'paid') {
             $goal = FundRaisa::latest()->first();
 
-            // Store donation (initial)
+            // Store donation with donation_for
             $donation = GeneralDonation::create([
-                'fund_raisa_id' => $goal->id,  // add to validation if required
+                'fund_raisa_id' => $goal->id,
+                'donation_for' => $request->donation_for, // ✅ NEW
                 'name' => $request->name,
                 'email' => $request->email,
                 'amount' => (int) $request->amount,
-                'payment_id' => $invoiceId,  // or $subscription->id, see note below
+                'payment_id' => $invoiceId,
                 'donation_mode' => 'stripe',
-                'frequency' => $request->interval,  // month/year
+                'frequency' => $request->interval,
                 'stripe_customer_id' => $customer->id,
                 'stripe_subscription_id' => $subscription->id,
                 'status' => 'paid',
@@ -149,14 +145,11 @@ class GeneralDonationController extends Controller
                 'invoice_status' => $invoice->status ?? null,
                 'amount_due' => $invoice->amount_due ?? null,
                 'total' => $invoice->total ?? null,
-                // Sometimes charge exists even if payment_intent isn't present in invoice
                 'charge_id' => $invoice->charge->id ?? $invoice->charge ?? null,
                 'message' => 'Invoice is already paid. No client_secret required.',
             ], 200);
         }
 
-        // ✅ Case B: We have a PaymentIntent → return client_secret
-        // payment_intent can be an object (expanded) or an ID string (depending)
         $pi = $invoice->payment_intent ?? null;
 
         if (is_string($pi)) {
@@ -178,7 +171,6 @@ class GeneralDonationController extends Controller
             ], 200);
         }
 
-        // ✅ Case C: Still no PI and not paid → return debug
         return response()->json([
             'paid' => false,
             'customer_id' => $customer->id,
@@ -201,48 +193,39 @@ class GeneralDonationController extends Controller
             'payment_method' => 'required|string',
             'email'          => 'required|email',
             'name'           => 'nullable|string',
-            'amount'         => 'required|integer|min:50', // cents
+            'amount'         => 'required|integer|min:50',
+            'donation_for'   => 'required|string|max:255', // ✅ NEW
         ]);
 
         $stripe = new StripeClient(config('services.stripe.secret'));
 
-        // 1) Create customer
         $customer = $stripe->customers->create([
             'email' => $request->email,
             'name'  => $request->name,
         ]);
 
-        // 2) Attach payment method to customer
         $stripe->paymentMethods->attach($request->payment_method, [
             'customer' => $customer->id,
         ]);
 
-        // Optional but good practice: set default PM for invoices/future usage
         $stripe->customers->update($customer->id, [
             'invoice_settings' => [
                 'default_payment_method' => $request->payment_method,
             ],
         ]);
 
-        // 3) Create + confirm PaymentIntent
-        // ✅ Do NOT send confirmation_method when using automatic_payment_methods
         $pi = $stripe->paymentIntents->create([
             'amount'   => (int) $request->amount,
             'currency' => 'usd',
-
             'customer'       => $customer->id,
             'payment_method' => $request->payment_method,
-
-            'confirm'       => true,   // attempt to pay now
-            'off_session'   => false,  // user is present
+            'confirm'       => true,
+            'off_session'   => false,
             'receipt_email' => $request->email,
-
             'description' => 'One-time donation',
             'metadata'    => [
                 'type' => 'general_donation_one_time',
             ],
-
-            // ✅ Fix return_url error by blocking redirects
             'automatic_payment_methods' => [
                 'enabled'         => true,
                 'allow_redirects' => 'never',
@@ -251,13 +234,13 @@ class GeneralDonationController extends Controller
 
         $goal = FundRaisa::latest()->first();
 
-        // 4) Save donation as pending first
         $donation = GeneralDonation::create([
             'fund_raisa_id'          => $goal?->id,
+            'donation_for'           => $request->donation_for, // ✅ NEW
             'name'                   => $request->name,
             'email'                  => $request->email,
             'amount'                 => (int) $request->amount,
-            'payment_id'             => $pi->id, // PaymentIntent id
+            'payment_id'             => $pi->id,
             'donation_mode'          => 'stripe',
             'frequency'              => 'one_time',
             'stripe_customer_id'     => $customer->id,
@@ -265,7 +248,6 @@ class GeneralDonationController extends Controller
             'status'                 => 'pending',
         ]);
 
-        // 5) Handle statuses
         if (($pi->status ?? null) === 'succeeded') {
             $donation->update(['status' => 'paid']);
 
@@ -278,7 +260,6 @@ class GeneralDonationController extends Controller
             ], 200);
         }
 
-        // 3DS required -> client must confirm using client_secret
         if (in_array($pi->status, ['requires_action', 'requires_confirmation'], true)) {
             return response()->json([
                 'paid'             => false,
@@ -290,7 +271,6 @@ class GeneralDonationController extends Controller
             ], 200);
         }
 
-        // Any other status = failed for this flow
         $donation->update(['status' => 'failed']);
 
         return response()->json([

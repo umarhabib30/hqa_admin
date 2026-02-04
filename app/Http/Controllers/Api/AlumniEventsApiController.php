@@ -7,7 +7,7 @@ use App\Models\AlumniEvent;
 use Illuminate\Http\JsonResponse;
 use Throwable;
 
-class AlumniEventApiController extends Controller
+class AlumniEventsApiController extends Controller
 {
     /**
      * GET: All Alumni Events
@@ -21,14 +21,13 @@ class AlumniEventApiController extends Controller
             return response()->json([
                 'status'  => true,
                 'message' => 'Alumni events fetched successfully',
-                'data'    => $events
+                'data'    => $events,
             ], 200);
         } catch (Throwable $e) {
-
             return response()->json([
                 'status'  => false,
                 'message' => 'Failed to fetch alumni events',
-                'error'   => $e->getMessage()
+                'error'   => $e->getMessage(),
             ], 500);
         }
     }
@@ -37,7 +36,7 @@ class AlumniEventApiController extends Controller
      * GET: Single Alumni Event
      * URL: /api/alumni-events/{id}
      */
-    public function show($id): JsonResponse
+    public function show(int $id): JsonResponse
     {
         try {
             $event = AlumniEvent::find($id);
@@ -45,21 +44,20 @@ class AlumniEventApiController extends Controller
             if (!$event) {
                 return response()->json([
                     'status'  => false,
-                    'message' => 'Alumni event not found'
+                    'message' => 'Alumni event not found',
                 ], 404);
             }
 
             return response()->json([
                 'status'  => true,
                 'message' => 'Alumni event fetched successfully',
-                'data'    => $event
+                'data'    => $event,
             ], 200);
         } catch (Throwable $e) {
-
             return response()->json([
                 'status'  => false,
                 'message' => 'Failed to fetch alumni event',
-                'error'   => $e->getMessage()
+                'error'   => $e->getMessage(),
             ], 500);
         }
     }

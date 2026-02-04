@@ -1,7 +1,10 @@
 <?php
 
+use App\Http\Controllers\AlumniEventAttendeeController;
 use App\Http\Controllers\Api\AchievementsApiController;
-use App\Http\Controllers\Api\AlumniEventApiController;
+use App\Http\Controllers\Api\AlumniEventsApiController;
+use App\Http\Controllers\Api\AlumniFeePersonPriceApiController;
+// use App\Http\Controllers\Api\AlumniEventApiController;
 use App\Http\Controllers\Api\AlumniFormApiController;
 use App\Http\Controllers\Api\AlumniHustonApiController;
 use App\Http\Controllers\Api\AlumniImageApiController;
@@ -119,8 +122,8 @@ Route::post('/job-apply', action: [JobApplicationApiController::class, 'store'])
 Route::get('/alumniHuston', [AlumniHustonApiController::class, 'index']);
 
 // Alumni Event 
-Route::get('/alumniEvents', [AlumniEventApiController::class, 'index']);
-Route::get('/alumniEvents/{id}', [AlumniEventApiController::class, 'show']);
+Route::get('/alumniEvents', [AlumniEventsApiController::class, 'index']);
+Route::get('/alumniEvents/{id}', [AlumniEventsApiController::class, 'show']);
 
 //Alumni posts
 Route::get('/alumniPosts', [AlumniPostApiController::class, 'index']);
@@ -166,3 +169,10 @@ Route::post('/pto-event-attendees', [PtoEventAttendeeController::class, 'store']
 Route::get('/pto-event-attendees', [PtoEventAttendeeController::class, 'index']);
 Route::post('/pto-event-intent', [PtoEventAttendeeController::class, 'createIntent']);
 Route::post('/pto-event-attendees', [PtoEventAttendeeController::class, 'store']);
+
+
+// Alumni Event Attendees (similar to PTO Event Attendees)
+Route::get('/alumni-event-attendees', [AlumniEventAttendeeController::class, 'index']);
+Route::post('/alumni-event-attendees', [AlumniEventAttendeeController::class, 'store']);
+Route::post('/alumni-event-intent', [AlumniEventAttendeeController::class, 'createIntent']); // For Stripe Payment Intent
+Route::get('/alumniFee', [AlumniFeePersonPriceApiController::class, 'index']);

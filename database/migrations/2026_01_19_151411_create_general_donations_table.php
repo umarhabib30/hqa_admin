@@ -22,6 +22,8 @@ return new class extends Migration
             $table->string('stripe_customer_id')->nullable();
             $table->string('stripe_subscription_id')->nullable();
             $table->string('status')->default('active');
+            $table->string('donation_for')->nullable();
+
 
 
             $table->enum('donation_mode', ['paid_now', 'pledged', 'stripe'])->nullable()->default('paid_now');

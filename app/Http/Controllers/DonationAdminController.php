@@ -25,17 +25,19 @@ class DonationAdminController extends Controller
             'amount' => 'required|numeric|min:0.01',
             'donation_mode' => 'required|in:paid_now,pledged',
             'payment_id' => 'nullable|string|max:255|unique:general_donations,payment_id',
+            'donation_for' => 'required|string|max:255', // ✅ NEW
         ]);
 
         $latestGoalId = FundRaisa::latest('id')->value('id');
 
         GeneralDonation::create([
             'fund_raisa_id' => $latestGoalId,
-            'name' => $validated['name'] ?? null,
-            'email' => $validated['email'] ?? null,
-            'amount' => $validated['amount'],
+            'donation_for'  => $validated['donation_for'], // ✅ NEW
+            'name'          => $validated['name'] ?? null,
+            'email'         => $validated['email'] ?? null,
+            'amount'        => $validated['amount'],
             'donation_mode' => $validated['donation_mode'],
-            'payment_id' => $validated['payment_id'] ?? null,
+            'payment_id'    => $validated['payment_id'] ?? null,
         ]);
 
         return redirect()
@@ -56,14 +58,16 @@ class DonationAdminController extends Controller
             'amount' => 'required|numeric|min:0.01',
             'donation_mode' => 'required|in:paid_now,pledged',
             'payment_id' => 'nullable|string|max:255|unique:general_donations,payment_id,' . $donation->id,
+            'donation_for' => 'required|string|max:255', // ✅ NEW
         ]);
 
         $donation->update([
-            'name' => $validated['name'] ?? null,
-            'email' => $validated['email'] ?? null,
-            'amount' => $validated['amount'],
+            'donation_for'  => $validated['donation_for'], // ✅ NEW
+            'name'          => $validated['name'] ?? null,
+            'email'         => $validated['email'] ?? null,
+            'amount'        => $validated['amount'],
             'donation_mode' => $validated['donation_mode'],
-            'payment_id' => $validated['payment_id'] ?? null,
+            'payment_id'    => $validated['payment_id'] ?? null,
         ]);
 
         return redirect()
