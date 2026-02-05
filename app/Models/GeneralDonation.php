@@ -18,7 +18,13 @@ class GeneralDonation extends Model
         'stripe_customer_id',
         'stripe_subscription_id',
         'status',
-        'donation_for', // ✅ ADD THIS
+        'donation_for', 
+        'address1',
+        'address2',
+        'city',
+        'state',
+        'country',
+        
     ];
 
     public function goal(): BelongsTo

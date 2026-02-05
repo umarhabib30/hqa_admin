@@ -49,68 +49,95 @@
                 class="grid grid-cols-1 md:grid-cols-4 gap-4">
                 @csrf
 
-                <div class="md:col-span-1">
+                <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Name</label>
                     <input name="name" value="{{ old('name') }}" placeholder="Optional"
-                        class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#00285E] focus:border-transparent @error('name') border-red-500 @enderror" />
+                        class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#00285E]" />
                 </div>
 
-                <div class="md:col-span-1">
+                <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Email</label>
                     <input name="email" value="{{ old('email') }}" placeholder="Optional"
-                        class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#00285E] focus:border-transparent @error('email') border-red-500 @enderror" />
+                        class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#00285E]" />
                 </div>
 
-                <div class="md:col-span-1">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Amount <span
-                            class="text-red-500">*</span></label>
-                    <input name="amount" value="{{ old('amount') }}" type="number" step="0.01" min="0"
-                        class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#00285E] focus:border-transparent @error('amount') border-red-500 @enderror"
-                        placeholder="e.g. 50" required />
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Amount <span class="text-red-500">*</span>
+                    </label>
+                    <input name="amount" value="{{ old('amount') }}" type="number" step="0.01" required
+                        class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#00285E]" />
                 </div>
 
-                <div class="md:col-span-1">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Mode <span
-                            class="text-red-500">*</span></label>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Mode <span class="text-red-500">*</span>
+                    </label>
                     <select name="donation_mode" required
-                        class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#00285E] focus:border-transparent @error('donation_mode') border-red-500 @enderror">
-                        <option value="paid_now" {{ old('donation_mode', 'paid_now') === 'paid_now' ? 'selected' : '' }}>
-                            Cash</option>
-                        <option value="pledged" {{ old('donation_mode') === 'pledged' ? 'selected' : '' }}>Pledged (pay
-                            later)</option>
+                        class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#00285E]">
+                        <option value="paid_now">Cash</option>
+                        <option value="pledged">Pledged</option>
                     </select>
                 </div>
 
-                {{-- ✅ Donation Purpose --}}
-                <div class="md:col-span-1">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Purpose <span
-                            class="text-red-500">*</span></label>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Purpose <span class="text-red-500">*</span>
+                    </label>
                     <select name="donation_for" required
-                        class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#00285E] focus:border-transparent @error('donation_for') border-red-500 @enderror">
+                        class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#00285E]">
                         <option value="">Select Purpose</option>
-                        <option value="Scholarship-Hafiz"
-                            {{ old('donation_for') === 'Scholarship-Hafiz' ? 'selected' : '' }}>Scholarship-Hafiz</option>
-                        <option value="Katy campus – Maintenance Expenses"
-                            {{ old('donation_for') === 'Katy campus – Maintenance Expenses' ? 'selected' : '' }}>Katy
-                            campus – Maintenance Expenses</option>
-                        <option value="Construction of Richmond Campus"
-                            {{ old('donation_for') === 'Construction of Richmond Campus' ? 'selected' : '' }}>Construction
-                            of Richmond Campus</option>
-                        <option value="HQA Annual fundraiser"
-                            {{ old('donation_for') === 'HQA Annual fundraiser' ? 'selected' : '' }}>HQA Annual fundraiser
-                        </option>
-                        <option value="HQA Semi-annual fundraiser"
-                            {{ old('donation_for') === 'HQA Semi-annual fundraiser' ? 'selected' : '' }}>HQA Semi-annual
-                            fundraiser</option>
-                        <option value="Other" {{ old('donation_for') === 'Other' ? 'selected' : '' }}>Other</option>
-                        <option value="In the memory of"
-                            {{ old('donation_for') === 'In the memory of' ? 'selected' : '' }}>In the memory of</option>
-                        <option value="In the honor of" {{ old('donation_for') === 'In the honor of' ? 'selected' : '' }}>
-                            In the honor of</option>
+                        <option value="Scholarship-Hafiz">Scholarship-Hafiz</option>
+                        <option value="Katy campus – Maintenance Expenses">Katy campus – Maintenance Expenses</option>
+                        <option value="Construction of Richmond Campus">Construction of Richmond Campus</option>
+                        <option value="HQA Annual fundraiser">HQA Annual fundraiser</option>
+                        <option value="HQA Semi-annual fundraiser">HQA Semi-annual fundraiser</option>
+                        <option value="Other">Other</option>
+                        <option value="In the memory of">In the memory of</option>
+                        <option value="In the honor of">In the honor of</option>
                     </select>
                 </div>
 
-                <div class="md:col-span-4 flex">
+                {{-- Address --}}
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Address Line 1 <span class="text-red-500">*</span>
+                    </label>
+                    <input name="address1" value="{{ old('address1') }}" required
+                        class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#00285E]" />
+                </div>
+
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Address Line 2</label>
+                    <input name="address2" value="{{ old('address2') }}"
+                        class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#00285E]" />
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        City <span class="text-red-500">*</span>
+                    </label>
+                    <input name="city" value="{{ old('city') }}" required
+                        class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#00285E]" />
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        State <span class="text-red-500">*</span>
+                    </label>
+                    <input name="state" value="{{ old('state') }}" required
+                        class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#00285E]" />
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Country <span class="text-red-500">*</span>
+                    </label>
+                    <input name="country" value="{{ old('country') }}" required
+                        class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#00285E]" />
+                </div>
+
+                <div class="md:col-span-4">
                     <button type="submit"
                         class="px-8 py-3 border-2 border-[#00285E] text-[#00285E] rounded-lg hover:bg-[#00285E] hover:text-white transition">
                         Save Donation
@@ -121,87 +148,42 @@
 
         {{-- Donations Table --}}
         <div class="bg-white rounded-xl shadow-sm overflow-x-auto">
-            <table class="w-full text-left border-collapse min-w-[1050px]">
+            <table class="w-full text-left border-collapse min-w-[1200px]">
                 <thead>
                     <tr class="bg-gray-100 text-gray-600 text-sm uppercase">
                         <th class="px-6 py-4">ID</th>
                         <th class="px-6 py-4">Goal</th>
-                        <th class="px-6 py-4">Donor Name</th>
+                        <th class="px-6 py-4">Name</th>
                         <th class="px-6 py-4">Email</th>
-                        <th class="px-6 py-4">Purpose</th> {{-- ✅ NEW --}}
+                        <th class="px-6 py-4">Purpose</th>
+                        <th class="px-6 py-4">Address</th>
                         <th class="px-6 py-4">Amount</th>
                         <th class="px-6 py-4">Mode</th>
-                        <th class="px-6 py-4">Payment ID</th>
-                        <th class="px-6 py-4">Actions</th>
+                        <th class="px-6 py-4">Payment</th>
                         <th class="px-6 py-4 text-right">Date</th>
                     </tr>
                 </thead>
 
                 <tbody class="divide-y">
                     @forelse($donations as $donation)
-                        <tr class="hover:bg-gray-50 transition">
-                            <td class="px-6 py-4 text-gray-500">#{{ $donation->id }}</td>
-                            <td class="px-6 py-4 text-gray-700">
-                                @php($goal = $donation->goal)
-                                {{ $goal?->goal_name ?: ($donation->fund_raisa_id ? 'Fund #' . $donation->fund_raisa_id : '—') }}
-                            </td>
-                            <td class="px-6 py-4 font-medium text-gray-800">{{ $donation->name }}</td>
-                            <td class="px-6 py-4 text-gray-600">{{ $donation->email }}</td>
-                            <td class="px-6 py-4 text-gray-700">{{ $donation->donation_for }}</td> {{-- ✅ NEW --}}
-                            <td class="px-6 py-4">
-                                <span class="px-3 py-1 rounded-full bg-green-100 text-green-700 font-semibold">
-                                    ${{ number_format($donation->amount, 2) }}
-                                </span>
-                            </td>
-                            <td class="px-6 py-4">
-                                @php($mode = $donation->donation_mode ?? 'paid_now')
-                                @if ($mode === 'pledged')
-                                    <span class="px-3 py-1 rounded-full bg-yellow-100 text-yellow-800 font-semibold">
-                                        Pledged
-                                    </span>
-                                @elseif($mode === 'paid_now')
-                                    <span class="px-3 py-1 rounded-full bg-green-100 text-green-800 font-semibold">
-                                        Cash
-                                    </span>
-                                @else
-                                    <span class="px-3 py-1 rounded-full bg-green-100 text-green-800 font-semibold">
-                                        Online
-                                    </span>
+                        <tr>
+                            <td class="px-6 py-4">#{{ $donation->id }}</td>
+                            <td class="px-6 py-4">{{ $donation->goal?->goal_name ?? '—' }}</td>
+                            <td class="px-6 py-4">{{ $donation->name }}</td>
+                            <td class="px-6 py-4">{{ $donation->email }}</td>
+                            <td class="px-6 py-4">{{ $donation->donation_for }}</td>
+                            <td class="px-6 py-4 text-sm">
+                                {{ $donation->address1 }}
+                                @if ($donation->address2)
+                                    , {{ $donation->address2 }}
                                 @endif
+                                <br>
+                                {{ $donation->city }}, {{ $donation->state }}, {{ $donation->country }}
                             </td>
-                            <td class="px-6 py-4">
-                                <code class="text-xs bg-gray-100 px-2 py-1 rounded text-gray-500">
-                                    {{ $donation->payment_id ?: '-' }}
-                                </code>
-                            </td>
-                            <td class="px-6 py-4">
-                                <div class="flex items-center gap-2">
-                                    <a href="{{ route('admin.donations.edit', $donation->id) }}"
-                                        class="px-3 py-2 text-sm border rounded-lg hover:bg-gray-50 transition">
-                                        Edit
-                                    </a>
-
-                                    <form method="POST" action="{{ route('admin.donations.destroy', $donation->id) }}"
-                                        class="delete-form">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit"
-                                            class="delete-btn px-3 py-2 text-sm border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition"
-                                            data-name="{{ $donation->name ?: 'Donation #' . $donation->id }}">
-                                            Delete
-                                        </button>
-                                    </form>
-                                </div>
-                                @if (($donation->donation_mode ?? 'paid_now') === 'pledged')
-                                    <div class="mt-2 text-xs text-gray-500">
-                                        Later paid? <a class="text-[#00285E] underline"
-                                            href="{{ route('admin.donations.edit', $donation->id) }}">Mark as paid</a>
-                                    </div>
-                                @endif
-                            </td>
-                            <td class="px-6 py-4 text-right text-gray-500 text-sm">
-                                {{ $donation->created_at->format('M d, Y') }}
-                            </td>
+                            <td class="px-6 py-4">${{ number_format($donation->amount, 2) }}</td>
+                            <td class="px-6 py-4">{{ ucfirst($donation->donation_mode) }}</td>
+                            <td class="px-6 py-4">{{ $donation->payment_id ?? '-' }}</td>
+                            <td class="px-6 py-4 text-right">{{ $donation->created_at->format('M d, Y') }}</td>
                         </tr>
                     @empty
                         <tr>

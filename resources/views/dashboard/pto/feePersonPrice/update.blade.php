@@ -10,7 +10,7 @@
     @csrf
     @method('PUT')
 
-    <div class="md:col-span-2">
+    {{-- <div class="md:col-span-2">
         <label class="block mb-1 font-medium">Title</label>
         <input type="text" name="title"
             value="{{ $fee->title }}"
@@ -19,7 +19,7 @@
                           focus:ring-2 focus:ring-[#00285E]
                           focus:outline-none"
             required>
-    </div>
+    </div> --}}
 
     <div>
         <label class="block mb-1 font-medium">Fee Per Person ($)</label>

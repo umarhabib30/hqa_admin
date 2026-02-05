@@ -17,7 +17,7 @@
             <thead class="bg-gray-100">
                 <tr>
                     <th class="px-4 py-3 text-left">Event</th>
-                    <th class="px-4 py-3 text-left">Title</th>
+                    {{-- <th class="px-4 py-3 text-left">Title</th> --}}
                     <th class="px-4 py-3 text-center">Price</th>
                     <th class="px-4 py-3 text-center">Status</th>
                     <th class="px-4 py-3 text-center">Actions</th>
@@ -27,9 +27,9 @@
             <tbody>
                 @forelse($fees as $fee)
                     <tr class="border-t hover:bg-gray-50 transition">
-                        <td class="px-4 py-3 font-medium text-[#00285E]">
+                        {{-- <td class="px-4 py-3 font-medium text-[#00285E]">
                             {{ $fee->event->title ?? 'N/A' }}
-                        </td>
+                        </td> --}}
                         <td class="px-4 py-3 text-gray-600">{{ $fee->title }}</td>
 
                         <td class="px-4 py-3 text-center font-semibold">
@@ -80,15 +80,15 @@
     <div class="md:hidden space-y-4">
         @forelse($fees as $fee)
             <div class="bg-white rounded-xl shadow p-4 space-y-3 border-l-4 border-[#00285E]">
-                <div>
+                {{-- <div>
                     <p class="text-xs text-gray-500 uppercase">Event</p>
                     <p class="font-bold text-[#00285E]">{{ $fee->event->title ?? 'N/A' }}</p>
-                </div>
+                </div> --}}
 
-                <div>
+                {{-- <div>
                     <p class="text-xs text-gray-500">Title</p>
                     <p class="font-semibold">{{ $fee->title }}</p>
-                </div>
+                </div> --}}
 
                 <div class="flex justify-between items-center">
                     <div>

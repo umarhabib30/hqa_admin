@@ -17,12 +17,18 @@ return new class extends Migration
             $table->string('name')->nullable();
             $table->string('email')->nullable();
             $table->decimal('amount', 10, 2)->nullable();
-            $table->string('payment_id')->nullable(); // remove unique() constraint
-            $table->string('frequency')->default('once'); // once, month, year
+            $table->string('payment_id')->nullable();
+            $table->string('frequency')->default('once');
             $table->string('stripe_customer_id')->nullable();
             $table->string('stripe_subscription_id')->nullable();
             $table->string('status')->default('active');
             $table->string('donation_for')->nullable();
+            $table->string('address1');           
+            $table->string('address2')->nullable();  
+            $table->string('city');               
+            $table->string('state');              
+            $table->string('country');            
+
 
 
 

@@ -13,7 +13,6 @@ class DonationAdminController extends Controller
         // Fetch all donations, newest first
         $donations = GeneralDonation::with('goal')->latest()->get();
 
-        // Path matches: resources/views/dashboard/gernalDonation/donations_index.blade.php
         return view('dashboard.gernalDonation.donations_index', compact('donations'));
     }
 
@@ -25,19 +24,33 @@ class DonationAdminController extends Controller
             'amount' => 'required|numeric|min:0.01',
             'donation_mode' => 'required|in:paid_now,pledged',
             'payment_id' => 'nullable|string|max:255|unique:general_donations,payment_id',
-            'donation_for' => 'required|string|max:255', // ✅ NEW
+            'donation_for' => 'required|string|max:255',
+
+            // ✅ NEW ADDRESS FIELDS
+            'address1' => 'required|string|max:255',
+            'address2' => 'nullable|string|max:255',
+            'city'     => 'required|string|max:255',
+            'state'    => 'required|string|max:255',
+            'country'  => 'required|string|max:255',
         ]);
 
         $latestGoalId = FundRaisa::latest('id')->value('id');
 
         GeneralDonation::create([
             'fund_raisa_id' => $latestGoalId,
-            'donation_for'  => $validated['donation_for'], // ✅ NEW
+            'donation_for'  => $validated['donation_for'],
             'name'          => $validated['name'] ?? null,
             'email'         => $validated['email'] ?? null,
             'amount'        => $validated['amount'],
             'donation_mode' => $validated['donation_mode'],
             'payment_id'    => $validated['payment_id'] ?? null,
+
+            // ✅ ADDRESS SAVE
+            'address1' => $validated['address1'],
+            'address2' => $validated['address2'] ?? null,
+            'city'     => $validated['city'],
+            'state'    => $validated['state'],
+            'country'  => $validated['country'],
         ]);
 
         return redirect()
@@ -58,16 +71,30 @@ class DonationAdminController extends Controller
             'amount' => 'required|numeric|min:0.01',
             'donation_mode' => 'required|in:paid_now,pledged',
             'payment_id' => 'nullable|string|max:255|unique:general_donations,payment_id,' . $donation->id,
-            'donation_for' => 'required|string|max:255', // ✅ NEW
+            'donation_for' => 'required|string|max:255',
+
+            // ✅ NEW ADDRESS FIELDS
+            'address1' => 'required|string|max:255',
+            'address2' => 'nullable|string|max:255',
+            'city'     => 'required|string|max:255',
+            'state'    => 'required|string|max:255',
+            'country'  => 'required|string|max:255',
         ]);
 
         $donation->update([
-            'donation_for'  => $validated['donation_for'], // ✅ NEW
+            'donation_for'  => $validated['donation_for'],
             'name'          => $validated['name'] ?? null,
             'email'         => $validated['email'] ?? null,
             'amount'        => $validated['amount'],
             'donation_mode' => $validated['donation_mode'],
             'payment_id'    => $validated['payment_id'] ?? null,
+
+            // ✅ ADDRESS UPDATE
+            'address1' => $validated['address1'],
+            'address2' => $validated['address2'] ?? null,
+            'city'     => $validated['city'],
+            'state'    => $validated['state'],
+            'country'  => $validated['country'],
         ]);
 
         return redirect()

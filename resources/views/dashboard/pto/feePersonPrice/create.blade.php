@@ -21,7 +21,7 @@
             @enderror
         </div>
 
-        <div class="md:col-span-2">
+        {{-- <div class="md:col-span-2">
             <label class="block mb-1 font-medium">Fee Title</label>
             <input type="text" name="title" value="{{ old('title') }}"
                 class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#00285E] focus:outline-none"
@@ -29,7 +29,7 @@
             @error('title')
                 <span class="text-red-500 text-sm">{{ $message }}</span>
             @enderror
-        </div>
+        </div> --}}
 
         <div>
             <label class="block mb-1 font-medium">Fee Per Person ($)</label>
