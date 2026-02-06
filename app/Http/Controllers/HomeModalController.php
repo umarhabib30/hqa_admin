@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\homeModal;
+use App\Models\HomeModal;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 

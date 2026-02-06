@@ -17,6 +17,7 @@
             <thead class="bg-gray-100 text-sm">
                 <tr>
                     <th class="p-3 text-left">Title</th>
+                    <th class="p-3 text-left">Description</th>
                     <th class="p-3">Image</th>
                     <th class="p-3">Action</th>
                 </tr>
@@ -26,6 +27,14 @@
                 @foreach($modals as $modal)
                 <tr class="border-t">
                     <td class="p-3">{{ $modal->title }}</td>
+
+                    <td class="p-3 text-gray-700">
+                        @if($modal->cdesc)
+                            {{ \Illuminate\Support\Str::limit($modal->cdesc, 120) }}
+                        @else
+                            —
+                        @endif
+                    </td>
 
                     <td class="p-3 text-center">
                         @if($modal->image)
