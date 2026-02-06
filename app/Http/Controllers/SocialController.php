@@ -25,13 +25,13 @@ class SocialController extends Controller
             'title' => 'required|string|max:255',
             'desc' => 'nullable|string',
             'image' => 'required|image',
-            'fblink' => 'required|url',
-            'ytlink' => 'required|url',
-            'instalink' => 'required|url',
-            'tiktoklink' => 'required|url',
+            'fblink' => 'nullable|url',
+            'ytlink' => 'nullable|url',
+            'instalink' => 'nullable|url',
+            'tiktoklink' => 'nullable|url',
         ]);
 
-        $data = $request->only(['title', 'desc', 'fblink','ytlink','tiktoklink','instalink']);
+        $data = $request->only(['title', 'desc', 'fblink', 'ytlink', 'tiktoklink', 'instalink']);
 
         if ($request->hasFile('image')) {
             $data['image'] = $request->file('image')->store('socials/icons', 'public');
@@ -57,14 +57,14 @@ class SocialController extends Controller
             'title' => 'required|string|max:255',
             'desc' => 'nullable|string',
             'image' => 'nullable|image',
-            'link' => 'required|url',
-            'fblink' => 'required|url',
-            'ytlink' => 'required|url',
-            'instalink' => 'required|url',
-            'tiktoklink' => 'required|url',
+            'link' => 'nullable|url',
+            'fblink' => 'nullable|url',
+            'ytlink' => 'nullable|url',
+            'instalink' => 'nullable|url',
+            'tiktoklink' => 'nullable|url',
         ]);
 
-        $data = $request->only(['title', 'desc', 'fblink','ytlink','tiktoklink','instalink']);
+        $data = $request->only(['title', 'desc', 'fblink', 'ytlink', 'tiktoklink', 'instalink']);
 
         if ($request->hasFile('image')) {
             // Delete old image

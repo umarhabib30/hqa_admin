@@ -22,7 +22,7 @@ class HomeMemoriesController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-            'title'     => 'required',
+            'title'     => 'nullable',
             'desc'      => 'nullable',
             'quote'     => 'nullable',
             'name'      => 'required',
@@ -53,7 +53,7 @@ class HomeMemoriesController extends Controller
         $memory = homeMemories::findOrFail($id);
 
         $data = $request->validate([
-            'title'     => 'required',
+            'title'     => 'nullable',
             'desc'      => 'nullable',
             'quote'     => 'nullable',
             'name'      => 'required',

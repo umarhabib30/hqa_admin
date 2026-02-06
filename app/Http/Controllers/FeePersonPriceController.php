@@ -25,7 +25,7 @@ class FeePersonPriceController extends Controller
     {
         $data = $request->validate([
             'event_id'  => 'required|exists:pto_events,id',
-            'title'     => 'required|string',
+            'title'     => 'nullable|string',
             'price'     => 'required|numeric|min:0',
             'is_active' => 'boolean'
         ]);
@@ -50,7 +50,7 @@ class FeePersonPriceController extends Controller
     {
         $data = $request->validate([
             'event_id'  => 'required|exists:pto_events,id',
-            'title'     => 'required|string',
+            'title'     => 'nullable|string',
             'price'     => 'required|numeric|min:0',
             'is_active' => 'boolean'
         ]);

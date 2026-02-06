@@ -14,12 +14,12 @@ class AlumniEventsController extends Controller
     public function index()
     {
         $events = AlumniEvent::latest()->get();
-        return view('dashboard.alumni.upcomingEvents.index', compact('events'));
+        return view('dashboard.alumni.upcomingevents.index', compact('events'));
     }
 
     public function create()
     {
-        return view('dashboard.alumni.upcomingEvents.create');
+        return view('dashboard.alumni.upcomingevents.create');
     }
 
     public function store(Request $request)
@@ -77,7 +77,7 @@ class AlumniEventsController extends Controller
     public function edit($id)
     {
         $event = AlumniEvent::findOrFail($id);
-        return view('dashboard.alumni.upcomingEvents.update', compact('event'));
+        return view('dashboard.alumni.upcomingevents.update', compact('event'));
     }
 
     public function update(Request $request, $id)

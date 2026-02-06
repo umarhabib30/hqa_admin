@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('fee_person_prices', function (Blueprint $table) {
             $table->id();
             $table->foreignId('event_id')->constrained('pto_events')->onDelete('cascade'); // Link to events
-            $table->string('title');
+            $table->string('title')->nullable(); // ✅ FIXED
             $table->decimal('price', 10, 2);
             $table->boolean('is_active')->default(true);
             $table->timestamps();

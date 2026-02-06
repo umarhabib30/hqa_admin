@@ -16,10 +16,10 @@ return new class extends Migration
             $table->string('title');            // e.g., Facebook
             $table->text('desc')->nullable();   // optional description
             $table->string('image')->nullable(); // icon/thumbnail
-            $table->string('fblink');             // social URL
-            $table->string('ytlink');             // social URL
-            $table->string('instalink');             // social URL
-            $table->string('tiktoklink');             // social URL
+            $table->string('fblink')->nullable();             // social URL
+            $table->string('ytlink')->nullable();             // social URL
+            $table->string('instalink')->nullable();             // social URL
+            $table->string('tiktoklink')->nullable();             // social URL
             $table->timestamps();
         });
     }

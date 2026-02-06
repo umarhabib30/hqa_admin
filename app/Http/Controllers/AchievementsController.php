@@ -32,7 +32,7 @@ class AchievementsController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'main_title' => 'required|string|max:255',
+            'main_title' => 'nullable|string|max:255',
             'main_desc' => 'nullable|string',
             'card_title' => 'required|string|max:255',
             'card_price' => 'required|numeric|min:0',
@@ -82,7 +82,7 @@ class AchievementsController extends Controller
         $achievement = Achievements::findOrFail($id);
 
         $request->validate([
-            'main_title' => 'required|string|max:255',
+            'main_title' => 'nullable|string|max:255',
             'main_desc' => 'nullable|string',
             'card_title' => 'required|string|max:255',
             'card_price' => 'required|numeric|min:0',

@@ -29,7 +29,7 @@
                     <th class="p-4 text-left">Icon</th>
                     <th class="p-4 text-left">Title</th>
                     <th class="p-4 text-left">Link</th>
-                    <th class="p-4 text-left">Description</th>
+                    {{-- <th class="p-4 text-left">Description</th> --}}
                     <th class="p-4 text-center">Actions</th>
                 </tr>
             </thead>
@@ -60,9 +60,9 @@
                         </a>
                     </td>
 
-                    <td class="p-4 text-sm text-gray-600">
+                    {{-- <td class="p-4 text-sm text-gray-600">
                         {{ Str::limit($social->desc, 60) }}
-                    </td>
+                    </td> --}}
 
                     <td class="p-4 text-center">
                         <div class="flex justify-center gap-2">
@@ -129,9 +129,9 @@
                 {{ Str::limit($social->fblink, 80) }}
             </a>
 
-            <p class="text-sm text-gray-600">
+            {{-- <p class="text-sm text-gray-600">
                 {{ Str::limit($social->desc, 120) }}
-            </p>
+            </p> --}}
 
             <div class="flex gap-2 pt-2">
                 <a href="{{ route('socials.edit', $social->id) }}"
