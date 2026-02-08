@@ -23,6 +23,9 @@ class JobPostController extends Controller
         $request->validate([
             'job_category' => 'required|string|max:255',
             'job_location' => 'required|string|max:255',
+            'job_experience' => 'required|string|max:255',
+            'job_education' => 'required|string|max:255',
+            'job_description' => 'required|string',
         ]);
 
         JobPost::create($request->all());
@@ -41,6 +44,9 @@ class JobPostController extends Controller
         $request->validate([
             'job_category' => 'required|string|max:255',
             'job_location' => 'required|string|max:255',
+            'job_experience' => 'required|string|max:255',
+            'job_education' => 'required|string|max:255',
+            'job_description' => 'required|string',
         ]);
 
         $jobPost->update($request->all());

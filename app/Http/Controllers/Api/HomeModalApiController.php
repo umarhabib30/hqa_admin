@@ -4,57 +4,60 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\HomeModal;
-
+use Illuminate\Http\JsonResponse;
 
 class HomeModalApiController extends Controller
 {
     /**
      * GET all home modals
      */
-    public function index()
+    public function index(): JsonResponse
     {
-        $modals = HomeModal::all()->map(function ($modal) {
-            return [
-                'id' => $modal->id,
-                'title' => $modal->title,
-                'cdesc' => $modal->cdesc,
-                'image' => $modal->image
-                    ? asset('storage/' . $modal->image)
-                    : null,
-                'created_at' => $modal->created_at->toDateTimeString(),
-            ];
-        });
+        $modals = HomeModal::latest()->get()->map(fn($modal) => $this->transform($modal));
 
         return response()->json([
             'status' => true,
-            'data' => $modals
+            'count'  => $modals->count(),
+            'data'   => $modals
         ], 200);
     }
 
     /**
      * GET single modal
      */
-    public function show($id)
+    public function show($id): JsonResponse
     {
         $modal = HomeModal::find($id);
 
         if (!$modal) {
             return response()->json([
                 'status' => false,
-                'message' => 'Modal not found'
+                'message' => 'Home modal record not found.'
             ], 404);
         }
 
         return response()->json([
             'status' => true,
-            'data' => [
-                'id' => $modal->id,
-                'title' => $modal->title,
-                'cdesc' => $modal->cdesc,
-                'image' => $modal->image
-                    ? asset('storage/' . $modal->image)
-                    : null,
-            ]
+            'data' => $this->transform($modal)
         ], 200);
+    }
+
+    /**
+     * Helper to keep data structure consistent
+     */
+    private function transform($modal): array
+    {
+        return [
+            'id'           => $modal->id,
+            'title'        => $modal->title,
+            'description'  => $modal->cdesc,
+            'image_url'    => $modal->image ? asset('storage/' . $modal->image) : null,
+            'button' => [
+                'text' => $modal->btn_text,
+                'link' => $modal->btn_link,
+            ],
+            'external_link' => $modal->general_link,
+            'created_at'    => $modal->created_at->toDateTimeString(),
+        ];
     }
 }

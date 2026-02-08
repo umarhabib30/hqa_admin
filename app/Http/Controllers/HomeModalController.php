@@ -22,9 +22,13 @@ class HomeModalController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-            'title' => 'required',
-            'cdesc' => 'nullable',
-            'image' => 'nullable|image',
+            'title'        => 'required|string|max:255',
+            'cdesc'        => 'nullable|string',
+            // Added max:2048 (2MB limit)
+            'image'        => 'nullable',
+            'btn_text'     => 'nullable|string|max:50',
+            'btn_link'     => 'nullable|url',
+            'general_link' => 'nullable|url',
         ]);
 
         if ($request->hasFile('image')) {
@@ -34,47 +38,48 @@ class HomeModalController extends Controller
         HomeModal::create($data);
 
         return redirect()->route('homeModal.index')
-            ->with('success', 'Modal created successfully');
+            ->with('success', 'New modal added successfully.');
     }
 
-    public function edit($id)
+    public function edit(HomeModal $homeModal)
     {
-        $modal = HomeModal::findOrFail($id);
-        return view('dashboard.homePage.modal.update', compact('modal'));
+        // Changed variable name to 'homeModal' to match the 'update.blade.php'
+        return view('dashboard.homePage.modal.update', ['homeModal' => $homeModal]);
     }
 
-    public function update(Request $request, $id)
+    public function update(Request $request, HomeModal $homeModal)
     {
-        $modal = HomeModal::findOrFail($id);
-
         $data = $request->validate([
-            'title' => 'required',
-            'cdesc' => 'nullable',
-            'image' => 'nullable|image',
+            'title'        => 'required|string|max:255',
+            'cdesc'        => 'nullable|string',
+            // Added max:2048 (2MB limit)
+            'image'        => 'nullable',
+            'btn_text'     => 'nullable|string|max:50',
+            'btn_link'     => 'nullable|url',
+            'general_link' => 'nullable|url',
         ]);
 
         if ($request->hasFile('image')) {
-            if ($modal->image) {
-                Storage::disk('public')->delete($modal->image);
+            if ($homeModal->image) {
+                Storage::disk('public')->delete($homeModal->image);
             }
             $data['image'] = $request->file('image')->store('home/modal', 'public');
         }
 
-        $modal->update($data);
+        $homeModal->update($data);
 
         return redirect()->route('homeModal.index')
-            ->with('success', 'Modal updated successfully');
+            ->with('success', 'Modal updated successfully.');
     }
 
-    public function destroy($id)
+    public function destroy(HomeModal $homeModal)
     {
-        $modal = HomeModal::findOrFail($id);
-
-        if ($modal->image) {
-            Storage::disk('public')->delete($modal->image);
+        if ($homeModal->image) {
+            Storage::disk('public')->delete($homeModal->image);
         }
 
-        $modal->delete();
-        return back()->with('success', 'Modal deleted');
+        $homeModal->delete();
+
+        return back()->with('success', 'Modal record and associated image deleted.');
     }
 }

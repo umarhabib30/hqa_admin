@@ -17,12 +17,12 @@
 
             <input name="fblink" type="url" placeholder="https://facebook.com/yourpage"
                 class="w-full border p-3 rounded">
-            <input name="ytlink" type="url" placeholder="https://Youtube.com/yourpage"
+            {{-- <input name="ytlink" type="url" placeholder="https://Youtube.com/yourpage"
                 class="w-full border p-3 rounded">
             <input name="tiktoklink" type="url" placeholder="https://Instagram.com/yourpage"
                 class="w-full border p-3 rounded">
             <input name="instalink" type="url" placeholder="https://Tiktok.com/yourpage"
-                class="w-full border p-3 rounded">
+                class="w-full border p-3 rounded"> --}}
 
             <button class="w-full bg-[#00285E] text-white p-3 rounded hover:bg-blue-700">
                 Save Link

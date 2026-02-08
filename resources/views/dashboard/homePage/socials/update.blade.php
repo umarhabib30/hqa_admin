@@ -21,9 +21,9 @@
             </div>
 
             <input name="fblink" type="url" value="{{ $social->fblink }}" class="w-full border p-3 rounded">
-            <input name="ytlink" type="url" value="{{ $social->ytlink }}" class="w-full border p-3 rounded">
+            {{-- <input name="ytlink" type="url" value="{{ $social->ytlink }}" class="w-full border p-3 rounded">
             <input name="tiktoklink" type="url" value="{{ $social->tiktoklink }}" class="w-full border p-3 rounded">
-            <input name="instalink" type="url" value="{{ $social->instalink }}" class="w-full border p-3 rounded">
+            <input name="instalink" type="url" value="{{ $social->instalink }}" class="w-full border p-3 rounded"> --}}
 
             <button class="w-full bg-[#00285E] text-white p-3 rounded hover:bg-blue-700">
                 Update Link

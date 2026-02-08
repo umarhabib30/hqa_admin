@@ -38,6 +38,9 @@ class GeneralDonationController extends Controller
         $customer = $stripe->customers->create([
             'email' => $request->email,
             'name'  => $request->name,
+            'metadata' => [
+        'purpose' => $request->donation_for, // Add this for consistency
+    ],
         ]);
 
         $stripe->paymentMethods->attach($request->payment_method, [
@@ -63,6 +66,9 @@ class GeneralDonationController extends Controller
         $subscription = $stripe->subscriptions->create([
             'customer' => $customer->id,
             'items'    => [['price' => $price->id]],
+            'metadata' => [
+                'purpose' => $request->donation_for, // <--- Add this
+            ],
             'collection_method' => 'charge_automatically',
             'payment_behavior'  => 'default_incomplete',
             'payment_settings'  => [
@@ -140,7 +146,7 @@ class GeneralDonationController extends Controller
             'payment_method' => 'required|string',
             'email'          => 'required|email',
             'name'           => 'nullable|string',
-            'amount'         => 'required|integer|min:50',
+            'amount'         => 'required|integer|min:0',
             'donation_for'   => 'required|string|max:255',
             'address1'       => 'required|string|max:255',
             'address2'       => 'nullable|string|max:255',
@@ -154,6 +160,9 @@ class GeneralDonationController extends Controller
         $customer = $stripe->customers->create([
             'email' => $request->email,
             'name'  => $request->name,
+            'metadata' => [
+                'purpose' => $request->donation_for, // <--- Add this
+            ],
         ]);
 
         $stripe->paymentMethods->attach($request->payment_method, ['customer' => $customer->id]);
@@ -169,8 +178,13 @@ class GeneralDonationController extends Controller
             'confirm'  => true,
             'off_session' => false,
             'receipt_email' => $request->email,
-            'description' => 'One-time donation',
-            'metadata'    => ['type' => 'general_donation_one_time'],
+            'description'   => 'Donation for: ' . $request->donation_for, // Also added to description
+            'metadata'      => [
+                'type'    => 'general_donation_one_time',
+                'purpose' => $request->donation_for, // <--- Add this
+            ],
+            // 'description' => 'One-time donation',
+            // 'metadata'    => ['type' => 'general_donation_one_time'],
             'automatic_payment_methods' => ['enabled' => true, 'allow_redirects' => 'never'],
         ]);
 

@@ -15,7 +15,14 @@ return new class extends Migration
             $table->id();
             $table->string('title');
             $table->text('cdesc')->nullable();
+
             $table->string('image')->nullable();
+
+            $table->string('btn_text')->nullable();
+            $table->string('btn_link')->nullable();
+
+            $table->string('general_link')->nullable();
+
             $table->timestamps();
         });
     }
