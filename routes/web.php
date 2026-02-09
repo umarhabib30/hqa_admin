@@ -38,6 +38,8 @@ use App\Http\Controllers\CouponController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\AlumniAuthController;
 use App\Http\Controllers\AlumniEventsController;
+use App\Http\Controllers\ForgotPasswordController;
+use App\Http\Controllers\ResetPasswordController;
 use App\Http\Controllers\AlumniFeePersonPriceController;
 use App\Http\Controllers\AlumniPortalController;
 use App\Http\Controllers\Api\AlumniEventAttendeeController;
@@ -64,6 +66,12 @@ Route::post('/login', [AuthController::class, 'store'])->name('login.store');
 Route::get('/verify-otp', [AuthController::class, 'showOtp'])->name('otp.form');
 Route::post('/verify-otp', [AuthController::class, 'verifyOtp'])->name('otp.verify');
 
+// Admin / staff forgot password (users table: admin, super_admin, manager)
+Route::get('/password/forgot', [ForgotPasswordController::class, 'showLinkRequestForm'])->name('password.request');
+Route::post('/password/forgot', [ForgotPasswordController::class, 'sendResetLinkEmail'])->name('password.email');
+Route::get('/password/reset/{token}', [ResetPasswordController::class, 'showResetForm'])->name('password.reset');
+Route::post('/password/reset', [ResetPasswordController::class, 'reset'])->name('password.update');
+
 Route::post('/logout', function () {
     Auth::logout();
     request()->session()->invalidate();
@@ -77,6 +85,12 @@ Route::prefix('alumni')->name('alumni.')->group(function () {
     Route::get('/login', [AlumniAuthController::class, 'showLogin'])->name('login');
     Route::post('/login', [AlumniAuthController::class, 'login'])->name('login.store');
     Route::post('/logout', [AlumniAuthController::class, 'logout'])->name('logout');
+
+    // Alumni forgot password
+    Route::get('/password/forgot', [AlumniAuthController::class, 'showForgotPasswordForm'])->name('password.request');
+    Route::post('/password/forgot', [AlumniAuthController::class, 'sendResetLinkEmail'])->name('password.email');
+    Route::get('/password/reset/{token}', [AlumniAuthController::class, 'showResetForm'])->name('password.reset');
+    Route::post('/password/reset', [AlumniAuthController::class, 'resetPassword'])->name('password.update');
 
     Route::middleware(['alumni.auth'])->group(function () {
         Route::get('/dashboard', [AlumniPortalController::class, 'dashboard'])->name('dashboard');

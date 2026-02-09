@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Mail\SponsorSubscriberConfirmationMail;
 use App\Mail\SponsorSubscriberCreatedMail;
 use Illuminate\Http\Request;
 use App\Models\SponserPackageSubscriber;
@@ -83,7 +84,13 @@ class SponserApiSubscriber extends Controller
 
             try {
                 $subscriber->load('package');
-                Mail::to('mumarhabibrb102@gmail.com')->send(new SponsorSubscriberCreatedMail($subscriber));
+                // Confirmation to the subscriber
+                Mail::to($subscriber->user_email)->queue(new SponsorSubscriberConfirmationMail($subscriber));
+                // Admin notification (optional – only if MAIL_ADMIN_EMAIL is set)
+                $adminEmail = config('mail.admin_email');
+                if ($adminEmail) {
+                    Mail::to($adminEmail)->queue(new SponsorSubscriberCreatedMail($subscriber));
+                }
             } catch (\Throwable $e) {
                 Log::warning('Sponsor subscriber email failed', [
                     'subscriber_id' => $subscriber->id ?? null,

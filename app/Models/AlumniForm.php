@@ -2,13 +2,17 @@
 
 namespace App\Models;
 
+use App\Notifications\AlumniResetPasswordNotification;
 use Illuminate\Auth\Authenticatable;
+use Illuminate\Auth\Passwords\CanResetPassword;
 use Illuminate\Contracts\Auth\Authenticatable as AuthenticatableContract;
+use Illuminate\Contracts\Auth\CanResetPassword as CanResetPasswordContract;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Notifications\Notifiable;
 
-class AlumniForm extends Model implements AuthenticatableContract
+class AlumniForm extends Model implements AuthenticatableContract, CanResetPasswordContract
 {
-    use Authenticatable;
+    use Authenticatable, CanResetPassword, Notifiable;
 
     protected $guarded = [];
 
@@ -32,5 +36,13 @@ class AlumniForm extends Model implements AuthenticatableContract
         return [
             'password' => 'hashed',
         ];
+    }
+
+    /**
+     * Send the password reset notification.
+     */
+    public function sendPasswordResetNotification($token): void
+    {
+        $this->notify(new AlumniResetPasswordNotification($token));
     }
 }

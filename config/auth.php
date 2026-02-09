@@ -102,6 +102,13 @@ return [
             'expire' => 60,
             'throttle' => 60,
         ],
+
+        'alumni_forms' => [
+            'provider' => 'alumni_forms',
+            'table' => 'alumni_password_reset_tokens',
+            'expire' => 60,
+            'throttle' => 60,
+        ],
     ],
 
     /*

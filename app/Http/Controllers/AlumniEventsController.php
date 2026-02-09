@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\NewAlumniEventMail;
 use App\Models\AlumniEvent;
-// use App\Models\AlumniSubscribeMail;
-// use App\Mail\NewAlumniEventMail;
+use App\Models\AlumniMail;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
-// use Illuminate\Support\Facades\Mail;
 
 class AlumniEventsController extends Controller
 {
@@ -56,22 +56,19 @@ class AlumniEventsController extends Controller
         // ✅ CREATE EVENT
         $event = AlumniEvent::create($data);
 
-        /*
-        |--------------------------------------------------------------------------
-        | MAIL PART (COMMENTED)
-        |--------------------------------------------------------------------------
-        |
-        | $subscribers = AlumniSubscribeMail::pluck('email');
-        |
-        | foreach ($subscribers as $email) {
-        |     Mail::to($email)->send(new NewAlumniEventMail($event));
-        | }
-        |
-        */
+        // Send new alumni event email to all alumni subscribers (queued to avoid timeout)
+        $subscribers = AlumniMail::pluck('email')->filter()->unique();
+        foreach ($subscribers as $email) {
+            Mail::to($email)->queue(new NewAlumniEventMail($event));
+        }
+
+        $message = $subscribers->isEmpty()
+            ? 'Alumni Event created successfully.'
+            : 'Alumni Event created successfully. Subscribers have been notified by email.';
 
         return redirect()
             ->route('alumniEvent.index')
-            ->with('success', 'Alumni Event created successfully.');
+            ->with('success', $message);
     }
 
     public function edit($id)

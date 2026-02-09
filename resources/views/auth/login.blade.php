@@ -22,6 +22,12 @@
                 Login to continue
             </p>
 
+            @if (session('status'))
+                <div class="rounded-lg bg-green-50 border border-green-200 text-green-700 px-4 py-3 text-sm mb-6">
+                    {{ session('status') }}
+                </div>
+            @endif
+
             <form method="POST"
                 action="{{ route('login.store') }}"
                 class="space-y-5">
@@ -49,6 +55,9 @@
                                border border-gray-300 font-serif
                                focus:outline-none focus:ring-2 focus:ring-[#00285E]
                                transition">
+                    <p class="mt-1 text-sm text-gray-500">
+                        <a href="{{ route('password.request') }}" class="text-[#00285E] font-medium hover:underline">Forgot password?</a>
+                    </p>
                 </div>
 
                 <!-- BUTTON -->

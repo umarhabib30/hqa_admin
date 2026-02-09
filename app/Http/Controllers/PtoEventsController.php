@@ -57,11 +57,10 @@ class PtoEventsController extends Controller
         // ✅ CREATE EVENT
         $event = PtoEvents::create($data);
 
-        // ✅ SEND EMAIL TO ALL PTO SUBSCRIBERS
-        $subscribers = PtoSubscribeMails::pluck('email');
-
+        // Send new PTO event email to all PTO subscribers (queued to avoid timeout)
+        $subscribers = PtoSubscribeMails::pluck('email')->filter()->unique();
         foreach ($subscribers as $email) {
-            Mail::to($email)->send(new NewPtoEventMail($event));
+            Mail::to($email)->queue(new NewPtoEventMail($event));
         }
 
         // ✅ REDIRECT

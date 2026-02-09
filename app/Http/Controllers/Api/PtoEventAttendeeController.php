@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Mail\PtoEventAttendeeConfirmationMail;
 use App\Models\PtoEventAttendee;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
 use Stripe\Stripe;
@@ -91,6 +93,12 @@ class PtoEventAttendeeController extends Controller
                 'payment_id' => $request->payment_id,
                 'profile_pic' => $path,
             ]);
+
+            try {
+                Mail::to($attendee->email)->queue(new PtoEventAttendeeConfirmationMail($attendee));
+            } catch (\Throwable $e) {
+                // Log but don't fail the request
+            }
 
             return response()->json([
                 'status' => true,

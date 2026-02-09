@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Mail\AlumniEventAttendeeConfirmationMail;
 use App\Models\AlumniEventAttendee;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
 use Stripe\Stripe;
 use Stripe\PaymentIntent;
@@ -109,6 +111,12 @@ class AlumniEventAttendeeController extends Controller
                 'payment_id'       => $request->payment_id,
                 'profile_pic'      => $path,
             ]);
+
+            try {
+                Mail::to($attendee->email)->queue(new AlumniEventAttendeeConfirmationMail($attendee));
+            } catch (Throwable $e) {
+                // Log but don't fail the request
+            }
 
             return response()->json([
                 'status'  => true,
