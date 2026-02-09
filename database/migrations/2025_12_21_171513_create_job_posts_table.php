@@ -14,6 +14,10 @@ return new class extends Migration {
             $table->id();
             $table->string('job_category');
             $table->string('job_location');
+            $table->string('job_experience');
+            $table->string('job_education');
+            $table->text('job_description');
+
             $table->timestamps();
         });
     }

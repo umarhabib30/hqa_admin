@@ -102,6 +102,13 @@ class DonationAdminController extends Controller
             ->with('success', 'Donation updated successfully.');
     }
 
+    public function show(GeneralDonation $donation)
+    {
+        // Load the relationship to ensure goal name is available
+        $donation->load('goal');
+
+        return view('dashboard.gernalDonation.donations_show', compact('donation'));
+    }
     public function destroy(GeneralDonation $donation)
     {
         $donation->delete();

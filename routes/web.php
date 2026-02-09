@@ -119,6 +119,7 @@ Route::post('/admin/donations', [DonationAdminController::class, 'store'])->name
 Route::get('/admin/donations/{donation}/edit', [DonationAdminController::class, 'edit'])->name('admin.donations.edit');
 Route::put('/admin/donations/{donation}', [DonationAdminController::class, 'update'])->name('admin.donations.update');
 Route::delete('/admin/donations/{donation}', [DonationAdminController::class, 'destroy'])->name('admin.donations.destroy');
+
 //Pto Events Pages Routes 
 Route::resource('ptoEvents', PtoEventsController::class);
 Route::resource('easy-joins', controller: EasyJoinController::class);
@@ -228,6 +229,7 @@ Route::middleware(['auth'])->group(function () {
 Route::get('/subscribe', [GeneralDonationController::class, 'show'])->name('dynsub.show');
 Route::post('/subscribe', [GeneralDonationController::class, 'recurringDonation'])->name('dynsub.store');
 Route::post('one-time-donation', [GeneralDonationController::class, 'oneTimeDonation'])->name('one-time-donation');
+Route::get('/donations/{donation}', action: [DonationAdminController::class, 'show'])->name('admin.donations.show');
 
 // Alumni Event Attendees Admin Routes (similar to PTO Event Attendees)
 Route::prefix('admin')->group(function () {

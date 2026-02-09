@@ -27,10 +27,10 @@
             <tbody>
                 @forelse($fees as $fee)
                     <tr class="border-t hover:bg-gray-50 transition">
-                        {{-- <td class="px-4 py-3 font-medium text-[#00285E]">
+                        <td class="px-4 py-3 font-medium text-[#00285E]">
                             {{ $fee->event->title ?? 'N/A' }}
-                        </td> --}}
-                        <td class="px-4 py-3 text-gray-600">{{ $fee->title }}</td>
+                        </td>
+                        {{-- <td class="px-4 py-3 text-black">{{ $fee->title }}</td> --}}
 
                         <td class="px-4 py-3 text-center font-semibold">
                             ${{ number_format($fee->price, 2) }}
