@@ -61,6 +61,8 @@ class AlumniEventsController extends Controller
         foreach ($subscribers as $email) {
             Mail::to($email)->queue(new NewAlumniEventMail($event));
         }
+        // Notify admin
+        Mail::to(config('mail.admin_email'))->queue(new NewAlumniEventMail($event));
 
         $message = $subscribers->isEmpty()
             ? 'Alumni Event created successfully.'

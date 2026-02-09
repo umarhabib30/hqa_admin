@@ -12,13 +12,62 @@ use App\Models\jobPost as JobPost;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+
 class DashboardController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
+        // Date range for donations chart (default: last 30 days)
+        $dateTo = $request->filled('date_to')
+            ? Carbon::parse($request->date_to)->endOfDay()
+            : Carbon::today()->endOfDay();
+        $dateFrom = $request->filled('date_from')
+            ? Carbon::parse($request->date_from)->startOfDay()
+            : Carbon::today()->subDays(30)->startOfDay();
+        if ($dateFrom->gt($dateTo)) {
+            $dateFrom = $dateTo->copy()->subDays(30)->startOfDay();
+        }
+
+        // Donations by purpose (for chart) – within date range
+        $donationsByPurpose = GeneralDonation::query()
+            ->whereBetween('created_at', [$dateFrom, $dateTo])
+            ->selectRaw('donation_for, SUM(amount) as total')
+            ->groupBy('donation_for')
+            ->orderByDesc('total')
+            ->get()
+            ->map(function ($row) {
+                return [
+                    'purpose' => $row->donation_for ?: 'Unspecified',
+                    'total' => (float) $row->total,
+                ];
+            });
+        $donationsChartDateFrom = $dateFrom->format('Y-m-d');
+        $donationsChartDateTo = $dateTo->format('Y-m-d');
+
+        // Date range for sponsor subscribers chart (default: last 30 days)
+        $sponsorDateTo = $request->filled('sponsor_date_to')
+            ? Carbon::parse($request->sponsor_date_to)->endOfDay()
+            : Carbon::today()->endOfDay();
+        $sponsorDateFrom = $request->filled('sponsor_date_from')
+            ? Carbon::parse($request->sponsor_date_from)->startOfDay()
+            : Carbon::today()->subDays(30)->startOfDay();
+        if ($sponsorDateFrom->gt($sponsorDateTo)) {
+            $sponsorDateFrom = $sponsorDateTo->copy()->subDays(30)->startOfDay();
+        }
+
+        // Sponsor package subscribers by type (for chart) – within date range
+        $sponsorSubscribersChartData = SponserPackageSubscriber::query()
+            ->whereBetween('created_at', [$sponsorDateFrom, $sponsorDateTo])
+            ->select('sponsor_type')
+            ->selectRaw('COUNT(*) as total')
+            ->groupBy('sponsor_type')
+            ->orderByDesc('total')
+            ->get();
+        $sponsorChartDateFrom = $sponsorDateFrom->format('Y-m-d');
+        $sponsorChartDateTo = $sponsorDateTo->format('Y-m-d');
         $allBookingEvents = DonationBooking::get();
 
         $totalSeatsBooked = $allBookingEvents->sum(function ($booking) {
@@ -138,6 +187,12 @@ class DashboardController extends Controller
             'last7Days',
             'donationStats',
             'latestDonations',
+            'donationsByPurpose',
+            'donationsChartDateFrom',
+            'donationsChartDateTo',
+            'sponsorSubscribersChartData',
+            'sponsorChartDateFrom',
+            'sponsorChartDateTo',
             'sponsorSubscriberCount',
             'sponsorSubscribersByType',
             'contactSponsorCount',

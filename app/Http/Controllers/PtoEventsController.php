@@ -62,6 +62,8 @@ class PtoEventsController extends Controller
         foreach ($subscribers as $email) {
             Mail::to($email)->queue(new NewPtoEventMail($event));
         }
+        // Notify admin
+        Mail::to(config('mail.admin_email'))->queue(new NewPtoEventMail($event));
 
         // ✅ REDIRECT
         return redirect()

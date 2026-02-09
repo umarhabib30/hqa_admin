@@ -18,13 +18,7 @@ class ContactSponserController extends Controller
             'sponsor_type' => $request->sponsor_type,
             'message' => $request->message,
         ]);
-        $adminEmail = config('mail.admin_email');
-        if ($adminEmail) {
-            Mail::to($adminEmail)->queue(new ContactSponserMail($contact));
-        } else {
-            // Fallback: keep previous behavior if MAIL_ADMIN_EMAIL not set
-            Mail::to('mumarhabibrb102@gmail.com')->queue(new ContactSponserMail($contact));
-        }
+        Mail::to(config('mail.admin_email'))->queue(new ContactSponserMail($contact));
         return response()->json([
             'status' => true,
             'message' => 'Contact created successfully',

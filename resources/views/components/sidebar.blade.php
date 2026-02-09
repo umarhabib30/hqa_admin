@@ -185,16 +185,16 @@
                 'pto.view',
                 'pto.events',
                 'pto.subscribe',
-                // 'pto.images',
                 'pto.letter_guide',
-                // 'pto.easy_join',
-                // 'pto.fee',
+                'pto.fee',
+                'pto.attendees',
+                'pto.easy_join',
             ]) || $user->isSuperAdmin())
-            <div x-data="{ open: {{ request()->routeIs('ptoEvents.*') || request()->routeIs('ptoSubscribemails.*') || request()->routeIs('ptoImages.*') || request()->routeIs('ptoLetterGuide.*') ? 'true' : 'false' }} }" class="space-y-1">
+            <div x-data="{ open: {{ request()->routeIs('ptoEvents.*') || request()->routeIs('ptoSubscribemails.*') || request()->routeIs('ptoImages.*') || request()->routeIs('ptoLetterGuide.*') || request()->routeIs('fee.*') || request()->routeIs('admin.pto-event-attendees.*') ? 'true' : 'false' }} }" class="space-y-1">
                 <button @click="open = !open"
                     class="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl font-medium text-gray-700 transition-all duration-200
                            hover:bg-blue-100 hover:text-[#00285E]
-                           {{ request()->routeIs('ptoEvents.*') || request()->routeIs('ptoSubscribemails.*') || request()->routeIs('ptoImages.*') || request()->routeIs('ptoLetterGuide.*') ? 'bg-blue-100 text-[#00285E] font-bold' : '' }}">
+                           {{ request()->routeIs('ptoEvents.*') || request()->routeIs('ptoSubscribemails.*') || request()->routeIs('ptoImages.*') || request()->routeIs('ptoLetterGuide.*') || request()->routeIs('fee.*') || request()->routeIs('admin.pto-event-attendees.*') ? 'bg-blue-100 text-[#00285E] font-bold' : '' }}">
                     <div class="flex items-center gap-3">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -227,28 +227,18 @@
                     @if ($user->hasPermission('pto.attendees') || $user->isSuperAdmin())
                         <a href="{{ route('admin.pto-event-attendees.index') }}"
                             class="block py-2.5 px-4 rounded-lg text-sm font-medium text-gray-600 transition-all 
-        {{ request()->routeIs('admin.pto-event-attendees.*') ? 'bg-blue-200 text-[#00285E] font-bold' : 'hover:bg-gray-200' }}">
+                     {{ request()->routeIs('admin.pto-event-attendees.*') ? 'bg-blue-200 text-[#00285E] font-bold' : 'hover:bg-gray-200' }}">
                             PTO Attendees
                         </a>
                     @endif
 
-                    {{-- @if ($user->hasPermission('pto.images') || $user->isSuperAdmin())
-                        <a href="{{ route('ptoImages.index') }}"
-                            class="block py-2.5 px-4 rounded-lg text-sm font-medium text-gray-600 transition-all {{ request()->routeIs('ptoImages.*') ? 'bg-blue-200 text-[#00285E] font-bold' : 'hover:bg-gray-200' }}">PTO
-                            Images</a>
-                    @endif --}}
+                  
                     @if ($user->hasPermission('pto.letter_guide') || $user->isSuperAdmin())
                         <a href="{{ route('ptoLetterGuide.index') }}"
                             class="block py-2.5 px-4 rounded-lg text-sm font-medium text-gray-600 transition-all {{ request()->routeIs('ptoLetterGuide.*') ? 'bg-blue-200 text-[#00285E] font-bold' : 'hover:bg-gray-200' }}">PTO
                             Letter Guide Download</a>
                     @endif
-                    {{-- @if ($user->hasPermission('pto.easy_join') || $user->isSuperAdmin())
-                        <a href="{{ route('easy-joins.index') }}"
-                            class="block py-2.5 px-4 rounded-lg text-sm font-medium text-gray-600 transition-all {{ request()->routeIs('easy-joins.*') ? 'bg-blue-200 text-[#00285E] font-bold' : 'hover:bg-gray-200' }}">PTO
-                            Easy Join</a>
-                    @endif --}}
-
-
+                
                 </div>
             </div>
         @endif
@@ -330,15 +320,16 @@
                 'alumni.huston',
                 'alumni.events',
                 'alumni.posts',
-                // 'alumni.images',
                 'alumni.forms',
-                // 'alumni.mails',
+                'alumni.fee',
+                'alumni.attendees',
+                'alumni.mails',
             ]) || $user->isSuperAdmin())
-            <div x-data="{ open: {{ request()->routeIs('alumniHuston.*') || request()->routeIs('alumniEvent.*') || request()->routeIs('alumniPosts.*') || request()->routeIs('alumniImages.*') || request()->routeIs('alumniForm.*') ? 'true' : 'false' }} }" class="space-y-1">
+            <div x-data="{ open: {{ request()->routeIs('alumniHuston.*') || request()->routeIs('alumniEvent.*') || request()->routeIs('alumniPosts.*') || request()->routeIs('alumniImages.*') || request()->routeIs('alumniForm.*') || request()->routeIs('alumniFee.*') || request()->routeIs('alumniMail.*') || request()->routeIs('admin.alumni-event-attendees.*') ? 'true' : 'false' }} }" class="space-y-1">
                 <button @click="open = !open"
                     class="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl font-medium text-gray-700 transition-all duration-200
                            hover:bg-blue-100 hover:text-[#00285E]
-                           {{ request()->routeIs('alumniHuston.*') || request()->routeIs('alumniEvent.*') || request()->routeIs('alumniPosts.*') || request()->routeIs('alumniImages.*') || request()->routeIs('alumniForm.*') ? 'bg-blue-100 text-[#00285E] font-bold' : '' }}">
+                           {{ request()->routeIs('alumniHuston.*') || request()->routeIs('alumniEvent.*') || request()->routeIs('alumniPosts.*') || request()->routeIs('alumniImages.*') || request()->routeIs('alumniForm.*') || request()->routeIs('alumniFee.*') || request()->routeIs('alumniMail.*') || request()->routeIs('admin.alumni-event-attendees.*') ? 'bg-blue-100 text-[#00285E] font-bold' : '' }}">
                     <div class="flex items-center gap-3">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -395,11 +386,11 @@
                             class="block py-2.5 px-4 rounded-lg text-sm font-medium text-gray-600 transition-all {{ request()->routeIs('alumniForm.*') ? 'bg-blue-200 text-[#00285E] font-bold' : 'hover:bg-gray-200' }}">Alumni
                             Form</a>
                     @endif
-                    {{-- @if ($user->hasPermission('alumni.mails') || $user->isSuperAdmin())
+                    @if ($user->hasPermission('alumni.mails') || $user->isSuperAdmin())
                         <a href="{{ route('alumniMail.index') }}"
                             class="block py-2.5 px-4 rounded-lg text-sm font-medium text-gray-600 transition-all {{ request()->routeIs('alumniMail.*') ? 'bg-blue-200 text-[#00285E] font-bold' : 'hover:bg-gray-200' }}">Alumni
                             Mail</a>
-                    @endif --}}
+                    @endif
                 </div>
             </div>
         @endif
@@ -417,19 +408,7 @@
                 Calendar
             </a>
         @endif
-        <!-- Users -->
-        @if ($user->hasPermission('managers.view') || $user->isSuperAdmin())
-            <a href="{{ route('managers.index') }}"
-                class="flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-gray-700 transition-all duration-200
-                  hover:bg-blue-100 hover:text-[#00285E]
-                  {{ request()->routeIs('managers.*') ? 'bg-blue-100 text-[#00285E] font-bold border-r-4 border-[#00285E] shadow-sm' : '' }}">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                </svg>
-                Users
-            </a>
-        @endif
+
 
         <!-- Sponsor Packages -->
         @if ($user->hasPermission('sponsor_packages.view') || $user->isSuperAdmin())
@@ -445,39 +424,40 @@
             </a>
         @endif
 
-        <!-- Coupons -->
-        @if ($user->hasPermission('coupons.view') || $user->isSuperAdmin())
-            <a href="{{ route('coupons.index') }}"
-                class="flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-gray-700 transition-all duration-200
-                  hover:bg-blue-100 hover:text-[#00285E]
-                  {{ request()->routeIs('coupons.*') ? 'bg-blue-100 text-[#00285E] font-bold border-r-4 border-[#00285E] shadow-sm' : '' }}">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-                </svg>
-                Coupons
-            </a>
-        @endif
         <!-- Contact Sponsor -->
-        <a href="{{ route('contact-sponser.index') }}"
-            class="flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-gray-700 transition-all duration-200
+        @if ($user->hasPermission('contact_sponsor.view') || $user->isSuperAdmin())
+            <a href="{{ route('contact-sponser.index') }}"
+                class="flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-gray-700 transition-all duration-200
           hover:bg-blue-100 hover:text-[#00285E]
           {{ request()->routeIs('contact-sponser.*') ? 'bg-blue-100 text-[#00285E] font-bold border-r-4 border-[#00285E] shadow-sm' : '' }}">
 
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2
                  a3 3 0 00-5.356-1.857M7 20H2v-2
                  a3 3 0 015.356-1.857M7 20v-2
                  a3 3 0 015.356-1.857M15 7
                  a3 3 0 11-6 0 3 3 0 016 0zm6 3
                  a2 2 0 11-4 0 2 2 0 014 0zM3 10
                  a2 2 0 114 0 2 2 0 01-4 0z" />
-            </svg>
+                </svg>
 
-            Contact Sponsor
-        </a>
+                Contact Sponsor
+            </a>
+        @endif
 
-
+        <!-- Users -->
+        @if ($user->hasPermission('managers.view') || $user->isSuperAdmin())
+            <a href="{{ route('managers.index') }}"
+                class="flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-gray-700 transition-all duration-200
+       hover:bg-blue-100 hover:text-[#00285E]
+       {{ request()->routeIs('managers.*') ? 'bg-blue-100 text-[#00285E] font-bold border-r-4 border-[#00285E] shadow-sm' : '' }}">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+                Users
+            </a>
+        @endif
         <!-- Permissions (Super Admin Only) -->
         @if ($user->isSuperAdmin())
             <a href="{{ route('permissions.index') }}"
@@ -491,15 +471,6 @@
                 Permissions
             </a>
         @endif
-        <a href="{{ route('admin.donations.index') }}"
-            class="flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-gray-700 transition-all duration-200
-    hover:bg-blue-100 hover:text-[#00285E]
-    {{ request()->routeIs('admin.donations.*') ? 'bg-blue-100 text-[#00285E] font-bold border-r-4 border-[#00285E] shadow-sm' : '' }}">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            General Donation
-        </a>
+       
     </nav>
 </aside>

@@ -86,11 +86,8 @@ class SponserApiSubscriber extends Controller
                 $subscriber->load('package');
                 // Confirmation to the subscriber
                 Mail::to($subscriber->user_email)->queue(new SponsorSubscriberConfirmationMail($subscriber));
-                // Admin notification (optional – only if MAIL_ADMIN_EMAIL is set)
-                $adminEmail = config('mail.admin_email');
-                if ($adminEmail) {
-                    Mail::to($adminEmail)->queue(new SponsorSubscriberCreatedMail($subscriber));
-                }
+                // Admin notification
+                Mail::to(config('mail.admin_email'))->queue(new SponsorSubscriberCreatedMail($subscriber));
             } catch (\Throwable $e) {
                 Log::warning('Sponsor subscriber email failed', [
                     'subscriber_id' => $subscriber->id ?? null,

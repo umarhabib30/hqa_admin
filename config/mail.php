@@ -120,8 +120,8 @@ return [
     | Admin / notification recipient
     |--------------------------------------------------------------------------
     | Used for: new sponsor subscriber (admin copy), contact sponsor form.
-    | Set MAIL_ADMIN_EMAIL in .env to receive these notifications.
+    | Override with MAIL_ADMIN_EMAIL in .env if needed.
     */
-    'admin_email' => env('MAIL_ADMIN_EMAIL'),
+    'admin_email' => env('MAIL_ADMIN_EMAIL', 'michael.johnson202521@gmail.com'),
 
 ];
