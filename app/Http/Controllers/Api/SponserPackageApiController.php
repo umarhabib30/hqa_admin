@@ -3,57 +3,124 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\SponsorPackage;
-use App\Models\SponserPackageSubscriber;
+use App\Mail\SponsorSubscriberConfirmationMail;
+use App\Mail\SponsorSubscriberCreatedMail;
 use Illuminate\Http\Request;
+use App\Models\SponserPackageSubscriber;
+use App\Models\SponsorPackage;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use Stripe\Stripe;
+use Stripe\PaymentIntent;
 
-class SponserPackageApiController extends Controller
+class SponserApiSubscriber extends Controller
 {
-    public function packages(){
-        try{
-            // Keep packages response as it was (raw list)
-            $packages = SponsorPackage::all();
+    /**
+     * Create Stripe PaymentIntent
+     */
+    public function createIntent(Request $request)
+    {
+        $request->validate([
+            'amount' => 'required|numeric',
+            'user_email' => 'required|email',
+            'sponsor_type' => 'required|string',
+        ]);
 
-            // Separate subscribers array grouped by sponsor_type, with asset image urls
-            $subscribersGrouped = SponserPackageSubscriber::latest()
-                ->get()
-                ->map(function ($subscriber) {
-                    return [
-                        'id' => $subscriber->id,
-                        'user_name' => $subscriber->user_name,
-                        'user_email' => $subscriber->user_email,
-                        'user_phone' => $subscriber->user_phone,
-                        'sponsor_package_id' => $subscriber->sponsor_package_id,
-                        'sponsor_type' => $subscriber->sponsor_type,
-                        'status' => $subscriber->status,
-                        'image' => $subscriber->image,
-                        'image_url' => $subscriber->image ? asset('storage/' . $subscriber->image) : null,
-                        'amount' => $subscriber->amount,
-                        'payment_id' => $subscriber->payment_id,
-                        'created_at' => $subscriber->created_at,
-                        'updated_at' => $subscriber->updated_at,
-                    ];
-                })
-                ->groupBy('sponsor_type')
-                ->map(fn ($items) => $items->values())
-                ->all();
+        try {
+            Stripe::setApiKey(config('services.stripe.secret'));
 
-            // Ensure all package names exist even if empty
-            $subscribers = [];
-            foreach ($packages as $package) {
-                $subscribers[$package->title] = $subscribersGrouped[$package->title] ?? [];
+            $intent = PaymentIntent::create([
+                'amount' => (int) round($request->amount * 100),
+                'currency' => 'usd',
+                'metadata' => [
+                    'email' => $request->user_email,
+                    'sponsor_type' => $request->sponsor_type,
+                ],
+            ]);
+
+            return response()->json([
+                'status' => true,
+                'clientSecret' => $intent->client_secret,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Stripe Intent Error: ' . $e->getMessage());
+            return response()->json([
+                'status' => false,
+                'message' => 'Could not initialize payment: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Store new sponsor subscriber
+     */
+    public function store(Request $request)
+    {
+        $request->validate([
+            'user_name' => 'required|string',
+            'user_email' => 'required|email',
+            'payment_id' => 'required|string',
+            'company_name' => 'nullable|string',
+            'designation' => 'nullable|string',
+            'user_phone' => 'nullable|string',
+            'image' => 'nullable|image',
+            'amount' => 'required|numeric',
+            'sponsor_type' => 'required|string',
+        ]);
+
+        try {
+            // Handle image upload if present
+            $image = null;
+            if ($request->hasFile('image')) {
+                $image = $request->file('image')->store('sponsor_package_subscribers', 'public');
+            }
+
+            // Find sponsor package
+            $package = SponsorPackage::where('title', $request->sponsor_type)->first();
+            if (!$package) {
+                return response()->json(['status' => false, 'message' => 'Package not found'], 404);
+            }
+
+            // Create subscriber with company_name and designation
+            $subscriber = SponserPackageSubscriber::create([
+                'user_name' => $request->user_name,
+                'user_email' => $request->user_email,
+                'user_phone' => $request->user_phone,
+                'company_name' => $request->company_name,   // ✅ added
+                'designation' => $request->designation,    // ✅ added
+                'sponsor_package_id' => $package->id,
+                'sponsor_type' => $request->sponsor_type,
+                'image' => $image,
+                'amount' => $request->amount,
+                'payment_id' => $request->payment_id,
+                'status' => 'paid',
+            ]);
+
+            try {
+                $subscriber->load('package');
+
+                // Send confirmation to subscriber
+                Mail::to($subscriber->user_email)->queue(new SponsorSubscriberConfirmationMail($subscriber));
+
+                // Notify admin
+                Mail::to(config('mail.admin_email'))->queue(new SponsorSubscriberCreatedMail($subscriber));
+            } catch (\Throwable $e) {
+                Log::warning('Sponsor subscriber email failed', [
+                    'subscriber_id' => $subscriber->id ?? null,
+                    'error' => $e->getMessage(),
+                ]);
             }
 
             return response()->json([
                 'status' => true,
-                'data' => $packages,
-                'subscribers' => $subscribers,
-            ], 200);
+                'message' => 'Sponsorship confirmed and recorded successfully',
+                'data' => $subscriber
+            ], 201);
         } catch (\Exception $e) {
+            Log::error('Database Error: ' . $e->getMessage());
             return response()->json([
                 'status' => false,
-                'message' => 'Failed to fetch sponsor packages',
-                'error' => $e->getMessage()
+                'message' => 'Database error: ' . $e->getMessage()
             ], 500);
         }
     }
