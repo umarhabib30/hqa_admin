@@ -42,6 +42,11 @@
         <input name="location" placeholder="Location"
             class="w-full px-4 py-3 border rounded-lg">
 
+        <input name="link" placeholder="Link"
+            class="w-full px-4 py-3 border rounded-lg">
+
+            
+
         <div class="flex justify-end gap-4">
             <a href="{{ route('calender.index') }}"
                 class="px-6 py-3 border rounded-lg">Cancel</a>
