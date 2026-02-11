@@ -14,8 +14,11 @@
 
     <!-- MENU -->
     <nav class="flex-1 py-6 px-4 space-y-2 overflow-y-auto">
-        <!-- Dashboard -->
         @php $user = auth()->user(); @endphp
+        @guest
+            <p class="px-4 py-3 text-sm text-gray-500">Please <a href="{{ route('login') }}" class="text-[#00285E] font-medium underline">log in</a> to view the menu.</p>
+        @else
+        <!-- Dashboard -->
         @if ($user->hasPermission('dashboard.view') || $user->isSuperAdmin())
             <a href="{{ route('dashboard.index') }}"
                 class="flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-gray-700 transition-all duration-200
@@ -471,6 +474,6 @@
                 Permissions
             </a>
         @endif
-       
+        @endguest
     </nav>
 </aside>

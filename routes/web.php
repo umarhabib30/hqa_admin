@@ -101,172 +101,128 @@ Route::prefix('alumni')->name('alumni.')->group(function () {
     });
 });
 
-//dashboard Routes
-Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard.index');
-
-//Donation Achievements Page Routes
-Route::resource('achievements', AchievementsController::class);
-
-//Donation Fundraiser Page Routes
-Route::resource('fundRaise', FundraiseController::class);
-
-Route::resource('donationImage', DonationImageController::class);
-
-
-//Donation Booking Page Routes
-Route::resource('donationBooking', DonationBookingController::class);
-Route::post(
-    '/donation-booking/{id}/book-seat',
-    [DonationBookingController::class, 'bookSeat']
-)->name('donationBooking.bookSeat');
-Route::get(
-    '/donation-booking/scan',
-    [DonationBookingController::class, 'scanPage']
-)->name('donationBooking.scan');
-Route::get(
-    '/donation-booking/check-in',
-    [DonationBookingController::class, 'checkIn']
-)->name('donationBooking.checkIn');
-
-// Donation Admin Log Route
-Route::get('/admin/donations', [DonationAdminController::class, 'index'])->name('admin.donations.index');
-Route::post('/admin/donations', [DonationAdminController::class, 'store'])->name('admin.donations.store');
-Route::get('/admin/donations/{donation}/edit', [DonationAdminController::class, 'edit'])->name('admin.donations.edit');
-Route::put('/admin/donations/{donation}', [DonationAdminController::class, 'update'])->name('admin.donations.update');
-Route::delete('/admin/donations/{donation}', [DonationAdminController::class, 'destroy'])->name('admin.donations.destroy');
-
-//Pto Events Pages Routes 
-Route::resource('ptoEvents', PtoEventsController::class);
-Route::resource('easy-joins', controller: EasyJoinController::class);
-Route::resource('fee', FeePersonPriceController::class);
-// PTO Event Attendees Admin Routes
-Route::prefix('admin')->group(function () {
-    Route::get('/pto-event-attendees', [PtoEventAttendeeController::class, 'index'])
-        ->name('admin.pto-event-attendees.index');
-
-    Route::delete('/pto-event-attendees/{id}', [PtoEventAttendeeController::class, 'destroy'])
-        ->name('admin.pto-event-attendees.destroy');
-});
-
-
-//Pto  SubscribeMails Pages Routes 
-Route::resource('ptoSubscribemails', PtoSubscribeMailController::class);
-
-//pto multiple images page routes
-Route::resource('ptoImages', PtoImagesController::class);
-
-// pto letter guide downlaod Routes page 
-Route::resource('ptoLetterGuide', PtoLetterGuideController::class);
-
-
-
-//Alumni  Huston Pages Routes 
-Route::resource('alumniHuston', alumniHustonController::class);
-
-//Alumni  Events Pages Routes 
-Route::resource('alumniEvent', AlumniEventsController::class);
-
-//Alumni  Posts Pages Routes 
-Route::resource('alumniPosts', AlumniPostController::class);
-
-//Alumni  image Pages Routes 
-Route::resource('alumniImages', alumniImageController::class);
-
-//Alumni  Form Pages Routes 
-Route::resource('alumniForm', alumniFormController::class);
-Route::resource('alumniMail', AlumniMailController::class);
-
-
-//calender Routes
-Route::resource('calender', CalendarController::class);
-
-
-//Home page Modal Rpute
-
-Route::resource('homeModal', HomeModalController::class);
-
-// Home topAchievers Route
-Route::resource('topAchievers', TopAchieverController::class);
-
-//Home Memories Route
-Route::resource('memories', HomeMemoriesController::class);
-
-
-//Home News Section Route
-Route::resource('news', NewsController::class);
-
-// Home Video Section 
-Route::resource('videos', VideoController::class);
-
-// Home Social Section 
-
-Route::resource('socials', SocialController::class)->except(['show']);
-
-
-
-
-//career job post Route
-Route::resource('jobPost', jobPostController::class);
-Route::resource('jobApp', jobAppController::class);
-
-// Managers Routes (with auth middleware)
+// Admin / dashboard routes – require login (redirect to login if not authenticated)
 Route::middleware(['auth'])->group(function () {
+    //dashboard Routes
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard.index');
+
+    //Donation Achievements Page Routes
+    Route::resource('achievements', AchievementsController::class);
+
+    //Donation Fundraiser Page Routes
+    Route::resource('fundRaise', FundraiseController::class);
+    Route::resource('donationImage', DonationImageController::class);
+
+    //Donation Booking Page Routes
+    Route::resource('donationBooking', DonationBookingController::class);
+    Route::post(
+        '/donation-booking/{id}/book-seat',
+        [DonationBookingController::class, 'bookSeat']
+    )->name('donationBooking.bookSeat');
+    Route::get(
+        '/donation-booking/scan',
+        [DonationBookingController::class, 'scanPage']
+    )->name('donationBooking.scan');
+    Route::get(
+        '/donation-booking/check-in',
+        [DonationBookingController::class, 'checkIn']
+    )->name('donationBooking.checkIn');
+
+    // Donation Admin Log Route
+    Route::get('/admin/donations', [DonationAdminController::class, 'index'])->name('admin.donations.index');
+    Route::post('/admin/donations', [DonationAdminController::class, 'store'])->name('admin.donations.store');
+    Route::get('/admin/donations/{donation}/edit', [DonationAdminController::class, 'edit'])->name('admin.donations.edit');
+    Route::put('/admin/donations/{donation}', [DonationAdminController::class, 'update'])->name('admin.donations.update');
+    Route::delete('/admin/donations/{donation}', [DonationAdminController::class, 'destroy'])->name('admin.donations.destroy');
+    Route::get('/donations/{donation}', action: [DonationAdminController::class, 'show'])->name('admin.donations.show');
+
+    //Pto Events Pages Routes
+    Route::resource('ptoEvents', PtoEventsController::class);
+    Route::resource('easy-joins', controller: EasyJoinController::class);
+    Route::resource('fee', FeePersonPriceController::class);
+    // PTO Event Attendees Admin Routes
+    Route::prefix('admin')->group(function () {
+        Route::get('/pto-event-attendees', [PtoEventAttendeeController::class, 'index'])
+            ->name('admin.pto-event-attendees.index');
+        Route::delete('/pto-event-attendees/{id}', [PtoEventAttendeeController::class, 'destroy'])
+            ->name('admin.pto-event-attendees.destroy');
+    });
+
+    //Pto SubscribeMails Pages Routes
+    Route::resource('ptoSubscribemails', PtoSubscribeMailController::class);
+    Route::resource('ptoImages', PtoImagesController::class);
+    Route::resource('ptoLetterGuide', PtoLetterGuideController::class);
+
+    //Alumni Huston / Events / Posts / Images / Form / Mail Routes
+    Route::resource('alumniHuston', alumniHustonController::class);
+    Route::resource('alumniEvent', AlumniEventsController::class);
+    Route::resource('alumniPosts', AlumniPostController::class);
+    Route::resource('alumniImages', alumniImageController::class);
+    Route::resource('alumniForm', alumniFormController::class);
+    Route::resource('alumniMail', AlumniMailController::class);
+
+    //Calendar, Home Modal, Top Achievers, Memories, News, Videos, Socials
+    Route::resource('calender', CalendarController::class);
+    Route::resource('homeModal', HomeModalController::class);
+    Route::resource('topAchievers', TopAchieverController::class);
+    Route::resource('memories', HomeMemoriesController::class);
+    Route::resource('news', NewsController::class);
+    Route::resource('videos', VideoController::class);
+    Route::resource('socials', SocialController::class)->except(['show']);
+
+    //Career job post / applications
+    Route::resource('jobPost', jobPostController::class);
+    Route::resource('jobApp', jobAppController::class);
+
+    // Managers Routes
     Route::resource('managers', ManagerController::class);
     Route::get('/managers/{id}/reset-password', [ManagerController::class, 'showResetPassword'])->name('managers.reset-password');
     Route::put('/managers/{id}/reset-password', [ManagerController::class, 'resetPassword'])->name('managers.reset-password.update');
-});
 
-// Sponsor Packages Routes
-Route::resource('sponsor-packages', SponsorPackageController::class);
-Route::get('sponsor-package-subscribers/{subscriber}', [SponsorPackageSubscriberController::class, 'show'])
-    ->name('sponsor-package-subscribers.show');
+    // Sponsor Packages Routes
+    Route::resource('sponsor-packages', SponsorPackageController::class);
+    Route::get('sponsor-package-subscribers/{subscriber}', [SponsorPackageSubscriberController::class, 'show'])
+        ->name('sponsor-package-subscribers.show');
 
-// Coupons Routes
-Route::resource('coupons', CouponController::class);
-Route::get('/coupons/{id}/codes', [CouponController::class, 'showCodes'])->name('coupons.codes');
-Route::post('/coupon-codes/mark-copied', [CouponController::class, 'markAsCopied'])->name('coupon-codes.mark-copied');
+    // Coupons Routes
+    Route::resource('coupons', CouponController::class);
+    Route::get('/coupons/{id}/codes', [CouponController::class, 'showCodes'])->name('coupons.codes');
+    Route::post('/coupon-codes/mark-copied', [CouponController::class, 'markAsCopied'])->name('coupon-codes.mark-copied');
 
+    // Contact Sponser Routes
+    Route::get('contact-sponser', [ContactSponserController::class, 'index'])->name('contact-sponser.index');
+    Route::get('contact-sponser/{id}', [ContactSponserController::class, 'show'])->name('contact-sponser.show');
+    Route::delete('contact-sponser/{id}', [ContactSponserController::class, 'destroy'])->name('contact-sponser.destroy');
 
-// Contact Sponser Routes
-Route::get('contact-sponser', [ContactSponserController::class, 'index'])->name('contact-sponser.index');
-Route::get('contact-sponser/{id}', [ContactSponserController::class, 'show'])->name('contact-sponser.show');
-Route::delete('contact-sponser/{id}', [ContactSponserController::class, 'destroy'])->name('contact-sponser.destroy');
-
-// Permissions Routes (Super Admin Only) - user-wise permissions
-Route::middleware(['auth'])->group(function () {
+    // Permissions Routes (Super Admin Only)
     Route::get('/permissions', [PermissionController::class, 'index'])->name('permissions.index');
     Route::get('/permissions/user/{user}', [PermissionController::class, 'editUser'])->name('permissions.edit-user');
     Route::put('/permissions/user/{user}', [PermissionController::class, 'updateUser'])->name('permissions.update-user');
+
+    // Alumni Event Attendees Admin Routes
+    Route::prefix('admin')->group(function () {
+        Route::get('/alumni-event-attendees', [AlumniEventAttendeeWebController::class, 'index'])
+            ->name('admin.alumni-event-attendees.index');
+        Route::delete('/alumni-event-attendees/{id}', [AlumniEventAttendeeWebController::class, 'destroy'])
+            ->name('admin.alumni-event-attendees.destroy');
+    });
+
+    // Alumni Fee Person Price Routes
+    Route::resource('alumniFee', AlumniFeePersonPriceController::class)->parameters([
+        'alumniFee' => 'fee'
+    ]);
 });
 
-
-// test urls for recurring and one time donation
+// Public routes (no login required)
+// Recurring and one-time donation (subscribe form + API)
 Route::get('/subscribe', [GeneralDonationController::class, 'show'])->name('dynsub.show');
 Route::post('/subscribe', [GeneralDonationController::class, 'recurringDonation'])->name('dynsub.store');
 Route::post('one-time-donation', [GeneralDonationController::class, 'oneTimeDonation'])->name('one-time-donation');
-Route::get('/donations/{donation}', action: [DonationAdminController::class, 'show'])->name('admin.donations.show');
 
-// Alumni Event Attendees Admin Routes (similar to PTO Event Attendees)
-Route::prefix('admin')->group(function () {
-    // List all alumni event attendees (dashboard view)
-    Route::get('/alumni-event-attendees', [AlumniEventAttendeeWebController::class, 'index'])
-        ->name('admin.alumni-event-attendees.index');
-
-    // Delete an attendee record
-    Route::delete('/alumni-event-attendees/{id}', [AlumniEventAttendeeWebController::class, 'destroy'])
-        ->name('admin.alumni-event-attendees.destroy');
-});
-
-// Alumni Event Attendees Frontend Routes (for alumni users)
+// Alumni Event Attendees Frontend Routes (for alumni users / public registration)
 Route::get('/alumni-event-attendees', [AlumniEventAttendeeController::class, 'index'])
-    ->name('alumni-event-attendees.index'); // For listing/filtering
-
+    ->name('alumni-event-attendees.index');
 Route::post('/alumni-event-attendees', [AlumniEventAttendeeController::class, 'store'])
-    ->name('alumni-event-attendees.store'); // For registering new attendee
-
+    ->name('alumni-event-attendees.store');
 Route::post('/alumni-event-intent', [AlumniEventAttendeeController::class, 'createIntent'])
-    ->name('alumni-event-attendees.intent'); // For Stripe payment intent
-// Alumni Fee Person Price Routes
-Route::resource('alumniFee', AlumniFeePersonPriceController::class)->parameters([
-    'alumniFee' => 'fee'
-]);
+    ->name('alumni-event-attendees.intent');
