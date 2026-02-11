@@ -3,9 +3,13 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Mail\GeneralDonationConfirmationMail;
+use App\Mail\GeneralDonationReceivedMail;
 use App\Models\FundRaisa;
 use App\Models\GeneralDonation;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 use Stripe\StripeClient;
 
 class GeneralDonationController extends Controller
@@ -118,6 +122,8 @@ class GeneralDonationController extends Controller
                 'country'                => $request->country,
             ]);
 
+            $this->sendDonationEmails($donation);
+
             return response()->json([
                 'paid'                => true,
                 'donation_id'         => $donation->id,
@@ -214,6 +220,7 @@ class GeneralDonationController extends Controller
 
         if ($pi->status === 'succeeded') {
             $donation->update(['status' => 'paid']);
+            $this->sendDonationEmails($donation);
             return response()->json([
                 'paid'             => true,
                 'donation_id'      => $donation->id,
@@ -239,5 +246,22 @@ class GeneralDonationController extends Controller
             'payment_intent_id' => $pi->id,
             'pi_status'        => $pi->status,
         ], 400);
+    }
+
+    /**
+     * Send confirmation to donor and notification to super admins.
+     */
+    private function sendDonationEmails(GeneralDonation $donation): void
+    {
+        if (!empty($donation->email)) {
+            Mail::to($donation->email)->queue(new GeneralDonationConfirmationMail($donation));
+        }
+
+        $superAdmins = User::where('role', 'super_admin')->get();
+        foreach ($superAdmins as $admin) {
+            if (!empty($admin->email)) {
+                Mail::to($admin->email)->queue(new GeneralDonationReceivedMail($donation));
+            }
+        }
     }
 }

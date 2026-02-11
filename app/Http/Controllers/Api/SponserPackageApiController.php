@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Mail;
 use Stripe\Stripe;
 use Stripe\PaymentIntent;
 
-class SponserApiSubscriber extends Controller
+class SponserPackageApiController extends Controller
 {
     /**
      * Create Stripe PaymentIntent
