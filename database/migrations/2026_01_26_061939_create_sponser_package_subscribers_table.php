@@ -14,8 +14,10 @@ return new class extends Migration
         Schema::create('sponser_package_subscribers', function (Blueprint $table) {
             $table->id();
             $table->string('user_name')->nullable();
+            $table->string('company_name')->nullable();
+            $table->string('designation')->nullable();
             $table->string('user_email')->nullable();
-            $table->string('user_phone')->nullable();
+            $table->string(column: 'user_phone')->nullable();
             $table->string('sponsor_package_id')->nullable();
             $table->string('sponsor_type')->nullable();
             $table->string('status')->default('paid');

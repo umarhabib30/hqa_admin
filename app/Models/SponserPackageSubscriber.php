@@ -7,8 +7,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class SponserPackageSubscriber extends Model
 {
-    protected $fillable = 
-    ['user_name', 'user_email', 'user_phone', 'sponsor_package_id', 'sponsor_type', 'status', 'image', 'amount', 'payment_id'];
+    protected $fillable =
+    ['user_name', 'company_name', 'designation', 'user_email', 'user_phone', 'sponsor_package_id', 'sponsor_type', 'status', 'image', 'amount', 'payment_id'];
 
     public function package(): BelongsTo
     {

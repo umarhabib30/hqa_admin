@@ -25,6 +25,8 @@ return new class extends Migration
             $table->time('end_time')->nullable();
 
             $table->string('location')->nullable();
+            $table->string('link')->nullable();
+
             $table->timestamps();
         });
     }
