@@ -21,19 +21,18 @@
     </div>
 
     <!-- DESKTOP TABLE -->
-    <div class="hidden md:block bg-white rounded-xl shadow overflow-hidden">
-
-        <table class="w-full">
-            <thead class="bg-gray-100 text-sm text-gray-700">
-                <tr>
-                    <th class="p-4 text-left">Thumbnail</th>
-                    <th class="p-4 text-left">Title</th>
-                    <th class="p-4 text-left">Video Link</th>
-                    <th class="p-4 text-center">Actions</th>
-                </tr>
-            </thead>
-
-            <tbody class="divide-y">
+    <div class="hidden md:block bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="overflow-x-auto p-4">
+            <table id="videoSectionTable" class="display w-full text-left" style="width:100%">
+                <thead>
+                    <tr class="bg-gray-50/80 text-gray-500 text-xs uppercase tracking-wider font-bold">
+                        <th class="px-4 py-3 border-b border-gray-200">Thumbnail</th>
+                        <th class="px-4 py-3 border-b border-gray-200">Title</th>
+                        <th class="px-4 py-3 border-b border-gray-200">Video Link</th>
+                        <th class="px-4 py-3 border-b border-gray-200 text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
                 @forelse($videos as $video)
                 <tr class="hover:bg-gray-50 transition">
                     <td class="p-4">
@@ -90,10 +89,14 @@
                     </td>
                 </tr>
                 @endforelse
-            </tbody>
-        </table>
-
+                </tbody>
+            </table>
+        </div>
     </div>
+
+    @push('scripts')
+    <x-datatable-init table-id="videoSectionTable" />
+    @endpush
 
     <!-- MOBILE CARDS -->
     <div class="md:hidden space-y-4">

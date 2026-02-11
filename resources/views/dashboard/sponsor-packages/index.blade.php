@@ -1,32 +1,5 @@
 @extends('layouts.layout')
 @section('content')
-    @push('styles')
-        <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/jquery.dataTables.min.css">
-        <style>
-            /* Make DataTables spacing look good with Tailwind layouts */
-            .dataTables_wrapper .dataTables_length,
-            .dataTables_wrapper .dataTables_filter {
-                margin-bottom: 0.75rem;
-            }
-
-            .dataTables_wrapper .dataTables_info,
-            .dataTables_wrapper .dataTables_paginate {
-                margin-top: 0.75rem;
-            }
-
-            /* Slightly smaller controls on mobile */
-            @media (max-width: 768px) {
-
-                .dataTables_wrapper .dataTables_length,
-                .dataTables_wrapper .dataTables_filter,
-                .dataTables_wrapper .dataTables_info,
-                .dataTables_wrapper .dataTables_paginate {
-                    font-size: 12px;
-                }
-            }
-        </style>
-    @endpush
-
     <div>
 
         <!-- HEADER -->
@@ -54,18 +27,19 @@
         @endif
 
         <!-- DESKTOP TABLE -->
-        <div class="hidden md:block bg-white rounded-xl shadow overflow-hidden">
-            <table class="w-full">
-                <thead class="bg-gray-100 text-sm text-gray-600">
-                    <tr>
-                        <th class="p-4 text-left">Title</th>
-                        <th class="p-4 text-right">Price/Year</th>
-                        <th class="p-4 text-center">Benefits Count</th>
-                        <th class="p-4 text-center">Created At</th>
-                        <th class="p-4 text-center">Actions</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y">
+        <div class="hidden md:block bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="overflow-x-auto p-4">
+                <table id="sponsorPackagesTable" class="display w-full text-left" style="width:100%">
+                    <thead>
+                        <tr class="bg-gray-50/80 text-gray-500 text-xs uppercase tracking-wider font-bold">
+                            <th class="px-4 py-3 border-b border-gray-200">Title</th>
+                            <th class="px-4 py-3 border-b border-gray-200">Price/Year</th>
+                            <th class="px-4 py-3 border-b border-gray-200">Benefits Count</th>
+                            <th class="px-4 py-3 border-b border-gray-200">Created At</th>
+                            <th class="px-4 py-3 border-b border-gray-200 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
                     @forelse($packages as $package)
                         <tr class="hover:bg-gray-50 transition">
                             <td class="p-4 font-medium">{{ $package->title }}</td>
@@ -111,8 +85,9 @@
                             </td>
                         </tr>
                     @endforelse
-                </tbody>
-            </table>
+                    </tbody>
+                </table>
+            </div>
         </div>
 
         <!-- MOBILE CARDS -->
@@ -196,22 +171,23 @@
                 </div>
             </div>
 
-            <div class="mt-6 overflow-x-auto">
-                <table id="subscribersTable" class="w-full min-w-[1100px] text-left border-collapse">
-                    <thead class="bg-gray-100 text-sm text-gray-600">
-                        <tr>
-                            <th class="p-4">Image</th>
-                            <th class="p-4">Package</th>
-                            <th class="p-4">Name</th>
-                            <th class="p-4">Email</th>
-                            <th class="p-4">Phone</th>
-                            <th class="p-4 text-right">Amount</th>
-                            <th class="p-4">Status</th>
-                            <th class="p-4">Payment ID</th>
-                            <th class="p-4">Date</th>
-                            <th class="p-4">Actions</th>
-                        </tr>
-                    </thead>
+            <div class="mt-6 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <div class="overflow-x-auto p-4">
+                    <table id="subscribersTable" class="display w-full text-left" style="width:100%">
+                        <thead>
+                            <tr class="bg-gray-50/80 text-gray-500 text-xs uppercase tracking-wider font-bold">
+                                <th class="px-4 py-3 border-b border-gray-200">Image</th>
+                                <th class="px-4 py-3 border-b border-gray-200">Package</th>
+                                <th class="px-4 py-3 border-b border-gray-200">Name</th>
+                                <th class="px-4 py-3 border-b border-gray-200">Email</th>
+                                <th class="px-4 py-3 border-b border-gray-200">Phone</th>
+                                <th class="px-4 py-3 border-b border-gray-200">Amount</th>
+                                <th class="px-4 py-3 border-b border-gray-200">Status</th>
+                                <th class="px-4 py-3 border-b border-gray-200">Payment ID</th>
+                                <th class="px-4 py-3 border-b border-gray-200">Date</th>
+                                <th class="px-4 py-3 border-b border-gray-200 text-right">Actions</th>
+                            </tr>
+                        </thead>
                     <tbody class="divide-y bg-white">
                         @forelse($subscribers as $sub)
                             <tr class="hover:bg-gray-50 transition">
@@ -257,42 +233,33 @@
                             </tr>
                         @empty
                             <tr>
-                                <td class="p-6 text-gray-500">No subscribers found.</td>
-                                <td class="p-6"></td>
-                                <td class="p-6"></td>
-                                <td class="p-6"></td>
-                                <td class="p-6"></td>
-                                <td class="p-6"></td>
-                                <td class="p-6"></td>
-                                <td class="p-6"></td>
-                                <td class="p-6"></td>
-                                <td class="p-6"></td>
+                                <td colspan="10" class="px-4 py-10 text-center text-gray-500">No subscribers found.</td>
                             </tr>
                         @endforelse
                     </tbody>
                 </table>
+            </div>
             </div>
         </div>
 
     </div>
 
     @push('scripts')
-        <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-        <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
-        <script>
-            document.addEventListener('DOMContentLoaded', function() {
-                const table = document.getElementById('subscribersTable');
-                if (!table || !window.jQuery || !jQuery.fn.DataTable) return;
-
-                jQuery('#subscribersTable').DataTable({
-                    pageLength: 25,
-                    order: [
-                        [8, 'desc']
-                    ],
-                    scrollX: true,
-                    autoWidth: false,
-                });
+    <x-datatable-init table-id="sponsorPackagesTable" />
+    <script>
+    $(function() {
+        var $t = $('#subscribersTable');
+        if ($t.length && $t.find('tbody tr').length > 0 && !$t.find('tbody tr td[colspan]').length) {
+            $t.DataTable({
+                order: [[8, 'desc']],
+                pageLength: 25,
+                lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
+                language: { search: 'Search:', lengthMenu: 'Show _MENU_ entries', info: 'Showing _START_ to _END_ of _TOTAL_', infoEmpty: 'Showing 0 to 0 of 0', infoFiltered: '(filtered from _MAX_)', paginate: { first: 'First', last: 'Last', next: 'Next', previous: 'Previous' }, zeroRecords: 'No matching records.' },
+                columnDefs: [{ orderable: false, targets: -1 }],
+                scrollX: true
             });
-        </script>
+        }
+    });
+    </script>
     @endpush
 @endsection

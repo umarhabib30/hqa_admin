@@ -21,20 +21,18 @@
     </div>
 
     <!-- DESKTOP TABLE -->
-    <div class="hidden md:block bg-white rounded-xl shadow overflow-hidden">
-
-        <table class="w-full">
-            <thead class="bg-gray-100 text-sm text-gray-700">
-                <tr>
-                    <th class="p-4 text-left">Icon</th>
-                    <th class="p-4 text-left">Title</th>
-                    <th class="p-4 text-left">Link</th>
-                    {{-- <th class="p-4 text-left">Description</th> --}}
-                    <th class="p-4 text-center">Actions</th>
-                </tr>
-            </thead>
-
-            <tbody class="divide-y">
+    <div class="hidden md:block bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="overflow-x-auto p-4">
+            <table id="socialsTable" class="display w-full text-left" style="width:100%">
+                <thead>
+                    <tr class="bg-gray-50/80 text-gray-500 text-xs uppercase tracking-wider font-bold">
+                        <th class="px-4 py-3 border-b border-gray-200">Icon</th>
+                        <th class="px-4 py-3 border-b border-gray-200">Title</th>
+                        <th class="px-4 py-3 border-b border-gray-200">Link</th>
+                        <th class="px-4 py-3 border-b border-gray-200 text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
                 @forelse($socials as $social)
                 <tr class="hover:bg-gray-50 transition">
                     <td class="p-4">
@@ -90,15 +88,17 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="5" class="p-8 text-center text-gray-500">
-                        No social links added yet.
-                    </td>
+                    <td colspan="4" class="px-4 py-10 text-center text-gray-500">No social links added yet.</td>
                 </tr>
                 @endforelse
-            </tbody>
-        </table>
-
+                </tbody>
+            </table>
+        </div>
     </div>
+
+    @push('scripts')
+    <x-datatable-init table-id="socialsTable" />
+    @endpush
 
     <!-- MOBILE CARDS -->
     <div class="md:hidden space-y-4">

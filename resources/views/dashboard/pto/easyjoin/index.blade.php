@@ -13,20 +13,20 @@
 </div>
 
 {{-- ================= DESKTOP / TABLET ================= --}}
-<div class="hidden md:block bg-white rounded-xl shadow overflow-x-auto">
-    <table class="min-w-full text-sm">
-        <thead class="bg-gray-100">
-            <tr>
-                <th class="px-4 py-3 text-left">Name</th>
-                <th class="px-4 py-3 text-left">Email</th>
-                <th class="px-4 py-3 text-center">Guests</th>
-                <th class="px-4 py-3 text-center">Fee / Person</th>
-                <th class="px-4 py-3 text-center">Total</th>
-                <th class="px-4 py-3 text-center">Actions</th>
-            </tr>
-        </thead>
-
-        <tbody>
+<div class="hidden md:block bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+    <div class="overflow-x-auto p-4">
+        <table id="easyjoinTable" class="display w-full text-left" style="width:100%">
+            <thead>
+                <tr class="bg-gray-50/80 text-gray-500 text-xs uppercase tracking-wider font-bold">
+                    <th class="px-4 py-3 border-b border-gray-200">Name</th>
+                    <th class="px-4 py-3 border-b border-gray-200">Email</th>
+                    <th class="px-4 py-3 border-b border-gray-200">Guests</th>
+                    <th class="px-4 py-3 border-b border-gray-200">Fee / Person</th>
+                    <th class="px-4 py-3 border-b border-gray-200">Total</th>
+                    <th class="px-4 py-3 border-b border-gray-200 text-right">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
             @forelse($joins as $join)
             <tr class="border-t hover:bg-gray-50 transition">
                 <td class="px-4 py-3">
@@ -76,7 +76,12 @@
             @endforelse
         </tbody>
     </table>
+    </div>
 </div>
+
+@push('scripts')
+<x-datatable-init table-id="easyjoinTable" />
+@endpush
 
 {{-- ================= MOBILE CARDS ================= --}}
 <div class="md:hidden space-y-4">

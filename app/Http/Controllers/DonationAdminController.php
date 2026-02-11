@@ -12,8 +12,9 @@ class DonationAdminController extends Controller
     {
         // Fetch all donations, newest first
         $donations = GeneralDonation::with('goal')->latest()->get();
+        $goals = FundRaisa::orderByDesc('id')->get();
 
-        return view('dashboard.gernalDonation.donations_index', compact('donations'));
+        return view('dashboard.gernalDonation.donations_index', compact('donations', 'goals'));
     }
 
     public function store(Request $request)
@@ -25,6 +26,7 @@ class DonationAdminController extends Controller
             'donation_mode' => 'required|in:paid_now,pledged',
             'payment_id' => 'nullable|string|max:255|unique:general_donations,payment_id',
             'donation_for' => 'required|string|max:255',
+            'fund_raisa_id' => 'nullable|integer|exists:fund_raisas,id',
 
             // ✅ NEW ADDRESS FIELDS
             'address1' => 'required|string|max:255',
@@ -34,10 +36,10 @@ class DonationAdminController extends Controller
             'country'  => 'required|string|max:255',
         ]);
 
-        $latestGoalId = FundRaisa::latest('id')->value('id');
+        $goalId = isset($validated['fund_raisa_id']) ? (int) $validated['fund_raisa_id'] : FundRaisa::latest('id')->value('id');
 
         GeneralDonation::create([
-            'fund_raisa_id' => $latestGoalId,
+            'fund_raisa_id' => $goalId,
             'donation_for'  => $validated['donation_for'],
             'name'          => $validated['name'] ?? null,
             'email'         => $validated['email'] ?? null,

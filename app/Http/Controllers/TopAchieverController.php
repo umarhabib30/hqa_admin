@@ -80,8 +80,6 @@ class TopAchieverController extends Controller
         $achiever = TopAchiever::findOrFail($id);
 
         $request->validate([
-            'title' => 'required|string|max:255',
-            'desc' => 'nullable|string',
             'image' => 'nullable|image',
             'class_achiever' => 'required|string',
             'achiever_name' => 'required|string',
@@ -91,8 +89,6 @@ class TopAchieverController extends Controller
         ]);
 
         $data = $request->only([
-            'title',
-            'desc',
             'class_achiever',
             'achiever_name',
             'achiever_desc'
@@ -108,6 +104,7 @@ class TopAchieverController extends Controller
         $metaData = [];
         $titles = $request->input('meta_titles', []);
         $images = $request->file('meta_images', []);
+        $existingImages = $request->input('meta_existing_images', []);
 
         foreach ($titles as $index => $title) {
             $title = trim($title);
@@ -118,6 +115,11 @@ class TopAchieverController extends Controller
 
             if (isset($images[$index]) && $images[$index]->isValid()) {
                 $item['image'] = $images[$index]->store('topAchievers/meta', 'public');
+            } else {
+                $existing = $existingImages[$index] ?? '';
+                if ($existing !== '') {
+                    $item['image'] = $existing;
+                }
             }
 
             $metaData[] = $item;

@@ -1,7 +1,7 @@
 @extends('layouts.layout')
 @section('content')
 
-<div class="max-w-6xl mx-auto">
+<div class="w-full">
 
     <!-- HEADER -->
     <div class="mb-6">
@@ -19,19 +19,19 @@
     @endif
 
     <!-- USERS LIST -->
-    <div class="bg-white rounded-xl shadow overflow-hidden">
-        <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
-                    <tr>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Permissions</th>
-                        <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="overflow-x-auto p-4">
+            <table id="permissionsTable" class="display w-full text-left" style="width:100%">
+                <thead>
+                    <tr class="bg-gray-50/80 text-gray-500 text-xs uppercase tracking-wider font-bold">
+                        <th class="px-4 py-3 border-b border-gray-200">Name</th>
+                        <th class="px-4 py-3 border-b border-gray-200">Email</th>
+                        <th class="px-4 py-3 border-b border-gray-200">Role</th>
+                        <th class="px-4 py-3 border-b border-gray-200">Permissions</th>
+                        <th class="px-4 py-3 border-b border-gray-200 text-right">Action</th>
                     </tr>
                 </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
+                <tbody>
                     @forelse($users as $u)
                     <tr>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ $u->name }}</td>
@@ -60,6 +60,10 @@
             </table>
         </div>
     </div>
+
+    @push('scripts')
+    <x-datatable-init table-id="permissionsTable" />
+    @endpush
 
 </div>
 

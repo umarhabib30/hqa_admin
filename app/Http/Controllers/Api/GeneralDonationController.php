@@ -148,6 +148,7 @@ class GeneralDonationController extends Controller
             'name'           => 'nullable|string',
             'amount'         => 'required|integer|min:0',
             'donation_for'   => 'required|string|max:255',
+            'fund_raisa_id'  => 'nullable|integer|exists:fund_raisas,id',
             'address1'       => 'required|string|max:255',
             'address2'       => 'nullable|string|max:255',
             'city'           => 'required|string|max:255',
@@ -188,10 +189,12 @@ class GeneralDonationController extends Controller
             'automatic_payment_methods' => ['enabled' => true, 'allow_redirects' => 'never'],
         ]);
 
-        $goal = FundRaisa::latest()->first();
+        $goalId = $request->filled('fund_raisa_id')
+            ? (int) $request->fund_raisa_id
+            : FundRaisa::latest('id')->value('id');
 
         $donation = GeneralDonation::create([
-            'fund_raisa_id'          => $goal?->id,
+            'fund_raisa_id'          => $goalId,
             'donation_for'           => $request->donation_for,
             'name'                   => $request->name,
             'email'                  => $request->email,

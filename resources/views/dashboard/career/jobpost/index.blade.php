@@ -1,6 +1,6 @@
 @extends('layouts.layout')
 @section('content')
-    <div class="max-w-6xl mx-auto">
+    <div class="w-full">
         {{-- Header Section --}}
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
             <div>
@@ -32,21 +32,20 @@
         @endif
 
         {{-- Table Card --}}
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="overflow-x-auto p-4">
+                <table id="jobPostTable" class="display w-full text-left" style="width:100%">
                     <thead>
-                        <tr class="bg-gray-50 border-b border-gray-200">
-                            <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-gray-600">Category</th>
-                            <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-gray-600">Location</th>
-                            <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-gray-600">Experience</th>
-                            <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-gray-600">Education</th>
-                            <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-gray-600">Description</th>
-                            <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-gray-600 text-right">
-                                Actions</th>
+                        <tr class="bg-gray-50/80 text-gray-500 text-xs uppercase tracking-wider font-bold">
+                            <th class="px-4 py-3 border-b border-gray-200">Category</th>
+                            <th class="px-4 py-3 border-b border-gray-200">Location</th>
+                            <th class="px-4 py-3 border-b border-gray-200">Experience</th>
+                            <th class="px-4 py-3 border-b border-gray-200">Education</th>
+                            <th class="px-4 py-3 border-b border-gray-200">Description</th>
+                            <th class="px-4 py-3 border-b border-gray-200 text-right">Actions</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-100">
+                    <tbody>
                         @forelse ($jobPosts as $post)
                             <tr class="hover:bg-gray-50/50 transition-colors group">
                                 <td class="px-6 py-4">
@@ -79,19 +78,18 @@
                                         {{ Str::limit($post->job_description, 60) }}
                                     </p>
                                 </td>
-                                <td class="px-6 py-4 text-right">
-                                    <div class="flex justify-end items-center gap-3">
+                                <td class="px-4 py-3">
+                                    <div class="flex flex-wrap items-center gap-2">
                                         <a href="{{ route('jobPost.edit', $post->id) }}"
-                                            class="text-sm font-semibold text-[#00285E] hover:underline underline-offset-4">
+                                            class="inline-flex items-center px-3 py-1.5 text-sm font-bold text-[#00285E] bg-white border-2 border-[#00285E] rounded-lg hover:bg-[#00285E] hover:text-white transition-all">
                                             Edit
                                         </a>
-
-                                        <form action="{{ route('jobPost.destroy', $post->id) }}" method="POST"
+                                        <form action="{{ route('jobPost.destroy', $post->id) }}" method="POST" class="inline"
                                             onsubmit="return confirm('Are you sure you want to delete this post?')">
                                             @csrf
                                             @method('DELETE')
-                                            <button
-                                                class="text-sm font-semibold text-red-500 hover:text-red-700 transition">
+                                            <button type="submit"
+                                                class="inline-flex items-center px-3 py-1.5 text-sm font-bold text-red-600 bg-white border-2 border-red-600 rounded-lg hover:bg-red-600 hover:text-white transition-all">
                                                 Delete
                                             </button>
                                         </form>
@@ -100,9 +98,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="4" class="px-6 py-12 text-center text-gray-400 italic">
-                                    No job posts found. Create your first one above!
-                                </td>
+                                <td colspan="6" class="px-4 py-10 text-center text-gray-500">No job posts found.</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -110,4 +106,8 @@
             </div>
         </div>
     </div>
+
+    @push('scripts')
+    <x-datatable-init table-id="jobPostTable" />
+    @endpush
 @endsection

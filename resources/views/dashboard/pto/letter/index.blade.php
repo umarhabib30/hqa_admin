@@ -28,19 +28,18 @@
     @endif
 
     <!-- DESKTOP TABLE -->
-    <div class="hidden md:block bg-white rounded-xl shadow overflow-hidden">
-
-        <table class="w-full text-left border-collapse">
-            <thead class="bg-gray-100">
-                <tr>
-                    <th class="px-6 py-4 text-sm font-semibold text-gray-600">#</th>
-                    <th class="px-6 py-4 text-sm font-semibold text-gray-600">Newsletter</th>
-                    <th class="px-6 py-4 text-sm font-semibold text-gray-600">Guide</th>
-                    <th class="px-6 py-4 text-sm font-semibold text-gray-600 text-center">Actions</th>
-                </tr>
-            </thead>
-
-            <tbody class="divide-y">
+    <div class="hidden md:block bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="overflow-x-auto p-4">
+            <table id="ptoLetterTable" class="display w-full text-left" style="width:100%">
+                <thead>
+                    <tr class="bg-gray-50/80 text-gray-500 text-xs uppercase tracking-wider font-bold">
+                        <th class="px-4 py-3 border-b border-gray-200">#</th>
+                        <th class="px-4 py-3 border-b border-gray-200">Newsletter</th>
+                        <th class="px-4 py-3 border-b border-gray-200">Guide</th>
+                        <th class="px-4 py-3 border-b border-gray-200 text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
                 @forelse($items as $key => $item)
                 <tr class="hover:bg-gray-50 transition">
                     <td class="px-6 py-4">{{ $key + 1 }}</td>
@@ -89,10 +88,14 @@
                     </td>
                 </tr>
                 @endforelse
-            </tbody>
-        </table>
-
+                </tbody>
+            </table>
+        </div>
     </div>
+
+    @push('scripts')
+    <x-datatable-init table-id="ptoLetterTable" />
+    @endpush
 
     <!-- MOBILE CARDS -->
     <div class="md:hidden space-y-4">

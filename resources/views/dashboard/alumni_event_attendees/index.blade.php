@@ -27,23 +27,23 @@
         @endif
 
         <!-- DESKTOP TABLE -->
-        <div class="hidden lg:block bg-white rounded-xl shadow overflow-hidden border border-gray-100">
-            <table class="w-full border-collapse">
-                <thead class="bg-gray-50 text-xs uppercase tracking-wider text-gray-600 border-b">
-                    <tr>
-                        <th class="p-4 text-center">#</th>
-                        <th class="p-4 text-center">Profile</th>
-                        <th class="p-4 text-left">Attendee Details</th>
-                        <th class="p-4 text-left">Contact Info</th>
-                        <th class="p-4 text-center">Guests</th>
-                        <th class="p-4 text-left">Payment Status</th>
-                        <th class="p-4 text-left">Event Name</th>
-                        <th class="p-4 text-center">Registered</th>
-                        <th class="p-4 text-center">Actions</th>
-                    </tr>
-                </thead>
-
-                <tbody class="divide-y text-sm">
+        <div class="hidden lg:block bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="overflow-x-auto p-4">
+                <table id="alumniAttendeesTable" class="display w-full text-left" style="width:100%">
+                    <thead>
+                        <tr class="bg-gray-50/80 text-gray-500 text-xs uppercase tracking-wider font-bold">
+                            <th class="px-4 py-3 border-b border-gray-200">#</th>
+                            <th class="px-4 py-3 border-b border-gray-200">Profile</th>
+                            <th class="px-4 py-3 border-b border-gray-200">Attendee Details</th>
+                            <th class="px-4 py-3 border-b border-gray-200">Contact Info</th>
+                            <th class="px-4 py-3 border-b border-gray-200">Guests</th>
+                            <th class="px-4 py-3 border-b border-gray-200">Payment Status</th>
+                            <th class="px-4 py-3 border-b border-gray-200">Event Name</th>
+                            <th class="px-4 py-3 border-b border-gray-200">Registered</th>
+                            <th class="px-4 py-3 border-b border-gray-200 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
                     @forelse($attendees as $attendee)
                         <tr class="hover:bg-blue-50/30 transition">
                             <td class="p-4 text-center text-gray-400">{{ $loop->iteration }}</td>
@@ -112,9 +112,14 @@
                             </td>
                         </tr>
                     @endforelse
-                </tbody>
-            </table>
+                    </tbody>
+                </table>
+            </div>
         </div>
+
+        @push('scripts')
+        <x-datatable-init table-id="alumniAttendeesTable" />
+        @endpush
 
         <!-- MOBILE CARDS -->
         <div class="lg:hidden space-y-4">

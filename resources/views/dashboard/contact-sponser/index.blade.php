@@ -4,21 +4,21 @@
 <div>
 
     <!-- DESKTOP TABLE -->
-    <div class="hidden md:block bg-white rounded-xl shadow overflow-hidden">
-        <table class="w-full">
-            <thead class="bg-gray-100 text-sm text-gray-600">
-                <tr>
-                    <th class="p-4 text-left">Full Name</th>
-                    <th class="p-4 text-left">Company</th>
-                    <th class="p-4 text-left">Email</th>
-                    <th class="p-4 text-left">Phone</th>
-                    <th class="p-4 text-center">Sponsor Type</th>
-                    <th class="p-4 text-center">Message</th>
-                    <th class="p-4 text-center">Actions</th>
-                </tr>
-            </thead>
-
-            <tbody class="divide-y">
+    <div class="hidden md:block bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="overflow-x-auto p-4">
+            <table id="contactSponsorTable" class="display w-full text-left" style="width:100%">
+                <thead>
+                    <tr class="bg-gray-50/80 text-gray-500 text-xs uppercase tracking-wider font-bold">
+                        <th class="px-4 py-3 border-b border-gray-200">Full Name</th>
+                        <th class="px-4 py-3 border-b border-gray-200">Company</th>
+                        <th class="px-4 py-3 border-b border-gray-200">Email</th>
+                        <th class="px-4 py-3 border-b border-gray-200">Phone</th>
+                        <th class="px-4 py-3 border-b border-gray-200">Sponsor Type</th>
+                        <th class="px-4 py-3 border-b border-gray-200">Message</th>
+                        <th class="px-4 py-3 border-b border-gray-200 text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
                 @forelse($contacts as $contact)
                     <tr class="hover:bg-gray-50 transition">
                         <td class="p-4 font-medium text-gray-800">
@@ -89,10 +89,10 @@
                         </td>
                     </tr>
                 @endforelse
-            </tbody>
-        </table>
+                </tbody>
+            </table>
+        </div>
     </div>
-
 
     <!-- MOBILE CARDS -->
     <div class="md:hidden space-y-4">
@@ -162,7 +162,7 @@
 </div>
 
 @push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<x-datatable-init table-id="contactSponsorTable" />
 <script>
     document.querySelectorAll('.delete-contact-btn').forEach(btn => {
         btn.addEventListener('click', () => {

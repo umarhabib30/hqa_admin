@@ -4,6 +4,17 @@
     <div class="max-w-4xl mx-auto bg-white p-6 rounded-xl shadow">
         <h2 class="text-2xl font-semibold mb-6">Edit Top Achiever</h2>
 
+        @if ($errors->any())
+            <div class="mb-6 p-4 rounded-lg bg-red-50 border border-red-200 text-red-700">
+                <p class="font-semibold mb-1">Please fix the following errors:</p>
+                <ul class="list-disc list-inside text-sm">
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
         <form method="POST" enctype="multipart/form-data" action="{{ route('topAchievers.update', $achiever->id) }}"
             class="space-y-6">
             @csrf
@@ -43,9 +54,13 @@
                             <div class="flex-1">
                                 <label class="block text-sm font-medium mb-1">Meta Image</label>
                                 @if(!empty($meta['image']))
-                                    <img src="{{ Storage::url($meta['image']) }}" class="w-full h-24 object-cover rounded mb-2">
+                                    <p class="text-xs text-gray-500 mb-1">Current image:</p>
+                                    <img src="{{ Storage::url($meta['image']) }}" alt="Meta image" class="w-full h-24 object-cover rounded mb-2 border border-gray-200">
+                                    <input type="hidden" name="meta_existing_images[]" value="{{ $meta['image'] }}">
+                                @else
+                                    <input type="hidden" name="meta_existing_images[]" value="">
                                 @endif
-                                <input type="file" name="meta_images[]" class="w-full">
+                                <input type="file" name="meta_images[]" class="w-full" accept="image/*">
                             </div>
                             <button type="button" onclick="this.closest('.border').remove()"
                                 class="text-red-600 text-sm">Remove</button>
@@ -60,7 +75,8 @@
                         </div>
                         <div class="flex-1">
                             <label class="block text-sm font-medium mb-1">Meta Image</label>
-                            <input type="file" name="meta_images[]" class="w-full">
+                            <input type="hidden" name="meta_existing_images[]" value="">
+                            <input type="file" name="meta_images[]" class="w-full" accept="image/*">
                         </div>
                         <button type="button" onclick="this.closest('.border').remove()"
                             class="text-red-600 text-sm">Remove</button>
@@ -86,7 +102,8 @@
             </div>
             <div class="flex-1">
                 <label class="block text-sm font-medium mb-1">Meta Image</label>
-                <input type="file" name="meta_images[]" class="w-full">
+                <input type="hidden" name="meta_existing_images[]" value="">
+                <input type="file" name="meta_images[]" class="w-full" accept="image/*">
             </div>
             <button type="button" onclick="this.closest('.border').remove()" class="text-red-600 text-sm">Remove</button>
         `;

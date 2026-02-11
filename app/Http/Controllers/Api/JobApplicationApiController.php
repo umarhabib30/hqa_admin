@@ -3,8 +3,12 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Mail\JobApplicationConfirmationMail;
+use App\Mail\JobApplicationReceivedMail;
 use App\Models\jobApp;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 
@@ -46,6 +50,17 @@ class JobApplicationApiController extends Controller
             'cv_path'          => $cvPath,
             'description'      => $request->description,
         ]);
+
+        // 🔹 Email to applicant (teacher) – confirmation
+        Mail::to($jobApp->email)->queue(new JobApplicationConfirmationMail($jobApp));
+
+        // 🔹 Email to all super admins – new application notification
+        $superAdmins = User::where('role', 'super_admin')->get();
+        foreach ($superAdmins as $admin) {
+            if (!empty($admin->email)) {
+                Mail::to($admin->email)->queue(new JobApplicationReceivedMail($jobApp));
+            }
+        }
 
         // 🔹 API response
         return response()->json([

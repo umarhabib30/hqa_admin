@@ -3,7 +3,7 @@
 
 
 @section('content')
-    <div class="max-w-7xl mx-auto px-6 py-10">
+    <div class="w-full px-6 py-10">
         {{-- Header Section --}}
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
             <div>
@@ -28,31 +28,19 @@
         </div>
 
         {{-- Main Content Card --}}
-        <div class="bg-white rounded-[2rem] shadow-2xl shadow-gray-200/50 border border-gray-100 overflow-hidden">
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-separate border-spacing-0">
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="overflow-x-auto p-4">
+                <table id="homeModalTable" class="display w-full text-left" style="width:100%">
                     <thead>
-                        <tr class="bg-gray-50/50">
-                            <th
-                                class="px-6 py-6 text-[10px] uppercase tracking-[0.2em] text-gray-400 font-black border-b border-gray-100">
-                                Visual</th>
-                            <th
-                                class="px-6 py-6 text-[10px] uppercase tracking-[0.2em] text-gray-400 font-black border-b border-gray-100">
-                                Details</th>
-                            <th
-                            
-                                class="px-6 py-6 text-[10px] uppercase tracking-[0.2em] text-gray-400 font-black border-b border-gray-100">
-                                Button Link</th>
-                            <th
-                                class="px-6 py-6 text-[10px] uppercase tracking-[0.2em] text-gray-400 font-black border-b border-gray-100">
-                                General Link</th>
-                            <th
-                                class="px-6 py-6 text-[10px] uppercase tracking-[0.2em] text-gray-400 font-black border-b border-gray-100 text-right">
-                                Settings</th>
+                        <tr class="bg-gray-50/80 text-gray-500 text-xs uppercase tracking-wider font-bold">
+                            <th class="px-4 py-3 border-b border-gray-200">Visual</th>
+                            <th class="px-4 py-3 border-b border-gray-200">Details</th>
+                            <th class="px-4 py-3 border-b border-gray-200">Button Link</th>
+                            <th class="px-4 py-3 border-b border-gray-200">General Link</th>
+                            <th class="px-4 py-3 border-b border-gray-200 text-right">Settings</th>
                         </tr>
                     </thead>
-
-                    <tbody class="divide-y divide-gray-50">
+                    <tbody>
                         @forelse ($modals as $modal)
                             <tr class="group hover:bg-[#00285E]/[0.02] transition-all duration-300">
                                 {{-- Visual Preview --}}
@@ -115,26 +103,18 @@
                                 </td>
 
                                 {{-- Settings --}}
-                                <td class="px-6 py-6 text-right">
-                                    <div class="flex justify-end items-center gap-2">
+                                <td class="px-4 py-3">
+                                    <div class="flex flex-wrap items-center gap-2">
                                         <a href="{{ route('homeModal.edit', $modal->id) }}"
-                                            class="w-9 h-9 flex items-center justify-center rounded-lg bg-gray-50 text-gray-400 hover:bg-[#00285E] hover:text-white transition-all shadow-sm">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                            </svg>
+                                            class="inline-flex items-center px-3 py-1.5 text-sm font-bold text-[#00285E] bg-white border-2 border-[#00285E] rounded-lg hover:bg-[#00285E] hover:text-white transition-all">
+                                            Edit
                                         </a>
-
                                         <form method="POST" action="{{ route('homeModal.destroy', $modal->id) }}"
                                             class="inline">
                                             @csrf @method('DELETE')
-                                            <button onclick="return confirm('Archive this modal?')"
-                                                class="w-9 h-9 flex items-center justify-center rounded-lg bg-gray-50 text-gray-400 hover:bg-red-500 hover:text-white transition-all shadow-sm">
-                                                <svg class="w-4 h-4" fill="none" stroke="currentColor"
-                                                    viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                </svg>
+                                            <button type="submit" onclick="return confirm('Archive this modal?')"
+                                                class="inline-flex items-center px-3 py-1.5 text-sm font-bold text-red-600 bg-white border-2 border-red-600 rounded-lg hover:bg-red-600 hover:text-white transition-all">
+                                                Delete
                                             </button>
                                         </form>
                                     </div>
@@ -155,4 +135,8 @@
             </div>
         </div>
     </div>
+
+    @push('scripts')
+    <x-datatable-init table-id="homeModalTable" />
+    @endpush
 @endsection

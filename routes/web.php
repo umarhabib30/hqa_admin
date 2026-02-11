@@ -42,6 +42,7 @@ use App\Http\Controllers\ForgotPasswordController;
 use App\Http\Controllers\ResetPasswordController;
 use App\Http\Controllers\AlumniFeePersonPriceController;
 use App\Http\Controllers\AlumniPortalController;
+use App\Http\Controllers\AlumniEventAttendeeController as AlumniEventAttendeeWebController;
 use App\Http\Controllers\Api\AlumniEventAttendeeController;
 use App\Models\PtoLetterGuide;
 use Illuminate\Support\Facades\Route;
@@ -247,12 +248,12 @@ Route::get('/donations/{donation}', action: [DonationAdminController::class, 'sh
 
 // Alumni Event Attendees Admin Routes (similar to PTO Event Attendees)
 Route::prefix('admin')->group(function () {
-    // List all alumni event attendees
-    Route::get('/alumni-event-attendees', [AlumniEventAttendeeController::class, 'index'])
+    // List all alumni event attendees (dashboard view)
+    Route::get('/alumni-event-attendees', [AlumniEventAttendeeWebController::class, 'index'])
         ->name('admin.alumni-event-attendees.index');
 
     // Delete an attendee record
-    Route::delete('/alumni-event-attendees/{id}', [AlumniEventAttendeeController::class, 'destroy'])
+    Route::delete('/alumni-event-attendees/{id}', [AlumniEventAttendeeWebController::class, 'destroy'])
         ->name('admin.alumni-event-attendees.destroy');
 });
 

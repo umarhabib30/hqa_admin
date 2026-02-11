@@ -12,19 +12,19 @@
     </div>
 
     {{-- DESKTOP / TABLE --}}
-    <div class="hidden md:block bg-white rounded-xl shadow overflow-x-auto">
-        <table class="min-w-full text-sm">
-            <thead class="bg-gray-100">
-                <tr>
-                    <th class="px-4 py-3 text-left">Event</th>
-                    <th class="px-4 py-3 text-left">Title</th>
-                    <th class="px-4 py-3 text-center">Price</th>
-                    <th class="px-4 py-3 text-center">Status</th>
-                    <th class="px-4 py-3 text-center">Actions</th>
-                </tr>
-            </thead>
-
-            <tbody>
+    <div class="hidden md:block bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="overflow-x-auto p-4">
+            <table id="alumniFeeTable" class="display w-full text-left" style="width:100%">
+                <thead>
+                    <tr class="bg-gray-50/80 text-gray-500 text-xs uppercase tracking-wider font-bold">
+                        <th class="px-4 py-3 border-b border-gray-200">Event</th>
+                        <th class="px-4 py-3 border-b border-gray-200">Title</th>
+                        <th class="px-4 py-3 border-b border-gray-200">Price</th>
+                        <th class="px-4 py-3 border-b border-gray-200">Status</th>
+                        <th class="px-4 py-3 border-b border-gray-200 text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
                 @forelse($fees as $fee)
                     <tr class="border-t hover:bg-gray-50 transition">
                         <td class="px-4 py-3 font-medium text-[#00285E]">
@@ -72,9 +72,14 @@
                         </td>
                     </tr>
                 @endforelse
-            </tbody>
-        </table>
+                </tbody>
+            </table>
+        </div>
     </div>
+
+    @push('scripts')
+    <x-datatable-init table-id="alumniFeeTable" />
+    @endpush
 
     {{-- MOBILE CARDS --}}
     <div class="md:hidden space-y-4">

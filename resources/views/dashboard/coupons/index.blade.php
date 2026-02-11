@@ -28,22 +28,23 @@
     @endif
 
     <!-- DESKTOP TABLE -->
-    <div class="hidden md:block bg-white rounded-xl shadow overflow-hidden">
-        <table class="w-full">
-            <thead class="bg-gray-100 text-sm text-gray-600">
-                <tr>
-                    <th class="p-4 text-left">Coupon Name</th>
-                    <th class="p-4 text-left">Type</th>
-                    <th class="p-4 text-right">Discount Price</th>
-                    <th class="p-4 text-right">Discount %</th>
-                    <th class="p-4 text-center">Total Codes</th>
-                    <th class="p-4 text-center">Used</th>
-                    <th class="p-4 text-center">Available</th>
-                    <th class="p-4 text-center">Status</th>
-                    <th class="p-4 text-center">Actions</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y">
+    <div class="hidden md:block bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="overflow-x-auto p-4">
+            <table id="couponsTable" class="display w-full text-left" style="width:100%">
+                <thead>
+                    <tr class="bg-gray-50/80 text-gray-500 text-xs uppercase tracking-wider font-bold">
+                        <th class="px-4 py-3 border-b border-gray-200">Coupon Name</th>
+                        <th class="px-4 py-3 border-b border-gray-200">Type</th>
+                        <th class="px-4 py-3 border-b border-gray-200">Discount Price</th>
+                        <th class="px-4 py-3 border-b border-gray-200">Discount %</th>
+                        <th class="px-4 py-3 border-b border-gray-200">Total Codes</th>
+                        <th class="px-4 py-3 border-b border-gray-200">Used</th>
+                        <th class="px-4 py-3 border-b border-gray-200">Available</th>
+                        <th class="px-4 py-3 border-b border-gray-200">Status</th>
+                        <th class="px-4 py-3 border-b border-gray-200 text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
                 @forelse($coupons as $coupon)
                 <tr class="hover:bg-gray-50 transition">
                     <td class="p-4 font-medium">{{ $coupon->coupon_name }}</td>
@@ -114,14 +115,17 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="8" class="p-6 text-center text-gray-500">
-                        No coupons found.
-                    </td>
+                    <td colspan="9" class="px-4 py-10 text-center text-gray-500">No coupons found.</td>
                 </tr>
                 @endforelse
-            </tbody>
-        </table>
+                </tbody>
+            </table>
+        </div>
     </div>
+
+    @push('scripts')
+    <x-datatable-init table-id="couponsTable" />
+    @endpush
 
     <!-- MOBILE CARDS -->
     <div class="md:hidden space-y-4">

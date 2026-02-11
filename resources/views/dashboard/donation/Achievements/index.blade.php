@@ -30,21 +30,20 @@
     </div>
 
     <!-- DESKTOP TABLE -->
-    <div class="hidden md:block bg-white rounded-xl shadow-sm overflow-hidden">
-
-        <table class="w-full text-left border-collapse">
-            <thead>
-                <tr class="bg-gray-100 text-gray-600 text-sm uppercase">
-                    <th class="px-6 py-4">ID</th>
-                    <th class="px-6 py-4">Card Title</th>
-                    <th class="px-6 py-4">Price</th>
-                    <th class="px-6 py-4">Description</th>
-                    <th class="px-6 py-4">Percentage</th>
-                    <th class="px-6 py-4 text-right">Actions</th>
-                </tr>
-            </thead>
-
-            <tbody class="divide-y">
+    <div class="hidden md:block bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="overflow-x-auto p-4">
+            <table id="achievementsTable" class="display w-full text-left" style="width:100%">
+                <thead>
+                    <tr class="bg-gray-50/80 text-gray-500 text-xs uppercase tracking-wider font-bold">
+                        <th class="px-4 py-3 border-b border-gray-200">ID</th>
+                        <th class="px-4 py-3 border-b border-gray-200">Card Title</th>
+                        <th class="px-4 py-3 border-b border-gray-200">Price</th>
+                        <th class="px-4 py-3 border-b border-gray-200">Description</th>
+                        <th class="px-4 py-3 border-b border-gray-200">Percentage</th>
+                        <th class="px-4 py-3 border-b border-gray-200 text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
                 @forelse($achievements as $achievement)
                 <tr class="hover:bg-gray-50 transition">
                     <td class="px-6 py-4">{{ $achievement->id }}</td>
@@ -92,10 +91,14 @@
                     </td>
                 </tr>
                 @endforelse
-            </tbody>
-        </table>
-
+                </tbody>
+            </table>
+        </div>
     </div>
+
+    @push('scripts')
+    <x-datatable-init table-id="achievementsTable" />
+    @endpush
 
     <!-- MOBILE CARDS -->
     <div class="md:hidden space-y-4">

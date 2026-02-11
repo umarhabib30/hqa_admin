@@ -14,17 +14,17 @@
         </div>
 
         <!-- TABLE -->
-        <div class="bg-white rounded-xl shadow overflow-x-auto">
-            <table class="w-full">
-                <thead class="bg-gray-100 text-sm text-gray-700">
-                    <tr>
-                        <th class="p-4 text-left">Image</th>
-                        <th class="p-4 text-left">Title</th>
-                        <th class="p-4 text-center">Actions</th>
-                    </tr>
-                </thead>
-
-                <tbody class="divide-y">
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="overflow-x-auto p-4">
+                <table id="newsSectionTable" class="display w-full text-left" style="width:100%">
+                    <thead>
+                        <tr class="bg-gray-50/80 text-gray-500 text-xs uppercase tracking-wider font-bold">
+                            <th class="px-4 py-3 border-b border-gray-200">Image</th>
+                            <th class="px-4 py-3 border-b border-gray-200">Title</th>
+                            <th class="px-4 py-3 border-b border-gray-200 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
                     @forelse($news as $item)
                         <tr class="hover:bg-gray-50 transition">
                             <!-- Image -->
@@ -72,5 +72,9 @@
             </table>
         </div>
     </div>
+
+    @push('scripts')
+    <x-datatable-init table-id="newsSectionTable" />
+    @endpush
 
 @endsection

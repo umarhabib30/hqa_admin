@@ -12,19 +12,19 @@
     </div>
 
     {{-- ===================== DESKTOP / TABLET TABLE ===================== --}}
-    <div class="hidden md:block bg-white rounded-xl shadow overflow-x-auto">
-        <table class="w-full text-sm">
-            <thead class="bg-gray-100">
-                <tr>
-                    <th class="px-4 py-3 text-left">Name</th>
-                    <th class="px-4 py-3 text-left">Email</th>
-                    <th class="px-4 py-3 text-center">Experience</th>
-                    <th class="px-4 py-3 text-center">CV</th>
-                    <th class="px-4 py-3 text-center">Actions</th>
-                </tr>
-            </thead>
-
-            <tbody>
+    <div class="hidden md:block bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="overflow-x-auto p-4">
+            <table id="jobAppTable" class="display w-full text-left" style="width:100%">
+                <thead>
+                    <tr class="bg-gray-50/80 text-gray-500 text-xs uppercase tracking-wider font-bold">
+                        <th class="px-4 py-3 border-b border-gray-200">Name</th>
+                        <th class="px-4 py-3 border-b border-gray-200">Email</th>
+                        <th class="px-4 py-3 border-b border-gray-200">Experience</th>
+                        <th class="px-4 py-3 border-b border-gray-200">CV</th>
+                        <th class="px-4 py-3 border-b border-gray-200 text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
                 @forelse($applications as $app)
                     <tr class="border-t hover:bg-gray-50 transition">
                         <td class="px-4 py-3">
@@ -65,9 +65,14 @@
                         </td>
                     </tr>
                 @endforelse
-            </tbody>
-        </table>
+                </tbody>
+            </table>
+        </div>
     </div>
+
+    @push('scripts')
+    <x-datatable-init table-id="jobAppTable" />
+    @endpush
 
     {{-- ===================== MOBILE CARDS ===================== --}}
     <div class="md:hidden space-y-4">

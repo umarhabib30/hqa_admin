@@ -1,9 +1,8 @@
 @extends('layouts.layout')
 <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 
-
 @section('content')
-    <div x-data="{ showAdd: false }" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div x-data="{ showAdd: false }" class="w-full px-4 sm:px-6 lg:px-8 py-8">
         {{-- Header Section --}}
         <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-8 border-b border-gray-100 pb-6">
             <div>
@@ -114,6 +113,19 @@
                     </div>
 
                     <div class="md:col-span-2">
+                        <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Goal</label>
+                        <select name="fund_raisa_id"
+                            class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-4 focus:ring-[#00285E]/10 focus:border-[#00285E] outline-none transition-all">
+                            <option value="">Latest goal (default)</option>
+                            @foreach($goals ?? [] as $goal)
+                                <option value="{{ $goal->id }}" {{ old('fund_raisa_id') == $goal->id ? 'selected' : '' }}>
+                                    {{ $goal->goal_name ?? 'Goal #' . $goal->id }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div class="md:col-span-2">
                         <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
                             Purpose <span class="text-red-500">*</span>
                         </label>
@@ -177,72 +189,51 @@
             </form>
         </div>
 
-        {{-- Donations Table --}}
+        {{-- Donations DataTable --}}
         <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
+            <div class="overflow-x-auto p-4">
+                <table id="donationsTable" class="display w-full text-left" style="width:100%">
                     <thead>
-                        <tr class="bg-gray-50/50 text-gray-400 text-xs uppercase tracking-widest font-bold">
-                            <th class="px-6 py-5 border-b border-gray-100">ID</th>
-                            <th class="px-6 py-5 border-b border-gray-100">Goal</th>
-                            <th class="px-6 py-5 border-b border-gray-100">Donor</th>
-                            <th class="px-6 py-5 border-b border-gray-100">Purpose</th>
-                            <th class="px-6 py-5 border-b border-gray-100">Amount</th>
-                            <th class="px-6 py-5 border-b border-gray-100 text-right">Action</th>
+                        <tr class="bg-gray-50/80 text-gray-500 text-xs uppercase tracking-wider font-bold">
+                            <th class="px-4 py-3 border-b border-gray-200">ID</th>
+                            <th class="px-4 py-3 border-b border-gray-200">Goal</th>
+                            <th class="px-4 py-3 border-b border-gray-200">Donor</th>
+                            <th class="px-4 py-3 border-b border-gray-200">Purpose</th>
+                            <th class="px-4 py-3 border-b border-gray-200">Amount</th>
+                            <th class="px-4 py-3 border-b border-gray-200 text-right no-sort">Action</th>
                         </tr>
                     </thead>
-
-                    <tbody class="divide-y divide-gray-50">
+                    <tbody>
                         @forelse($donations as $donation)
-                            <tr class="hover:bg-blue-50/30 transition-colors group">
-                                <td class="px-6 py-5">
-                                    <span class="font-mono text-sm text-gray-400">#{{ $donation->id }}</span>
-                                </td>
-                                <td class="px-6 py-5">
-                                    <span class="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-semibold">
-                                        {{ $donation->goal?->goal_name }}
+                            <tr class="hover:bg-blue-50/30 transition-colors">
+                                <td class="px-4 py-3 font-mono text-sm text-gray-500">#{{ $donation->id }}</td>
+                                <td class="px-4 py-3">
+                                    <span class="px-2.5 py-0.5 bg-gray-100 text-gray-600 rounded-full text-xs font-semibold">
+                                        {{ $donation->goal?->goal_name ?? '—' }}
                                     </span>
                                 </td>
-                                <td class="px-6 py-5">
+                                <td class="px-4 py-3">
                                     <div class="flex flex-col">
-                                        <span class="font-bold text-gray-800">{{ $donation->name ?? 'Anonymous' }}</span>
-                                        <span class="text-xs text-gray-500">{{ $donation->email }}</span>
+                                        <span class="font-semibold text-gray-800">{{ $donation->name ?? 'Anonymous' }}</span>
+                                        <span class="text-xs text-gray-500">{{ $donation->email ?? '—' }}</span>
                                     </div>
                                 </td>
-                                <td class="px-6 py-5 text-sm text-gray-600 max-w-[200px] truncate">
-                                    {{ $donation->donation_for }}
-                                </td>
-                                <td class="px-6 py-5">
-                                    <span class="text-lg font-bold text-gray-900">
-                                        ${{ number_format($donation->amount, 2) }}
-                                    </span>
-                                </td>
-                                <td class="px-6 py-5 text-right">
+                                <td class="px-4 py-3 text-sm text-gray-600 max-w-[200px]">{{ $donation->donation_for }}</td>
+                                <td class="px-4 py-3 font-semibold text-gray-900">${{ number_format($donation->amount, 2) }}</td>
+                                <td class="px-4 py-3 text-right">
                                     <a href="{{ route('admin.donations.show', $donation) }}"
-                                        class="inline-flex items-center px-4 py-2 text-sm font-bold text-[#00285E] bg-white border-2 border-[#00285E] rounded-xl hover:bg-[#00285E] hover:text-white transition-all">
+                                        class="inline-flex items-center px-3 py-1.5 text-sm font-bold text-[#00285E] bg-white border-2 border-[#00285E] rounded-lg hover:bg-[#00285E] hover:text-white transition-all">
                                         Details
-                                        <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor"
-                                            viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M9 5l7 7-7 7"></path>
+                                        <svg class="w-3.5 h-3.5 ml-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
                                         </svg>
                                     </a>
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="6" class="px-6 py-12 text-center">
-                                    <div class="flex flex-col items-center">
-                                        <div class="bg-gray-50 p-4 rounded-full mb-4 text-gray-300">
-                                            <svg class="w-12 h-12" fill="none" stroke="currentColor"
-                                                viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                    d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0a2 2 0 01-2 2H6a2 2 0 01-2-2m16 0l-8 4-8-4">
-                                                </path>
-                                            </svg>
-                                        </div>
-                                        <p class="text-gray-500 font-medium">No donations recorded yet.</p>
-                                    </div>
+                                <td colspan="6" class="px-4 py-10 text-center text-gray-500">
+                                    No donations recorded yet.
                                 </td>
                             </tr>
                         @endforelse
@@ -251,4 +242,21 @@
             </div>
         </div>
     </div>
+
+    @push('scripts')
+    <script>
+        $(function() {
+            var $t = $('#donationsTable');
+            if ($t.length && $t.find('tbody tr').length > 0 && !$t.find('tbody tr td[colspan]').length) {
+                $t.DataTable({
+                    order: [[0, 'desc']],
+                    pageLength: 10,
+                    lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
+                    language: { search: 'Search:', lengthMenu: 'Show _MENU_ entries', info: 'Showing _START_ to _END_ of _TOTAL_', infoEmpty: 'Showing 0 to 0 of 0', infoFiltered: '(filtered from _MAX_)', paginate: { first: 'First', last: 'Last', next: 'Next', previous: 'Previous' }, zeroRecords: 'No matching records.' },
+                    columnDefs: [{ orderable: false, targets: -1 }]
+                });
+            }
+        });
+    </script>
+    @endpush
 @endsection
