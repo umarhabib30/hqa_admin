@@ -124,4 +124,13 @@ class SponserPackageApiController extends Controller
             ], 500);
         }
     }
+
+    public function packages()
+    {
+        $packages = SponsorPackage::all();
+        return response()->json([
+            'status' => true,
+            'data' => $packages
+        ]);
+    }
 }
