@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Mail\AlumniEventAttendeeConfirmationMail;
+use App\Mail\AlumniEventAttendeeReceivedMail;
 use App\Models\AlumniEventAttendee;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
@@ -114,6 +116,12 @@ class AlumniEventAttendeeController extends Controller
 
             try {
                 Mail::to($attendee->email)->queue(new AlumniEventAttendeeConfirmationMail($attendee));
+                $superAdmins = User::where('role', 'super_admin')->get();
+                foreach ($superAdmins as $admin) {
+                    if (!empty($admin->email)) {
+                        Mail::to($admin->email)->queue(new AlumniEventAttendeeReceivedMail($attendee));
+                    }
+                }
             } catch (Throwable $e) {
                 // Log but don't fail the request
             }

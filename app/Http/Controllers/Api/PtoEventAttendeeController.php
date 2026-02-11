@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Mail\PtoEventAttendeeConfirmationMail;
+use App\Mail\PtoEventAttendeeReceivedMail;
 use App\Models\PtoEventAttendee;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
@@ -96,6 +98,12 @@ class PtoEventAttendeeController extends Controller
 
             try {
                 Mail::to($attendee->email)->queue(new PtoEventAttendeeConfirmationMail($attendee));
+                $superAdmins = User::where('role', 'super_admin')->get();
+                foreach ($superAdmins as $admin) {
+                    if (!empty($admin->email)) {
+                        Mail::to($admin->email)->queue(new PtoEventAttendeeReceivedMail($attendee));
+                    }
+                }
             } catch (\Throwable $e) {
                 // Log but don't fail the request
             }
