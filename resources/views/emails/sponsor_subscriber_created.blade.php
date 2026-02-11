@@ -68,17 +68,6 @@
                     </tr>
                 </table>
 
-                @if(!empty($imageDataUri))
-                    <div style="margin-top:18px;">
-                        <div style="color:#6b7280; font-size:12px; margin-bottom:8px;">
-                            Uploaded Image
-                        </div>
-                        <div style="border:1px solid #e5e7eb; border-radius:14px; overflow:hidden; background:#fff;">
-                            <img src="{{ $imageDataUri }}" alt="Subscriber image" style="display:block; width:100%; max-width:680px; height:auto;">
-                        </div>
-                    </div>
-                @endif
-
                 <div style="margin-top:18px; padding-top:14px; border-top:1px solid #e5e7eb; color:#6b7280; font-size:12px;">
                     This is an automated notification from your admin dashboard.
                 </div>
