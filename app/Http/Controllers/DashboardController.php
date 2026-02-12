@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AlumniEvent;
 use App\Models\AlumniForm;
 use App\Models\DonationBooking;
 use App\Models\GeneralDonation;
 use App\Models\ContactSponserModel;
+use App\Models\PtoEvents;
 use App\Models\PtoSubscribeMails;
 use App\Models\SponserPackageSubscriber;
 use App\Models\jobPost as JobPost;
@@ -181,6 +183,42 @@ class DashboardController extends Controller
             }
         }
 
+        // Current running / upcoming PTO event
+        $currentPtoEvent = PtoEvents::whereDate('start_date', '<=', $today)
+            ->where(function ($q) use ($today) {
+                $q->whereNull('end_date')->orWhereDate('end_date', '>=', $today);
+            })
+            ->orderBy('start_date')
+            ->first();
+        $currentPtoEventIsUpcoming = false;
+        if (!$currentPtoEvent) {
+            $currentPtoEvent = PtoEvents::whereDate('start_date', '>=', $today)
+                ->orderBy('start_date')
+                ->first();
+            $currentPtoEventIsUpcoming = $currentPtoEvent ? true : false;
+        }
+        $currentPtoEventAttendeeCount = $currentPtoEvent
+            ? \App\Models\PtoEventAttendee::where('event_id', $currentPtoEvent->id)->count()
+            : 0;
+
+        // Current running / upcoming Alumni event
+        $currentAlumniEvent = AlumniEvent::whereDate('start_date', '<=', $today)
+            ->where(function ($q) use ($today) {
+                $q->whereNull('end_date')->orWhereDate('end_date', '>=', $today);
+            })
+            ->orderBy('start_date')
+            ->first();
+        $currentAlumniEventIsUpcoming = false;
+        if (!$currentAlumniEvent) {
+            $currentAlumniEvent = AlumniEvent::whereDate('start_date', '>=', $today)
+                ->orderBy('start_date')
+                ->first();
+            $currentAlumniEventIsUpcoming = $currentAlumniEvent ? true : false;
+        }
+        $currentAlumniEventAttendeeCount = $currentAlumniEvent
+            ? \App\Models\AlumniEventAttendee::where('event_id', $currentAlumniEvent->id)->count()
+            : 0;
+
         return view('dashboard.main.index', compact(
             'stats',
             'todaySeats',
@@ -200,6 +238,12 @@ class DashboardController extends Controller
             'currentDonationEvent',
             'currentDonationEventIsUpcoming',
             'currentDonationEventSeatsBooked',
+            'currentPtoEvent',
+            'currentPtoEventIsUpcoming',
+            'currentPtoEventAttendeeCount',
+            'currentAlumniEvent',
+            'currentAlumniEventIsUpcoming',
+            'currentAlumniEventAttendeeCount',
         ));
     }
 

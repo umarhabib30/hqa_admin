@@ -133,7 +133,17 @@
                         <div class="flex justify-between items-center">
                             <span class="text-blue-200/60 text-xs font-bold uppercase">Payment Mode</span>
                             <span
-                                class="px-2 py-0.5 bg-white/10 rounded text-xs font-bold">{{ ucfirst($donation->donation_mode) }}</span>
+                                class="px-2 py-0.5 bg-white/10 rounded text-xs font-bold">
+                                @if ($donation->donation_mode === 'paid_now')
+                                    Cash
+                                @elseif ($donation->donation_mode === 'pledged')
+                                    Pledged
+                                @elseif ($donation->donation_mode === 'stripe')
+                                    Stripe
+                                @else
+                                    Unknown
+                                @endif
+                            </span>
                         </div>
                         <div class="flex justify-between items-center">
                             <span class="text-blue-200/60 text-xs font-bold uppercase">Transaction Date</span>

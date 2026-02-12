@@ -87,7 +87,8 @@ class AchievementsController extends Controller
             'card_title' => 'required|string|max:255',
             'card_price' => 'required|numeric|min:0',
             'card_percentage' => 'required|numeric|min:0|max:100',
-            'card_desc' => 'nullable|string',
+            'card_desc' => 'nullable|array',
+            'card_desc.*' => 'nullable|string',
         ]);
 
         $achievement->update([
@@ -96,7 +97,7 @@ class AchievementsController extends Controller
             'card_title' => $request->card_title,
             'card_price' => $request->card_price,
             'card_percentage' => $request->card_percentage,
-            'card_desc' => $request->card_desc,
+            'card_desc' => array_values(array_filter($request->card_desc ?? [])),
         ]);
 
 

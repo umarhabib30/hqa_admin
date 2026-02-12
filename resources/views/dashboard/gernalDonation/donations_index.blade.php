@@ -151,9 +151,8 @@
                             class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-4 focus:ring-[#00285E]/10 focus:border-[#00285E] outline-none transition-all" />
                     </div>
 
-                    <div class="md:col-span-1">
-                        <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Address Line
-                            2</label>
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Address Line 2</label>
                         <input name="address2" value="{{ old('address2') }}"
                             class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-4 focus:ring-[#00285E]/10 focus:border-[#00285E] outline-none transition-all" />
                     </div>
@@ -200,6 +199,7 @@
                             <th class="px-4 py-3 border-b border-gray-200">Donor</th>
                             <th class="px-4 py-3 border-b border-gray-200">Purpose</th>
                             <th class="px-4 py-3 border-b border-gray-200">Amount</th>
+                            <th class="px-4 py-3 border-b border-gray-200">Mode</th>
                             <th class="px-4 py-3 border-b border-gray-200 text-right no-sort">Action</th>
                         </tr>
                     </thead>
@@ -220,6 +220,20 @@
                                 </td>
                                 <td class="px-4 py-3 text-sm text-gray-600 max-w-[200px]">{{ $donation->donation_for }}</td>
                                 <td class="px-4 py-3 font-semibold text-gray-900">${{ number_format($donation->amount, 2) }}</td>
+                                {{-- make badge for donation mode --}}
+                                <td class="px-4 py-3 text-right">
+                                    <span class="px-2.5 py-0.5 bg-gray-100 text-gray-600 rounded-full text-xs font-semibold">
+                                       @if ($donation->donation_mode === 'paid_now')
+                                           Cash
+                                       @elseif ($donation->donation_mode === 'pledged')
+                                           Pledged
+                                       @elseif ($donation->donation_mode === 'stripe')
+                                           Stripe
+                                       @else
+                                           Unknown
+                                       @endif
+                                    </span>
+                                </td>
                                 <td class="px-4 py-3 text-right">
                                     <a href="{{ route('admin.donations.show', $donation) }}"
                                         class="inline-flex items-center px-3 py-1.5 text-sm font-bold text-[#00285E] bg-white border-2 border-[#00285E] rounded-lg hover:bg-[#00285E] hover:text-white transition-all">

@@ -147,11 +147,14 @@
             </div>
         </div>
 
+        <!-- CURRENT EVENTS: Donation Booking | PTO | Alumni -->
         <div class="bg-white rounded-2xl shadow p-6" style="margin-top: 20px;">
-                <!-- CURRENT EVENT -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- CURRENT DONATION BOOKING EVENT -->
                 <div class="rounded-2xl border border-gray-100">
                     <div class="p-4">
                         <h3 class="text-sm font-semibold text-gray-900">Current running event</h3>
+                        <p class="text-xs text-gray-500 mt-0.5">Donation booking</p>
 
                         @if($currentDonationEvent)
                             <p class="mt-1 text-sm text-gray-600">
@@ -174,14 +177,6 @@
                                 $booked = (int) ($currentDonationEventSeatsBooked ?? 0);
                                 $remaining = max($capacity - $booked, 0);
                                 $pct = $capacity > 0 ? min((int) round(($booked / $capacity) * 100), 100) : 0;
-
-                                // Expect this from controller:
-                                // $currentDonationEventSeatBreakdown = [
-                                //   'Adult' => 10,
-                                //   'Baby' => 3,
-                                //   'Sitting' => 2,
-                                // ];
-                                $seatBreakdown = collect($currentDonationEventSeatBreakdown ?? []);
                             @endphp
 
                             <!-- SUMMARY COUNTS -->
@@ -211,29 +206,83 @@
                                 </div>
                             </div>
 
-                            <!-- SEAT BREAKDOWN -->
-                            <div class="mt-8">
-                                <h4 class="text-sm font-semibold text-gray-900">Seat details</h4>
-
-                                @if($seatBreakdown->count())
-                                    <div class="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-3">
-                                        @foreach($seatBreakdown as $type => $count)
-                                            <div class="rounded-xl bg-gray-50 p-4">
-                                                <p class="text-xs text-gray-500 truncate">{{ $type }}</p>
-                                                <p class="text-lg font-semibold text-gray-900">{{ number_format((int)$count) }}</p>
-                                            </div>
-                                        @endforeach
-                                    </div>
-                                @else
-                                    <p class="mt-2 text-sm text-gray-500">No seat breakdown available for this event.</p>
-                                @endif
-                            </div>
+                            <a href="{{ url('donationBooking') }}" class="mt-4 inline-block text-sm text-[#00285E] font-medium hover:underline">View details →</a>
                         @else
                             <p class="mt-2 text-sm text-gray-500">No running or upcoming donation event found.</p>
                         @endif
                     </div>
                 </div>
 
+                <!-- CURRENT PTO EVENT -->
+                <div class="rounded-2xl border border-gray-100">
+                    <div class="p-4">
+                        <h3 class="text-sm font-semibold text-gray-900">Current PTO event</h3>
+                        <p class="text-xs text-gray-500 mt-0.5">PTO events</p>
+
+                        @if($currentPtoEvent ?? null)
+                            <p class="mt-1 text-sm text-gray-600">
+                                <span class="font-medium text-gray-900">{{ $currentPtoEvent->title }}</span>
+                                @if($currentPtoEventIsUpcoming ?? false)
+                                    <span class="ml-2 inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">Upcoming</span>
+                                @else
+                                    <span class="ml-2 inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">Running</span>
+                                @endif
+                            </p>
+                            <p class="mt-1 text-xs text-gray-500">
+                                {{ \Carbon\Carbon::parse($currentPtoEvent->start_date)->format('d M, Y') }}
+                                @if(!empty($currentPtoEvent->end_date))
+                                    – {{ \Carbon\Carbon::parse($currentPtoEvent->end_date)->format('d M, Y') }}
+                                @endif
+                                @if(!empty($currentPtoEvent->location))
+                                    • {{ $currentPtoEvent->location }}
+                                @endif
+                            </p>
+                            <div class="mt-4 rounded-xl bg-gray-50 p-4">
+                                <p class="text-xs text-gray-500">Attendees registered</p>
+                                <p class="text-lg font-semibold text-gray-900">{{ number_format($currentPtoEventAttendeeCount ?? 0) }}</p>
+                            </div>
+                            <a href="{{ route('admin.pto-event-attendees.index') }}?event_id={{ $currentPtoEvent->id }}" class="mt-3 inline-block text-sm text-[#00285E] font-medium hover:underline">View attendees →</a>
+                        @else
+                            <p class="mt-2 text-sm text-gray-500">No running or upcoming PTO event.</p>
+                        @endif
+                    </div>
+                </div>
+
+                <!-- CURRENT ALUMNI EVENT -->
+                <div class="rounded-2xl border border-gray-100">
+                    <div class="p-4">
+                        <h3 class="text-sm font-semibold text-gray-900">Current Alumni event</h3>
+                        <p class="text-xs text-gray-500 mt-0.5">Alumni events</p>
+
+                        @if($currentAlumniEvent ?? null)
+                            <p class="mt-1 text-sm text-gray-600">
+                                <span class="font-medium text-gray-900">{{ $currentAlumniEvent->title }}</span>
+                                @if($currentAlumniEventIsUpcoming ?? false)
+                                    <span class="ml-2 inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">Upcoming</span>
+                                @else
+                                    <span class="ml-2 inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">Running</span>
+                                @endif
+                            </p>
+                            <p class="mt-1 text-xs text-gray-500">
+                                {{ \Carbon\Carbon::parse($currentAlumniEvent->start_date)->format('d M, Y') }}
+                                @if(!empty($currentAlumniEvent->end_date))
+                                    – {{ \Carbon\Carbon::parse($currentAlumniEvent->end_date)->format('d M, Y') }}
+                                @endif
+                                @if(!empty($currentAlumniEvent->location))
+                                    • {{ $currentAlumniEvent->location }}
+                                @endif
+                            </p>
+                            <div class="mt-4 rounded-xl bg-gray-50 p-4">
+                                <p class="text-xs text-gray-500">Attendees registered</p>
+                                <p class="text-lg font-semibold text-gray-900">{{ number_format($currentAlumniEventAttendeeCount ?? 0) }}</p>
+                            </div>
+                            <a href="{{ route('admin.alumni-event-attendees.index') }}?event_id={{ $currentAlumniEvent->id }}" class="mt-3 inline-block text-sm text-[#00285E] font-medium hover:underline">View attendees →</a>
+                        @else
+                            <p class="mt-2 text-sm text-gray-500">No running or upcoming Alumni event.</p>
+                        @endif
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- OTHER OVERVIEW CARDS (each links to related page) -->
