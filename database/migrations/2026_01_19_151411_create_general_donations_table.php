@@ -23,16 +23,16 @@ return new class extends Migration
             $table->string('stripe_subscription_id')->nullable();
             $table->string('status')->default('active');
             $table->string('donation_for')->nullable();
-            $table->string('address1');           
-            $table->string('address2')->nullable();  
-            $table->string('city');               
-            $table->string('state');              
-            $table->string('country');            
+            $table->string('address1');
+            $table->string('address2')->nullable();
+            $table->string('city');
+            $table->string('state');
+            $table->string('country');
 
 
 
 
-            $table->enum('donation_mode', ['paid_now', 'pledged', 'stripe'])->nullable()->default('paid_now');
+            $table->enum('donation_mode', ['paid_now', 'pledged', 'stripe', 'paypal'])->nullable()->default('paid_now');
             $table->timestamps();
         });
     }

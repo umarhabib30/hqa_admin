@@ -32,6 +32,10 @@ class SponserPackageApiController extends Controller
             $intent = PaymentIntent::create([
                 'amount' => (int) round($request->amount * 100),
                 'currency' => 'usd',
+                'automatic_payment_methods' => [
+                    'enabled' => true,
+                ],
+                
                 'metadata' => [
                     'email' => $request->user_email,
                     'sponsor_type' => $request->sponsor_type,

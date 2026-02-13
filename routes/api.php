@@ -176,3 +176,15 @@ Route::get('/alumni-event-attendees', [AlumniEventAttendeeController::class, 'in
 Route::post('/alumni-event-attendees', [AlumniEventAttendeeController::class, 'store']);
 Route::post('/alumni-event-intent', [AlumniEventAttendeeController::class, 'createIntent']); // For Stripe Payment Intent
 Route::get('/alumniFee', [AlumniFeePersonPriceApiController::class, 'index']);
+
+
+//Stripe Intnet
+Route::post('/create-payment-intent', [App\Http\Controllers\Api\GeneralDonationController::class, 'createPaymentIntent']);
+//paypal
+Route::prefix('paypal')->group(function () {
+    Route::post('/create-order', [GeneralDonationController::class, 'createPaypalOrder']);
+    Route::post('/capture-order', [GeneralDonationController::class, 'capturePaypalOrder']);
+    // Recurring (The new ones we just created)
+    // Route::post('/create-subscription', [GeneralDonationController::class, 'createPaypalSubscription']);
+    // Route::post('/confirm-subscription', [GeneralDonationController::class, 'confirmPaypalSubscription']);
+});
