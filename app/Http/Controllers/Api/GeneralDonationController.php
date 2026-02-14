@@ -30,6 +30,16 @@ class GeneralDonationController extends Controller
      */
     public function recurringDonation(Request $request)
     {
+        // Normalize payment method key (frontend may send different names)
+        $pm =
+            $request->input('payment_method') ??
+            $request->input('paymentMethod') ??
+            $request->input('payment_method_id') ??
+            $request->input('paymentMethodId');
+        if (!empty($pm) && !$request->filled('payment_method')) {
+            $request->merge(['payment_method' => $pm]);
+        }
+
         $request->validate([
             'payment_method' => 'required|string',
             'email'          => 'required|email',
@@ -106,6 +116,16 @@ class GeneralDonationController extends Controller
      */
     public function oneTimeDonation(Request $request)
     {
+        // Normalize payment method key (frontend may send different names)
+        $pm =
+            $request->input('payment_method') ??
+            $request->input('paymentMethod') ??
+            $request->input('payment_method_id') ??
+            $request->input('paymentMethodId');
+        if (!empty($pm) && !$request->filled('payment_method')) {
+            $request->merge(['payment_method' => $pm]);
+        }
+
         $request->validate([
             'payment_method' => 'required|string',
             'email'          => 'required|email',
