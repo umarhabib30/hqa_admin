@@ -46,6 +46,7 @@ class DashboardController extends Controller
                     'total' => (float) $row->total,
                 ];
             });
+        $donationsByPurposeGrandTotal = (float) $donationsByPurpose->sum('total');
         $donationsChartDateFrom = $dateFrom->format('Y-m-d');
         $donationsChartDateTo = $dateTo->format('Y-m-d');
 
@@ -68,6 +69,7 @@ class DashboardController extends Controller
             ->groupBy('sponsor_type')
             ->orderByDesc('total')
             ->get();
+        $sponsorSubscribersChartGrandTotal = (int) $sponsorSubscribersChartData->sum('total');
         $sponsorChartDateFrom = $sponsorDateFrom->format('Y-m-d');
         $sponsorChartDateTo = $sponsorDateTo->format('Y-m-d');
         $allBookingEvents = DonationBooking::get();
@@ -226,9 +228,11 @@ class DashboardController extends Controller
             'donationStats',
             'latestDonations',
             'donationsByPurpose',
+            'donationsByPurposeGrandTotal',
             'donationsChartDateFrom',
             'donationsChartDateTo',
             'sponsorSubscribersChartData',
+            'sponsorSubscribersChartGrandTotal',
             'sponsorChartDateFrom',
             'sponsorChartDateTo',
             'sponsorSubscriberCount',

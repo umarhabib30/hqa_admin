@@ -84,11 +84,17 @@
             </div>
         </div>
 
-        <!-- CHARTS ROW (side by side) -->
+        <!-- CHARTS ROW -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6" style="margin-top: 20px;">
             <!-- Donations by purpose (with date range) -->
             <div class="bg-white rounded-2xl shadow p-6 flex flex-col">
-                <h3 class="text-sm font-semibold text-gray-900 mb-4">Donations by purpose</h3>
+                <div class="flex items-start justify-between gap-4 mb-1">
+                    <h3 class="text-sm font-semibold text-gray-900">Donations by purpose</h3>
+                    <div class="text-right">
+                        <p class="text-[11px] text-gray-500">Grand total</p>
+                        <p class="text-sm font-semibold text-gray-900">${{ number_format((float)($donationsByPurposeGrandTotal ?? 0), 2) }}</p>
+                    </div>
+                </div>
                 <form method="get" action="{{ route('dashboard.index') }}" class="flex flex-wrap items-end gap-3 mb-4">
                     <input type="hidden" name="sponsor_date_from" value="{{ $sponsorChartDateFrom ?? '' }}">
                     <input type="hidden" name="sponsor_date_to" value="{{ $sponsorChartDateTo ?? '' }}">
@@ -107,9 +113,11 @@
                     </button>
                 </form>
                 <div class="w-full flex-1 min-h-0" style="min-height: 260px;">
-                    <div class="w-full h-64 relative">
+                    <div class="w-full h-72 relative">
                         <canvas id="donationsByPurposeChart"></canvas>
                     </div>
+                    <!-- Custom legend: amount inside color chip -->
+                    <div id="donationsByPurposeLegend" class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2"></div>
                 </div>
                 @if($donationsByPurpose->isEmpty())
                     <p class="text-sm text-gray-500 mt-2 text-center">No donations in this date range.</p>
@@ -118,7 +126,13 @@
 
             <!-- Sponsor package subscribers count -->
             <div class="bg-white rounded-2xl shadow p-6 flex flex-col">
-                <h3 class="text-sm font-semibold text-gray-900 mb-4">Sponsor package subscribers</h3>
+                <div class="flex items-start justify-between gap-4 mb-1">
+                    <h3 class="text-sm font-semibold text-gray-900">Sponsor package subscribers</h3>
+                    <div class="text-right">
+                        <p class="text-[11px] text-gray-500">Total</p>
+                        <p class="text-sm font-semibold text-gray-900">{{ number_format((int)($sponsorSubscribersChartGrandTotal ?? 0)) }}</p>
+                    </div>
+                </div>
                 <form method="get" action="{{ route('dashboard.index') }}" class="flex flex-wrap items-end gap-3 mb-4">
                     <input type="hidden" name="date_from" value="{{ $donationsChartDateFrom ?? '' }}">
                     <input type="hidden" name="date_to" value="{{ $donationsChartDateTo ?? '' }}">
@@ -337,60 +351,157 @@
         document.addEventListener('DOMContentLoaded', function() {
             const chartColors = ['#00285E', '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4'];
 
-            // Donations by purpose (donut chart)
+            // Donations by purpose (bar chart)
             const donationsCtx = document.getElementById('donationsByPurposeChart');
             if (donationsCtx) {
                 const donationsData = @json($donationsByPurpose);
                 if (donationsData.length) {
+                    const fmtUsd = (n) => '$' + Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    const getOrCreateLegendList = (chart, id) => {
+                        const legendContainer = document.getElementById(id);
+                        if (!legendContainer) return null;
+                        return legendContainer;
+                    };
+
+                    const htmlLegend = {
+                        id: 'htmlLegend',
+                        afterUpdate(chart, args, options) {
+                            const legendContainer = getOrCreateLegendList(chart, options.containerID);
+                            if (!legendContainer) return;
+
+                            // Clear existing
+                            while (legendContainer.firstChild) {
+                                legendContainer.firstChild.remove();
+                            }
+
+                            const items = chart.options.plugins.legend.labels.generateLabels(chart);
+                            items.forEach((item) => {
+                                const i = item.index;
+                                const purpose = donationsData[i]?.purpose ?? item.text;
+
+                                const row = document.createElement('button');
+                                row.type = 'button';
+                                row.className = 'w-full flex items-center gap-2 text-left';
+                                row.onclick = () => {
+                                    chart.toggleDataVisibility(i);
+                                    chart.update();
+                                };
+
+                                const left = document.createElement('div');
+                                left.className = 'flex items-center gap-2 min-w-0';
+
+                                const label = document.createElement('span');
+                                label.className = 'text-[12px] text-gray-700 truncate';
+                                label.textContent = purpose;
+
+                                if (item.hidden) {
+                                    label.style.opacity = '0.5';
+                                }
+
+                                left.appendChild(label);
+                                row.appendChild(left);
+                                legendContainer.appendChild(row);
+                            });
+                        }
+                    };
                     new Chart(donationsCtx, {
-                        type: 'doughnut',
+                        type: 'bar',
                         data: {
+                            // Keep chart labels clean; legend uses custom HTML with amount inside chip
                             labels: donationsData.map(d => d.purpose),
                             datasets: [{
                                 data: donationsData.map(d => d.total),
                                 backgroundColor: chartColors.slice(0, donationsData.length),
-                                borderColor: '#fff',
-                                borderWidth: 2
+                                borderRadius: 8,
+                                borderSkipped: false
                             }]
                         },
                         options: {
                             responsive: true,
                             maintainAspectRatio: false,
-                            cutout: '60%',
-                            layout: { padding: { right: 24, left: 8 } },
+                            layout: { padding: { right: 8, left: 8 } },
+                            scales: {
+                                x: {
+                                    ticks: {
+                                        color: '#6b7280',
+                                        maxRotation: 35,
+                                        minRotation: 0,
+                                        font: { size: 11 }
+                                    },
+                                    grid: { display: false }
+                                },
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: {
+                                        color: '#6b7280',
+                                        font: { size: 11 },
+                                        callback: (v) => '$' + Number(v).toLocaleString()
+                                    },
+                                    grid: { color: '#f3f4f6' }
+                                }
+                            },
                             plugins: {
-                                legend: { position: 'right', align: 'middle' },
-                                tooltip: { callbacks: { label: ctx => ctx.label + ': $' + ctx.raw.toLocaleString() } }
+                                legend: { display: false },
+                                htmlLegend: { containerID: 'donationsByPurposeLegend' },
+                                tooltip: {
+                                    callbacks: {
+                                        label: (ctx) => `${ctx.label}: ${fmtUsd(ctx.raw)}`
+                                    }
+                                }
                             }
-                        }
+                        },
+                        plugins: [htmlLegend]
                     });
                 }
             }
 
-            // Sponsor package subscribers (donut chart)
+            // Sponsor package subscribers (bar chart)
             const sponsorCtx = document.getElementById('sponsorSubscribersChart');
             if (sponsorCtx) {
                 const sponsorData = @json($sponsorSubscribersChartData);
                 if (sponsorData.length) {
                     new Chart(sponsorCtx, {
-                        type: 'doughnut',
+                        type: 'bar',
                         data: {
-                            labels: sponsorData.map(d => d.sponsor_type || 'Unknown'),
+                            labels: sponsorData.map(d => `${(d.sponsor_type || 'Unknown')} (${Number(d.total).toLocaleString()})`),
                             datasets: [{
                                 data: sponsorData.map(d => Number(d.total)),
                                 backgroundColor: chartColors.slice(0, sponsorData.length),
-                                borderColor: '#fff',
-                                borderWidth: 2
+                                borderRadius: 8,
+                                borderSkipped: false
                             }]
                         },
                         options: {
                             responsive: true,
                             maintainAspectRatio: false,
-                            cutout: '60%',
-                            layout: { padding: { right: 24, left: 8 } },
+                            layout: { padding: { right: 8, left: 8 } },
+                            scales: {
+                                x: {
+                                    ticks: {
+                                        color: '#6b7280',
+                                        maxRotation: 35,
+                                        minRotation: 0,
+                                        font: { size: 11 }
+                                    },
+                                    grid: { display: false }
+                                },
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: {
+                                        color: '#6b7280',
+                                        font: { size: 11 },
+                                        precision: 0
+                                    },
+                                    grid: { color: '#f3f4f6' }
+                                }
+                            },
                             plugins: {
-                                legend: { position: 'right', align: 'middle' },
-                                tooltip: { callbacks: { label: ctx => ctx.label + ': ' + ctx.raw + ' subscriber(s)' } }
+                                legend: { display: false },
+                                tooltip: {
+                                    callbacks: {
+                                        label: (ctx) => `${ctx.label}: ${Number(ctx.raw).toLocaleString()} subscriber(s)`
+                                    }
+                                }
                             }
                         }
                     });

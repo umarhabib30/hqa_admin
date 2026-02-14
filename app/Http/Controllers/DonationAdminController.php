@@ -5,6 +5,10 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\GeneralDonation;
 use App\Models\FundRaisa;
+use App\Mail\GeneralDonationConfirmationMail;
+use App\Mail\GeneralDonationReceivedMail;
+use App\Models\User;
+use Illuminate\Support\Facades\Mail;
 
 class DonationAdminController extends Controller
 {
@@ -38,7 +42,7 @@ class DonationAdminController extends Controller
 
         $goalId = isset($validated['fund_raisa_id']) ? (int) $validated['fund_raisa_id'] : FundRaisa::latest('id')->value('id');
 
-        GeneralDonation::create([
+        $donation = GeneralDonation::create([
             'fund_raisa_id' => $goalId,
             'donation_for'  => $validated['donation_for'],
             'name'          => $validated['name'] ?? null,
@@ -46,6 +50,9 @@ class DonationAdminController extends Controller
             'amount'        => $validated['amount'],
             'donation_mode' => $validated['donation_mode'],
             'payment_id'    => $validated['payment_id'] ?? null,
+            // Manual entries should behave like one-time donations
+            'frequency'     => 'one_time',
+            'status'        => ($validated['donation_mode'] ?? 'paid_now') === 'pledged' ? 'pending' : 'paid',
 
             // ✅ ADDRESS SAVE
             'address1' => $validated['address1'],
@@ -54,6 +61,8 @@ class DonationAdminController extends Controller
             'state'    => $validated['state'],
             'country'  => $validated['country'],
         ]);
+
+        $this->sendDonationEmails($donation);
 
         return redirect()
             ->route('admin.donations.index')
@@ -121,5 +130,27 @@ class DonationAdminController extends Controller
         return redirect()
             ->route('admin.donations.index')
             ->with('success', 'Donation deleted successfully.');
+    }
+
+    /**
+     * Send confirmation to donor and notification to super admins.
+     * Manual donation entries should also notify both parties.
+     */
+    private function sendDonationEmails(GeneralDonation $donation): void
+    {
+        try {
+            if (!empty($donation->email)) {
+                Mail::to($donation->email)->queue(new GeneralDonationConfirmationMail($donation));
+            }
+
+            $superAdmins = User::where('role', 'super_admin')->get();
+            foreach ($superAdmins as $admin) {
+                if (!empty($admin->email)) {
+                    Mail::to($admin->email)->queue(new GeneralDonationReceivedMail($donation));
+                }
+            }
+        } catch (\Throwable $e) {
+            // Don't fail the manual entry flow if mail/queue fails.
+        }
     }
 }
