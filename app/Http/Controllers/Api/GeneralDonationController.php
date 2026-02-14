@@ -256,12 +256,15 @@ class GeneralDonationController extends Controller
             'donation_for' => 'required|string',
             'name'         => 'required|string',
             'email'        => 'required|email',
+            'return_url'   => 'nullable|url',
+            'cancel_url'   => 'nullable|url',
             // Include address validation if you want to save it before the redirect
         ]);
 
         try {
             $provider = new PayPalClient;
             $provider->setApiCredentials(config('paypal'));
+            $provider->setCurrency(config('paypal.currency', 'USD'));
             $provider->getAccessToken();
 
             // 1. DYNAMIC PRODUCT CREATION
@@ -269,19 +272,27 @@ class GeneralDonationController extends Controller
                 "name" => "Donation Service",
                 "description" => "Recurring donation for " . config('app.name'),
                 "type" => "SERVICE",
-                "category" => "CHARITY_AND_NON_PROFIT_ORGANIZATIONS"
+                // PayPal Catalog Products API expects a fixed enum value (e.g. CHARITY/NONPROFIT/SOFTWARE).
+                "category" => "CHARITY"
             ];
 
             // Avoid creating duplicate products by using a consistent Request-ID
             $request_id = 'PRODUCT-' . md5('donation-service-fixed');
             $product = $provider->createProduct($productData, $request_id);
-            $productId = $product['id'] ?? 'DONATION-SERVICE';
+            if (isset($product['error'])) {
+                throw new Exception("PayPal Product Error: " . json_encode($product));
+            }
+            $productId = $product['id'] ?? null;
+            if (!$productId) {
+                throw new Exception("PayPal Product Error: Missing product id. Response: " . json_encode($product));
+            }
 
             // 2. CREATE DYNAMIC PLAN
             $planName = "Donation: " . $request->donation_for . " ($" . $request->amount . ")";
             $planDetails = [
                 "product_id" => $productId,
                 "name" => $planName,
+                "description" => $planName,
                 "status" => "ACTIVE",
                 "billing_cycles" => [
                     [
@@ -313,18 +324,48 @@ class GeneralDonationController extends Controller
             if (isset($plan['error'])) {
                 throw new Exception("PayPal Plan Error: " . json_encode($plan));
             }
+            if (empty($plan['id'])) {
+                throw new Exception("PayPal Plan Error: Missing plan id. Response: " . json_encode($plan));
+            }
 
             // 3. CREATE SUBSCRIPTION
+            $defaultReturnUrl = url('/subscribe?paypal=success');
+            $defaultCancelUrl = url('/subscribe?paypal=cancel');
+            $returnUrl = $request->input('return_url') ?: $defaultReturnUrl;
+            $cancelUrl = $request->input('cancel_url') ?: $defaultCancelUrl;
+
+            // Split full name into given/surname (best-effort)
+            $nameParts = preg_split('/\s+/', trim((string) $request->name)) ?: [];
+            $givenName = $nameParts[0] ?? 'Donor';
+            $surname = count($nameParts) > 1 ? implode(' ', array_slice($nameParts, 1)) : ' ';
+
             $subscriptionData = [
                 "plan_id" => $plan['id'],
+                "subscriber" => [
+                    "name" => [
+                        "given_name" => $givenName,
+                        "surname" => $surname,
+                    ],
+                    "email_address" => $request->email,
+                ],
                 "application_context" => [
                     "brand_name" => config('app.name'),
+                    "locale" => "en-US",
+                    // Let PayPal decide whether to show wallet vs card (if eligible).
+                    // Subscriptions often still require PayPal login, depending on account/region.
+                    "landing_page" => "NO_PREFERENCE",
                     "shipping_preference" => "NO_SHIPPING",
                     "user_action" => "SUBSCRIBE_NOW",
+                    "return_url" => $returnUrl,
+                    "cancel_url" => $cancelUrl,
                 ]
             ];
 
             $subscription = $provider->createSubscription($subscriptionData);
+
+            if (isset($subscription['error'])) {
+                throw new Exception("PayPal Subscription Error: " . json_encode($subscription));
+            }
 
             // 4. OPTIONAL: Save a pending record
             // Since PayPal subscriptions are approved on the frontend, 
