@@ -82,8 +82,10 @@ class GeneralDonationController extends Controller
             $subscription = $this->stripe->subscriptions->create([
                 'customer' => $customer->id,
                 'items'    => [['price' => $price->id]],
+                'collection_method' => 'charge_automatically',
                 'payment_behavior' => 'default_incomplete',
                 'payment_settings' => [
+                    'payment_method_types' => ['card'],
                     'save_default_payment_method' => 'on_subscription',
                 ],
                 'metadata' => ['purpose' => $request->donation_for],
@@ -106,6 +108,14 @@ class GeneralDonationController extends Controller
                 }
 
                 if (is_object($latestInvoice)) {
+                    // If invoice is draft, finalize so a PaymentIntent gets created
+                    if (($latestInvoice->status ?? null) === 'draft' && !empty($latestInvoice->id)) {
+                        $this->stripe->invoices->finalizeInvoice($latestInvoice->id);
+                        $latestInvoice = $this->stripe->invoices->retrieve($latestInvoice->id, [
+                            'expand' => ['payment_intent'],
+                        ]);
+                    }
+
                     $pi = $latestInvoice->payment_intent ?? null;
 
                     // If payment_intent isn't expanded, retrieve it
@@ -155,11 +165,19 @@ class GeneralDonationController extends Controller
 
             // If subscription isn't active and we still have no client_secret, avoid frontend IntegrationError
             if (($subscription->status ?? null) !== 'active') {
+                Log::warning('Stripe recurring missing client_secret', [
+                    'subscription_id' => $subscription->id ?? null,
+                    'subscription_status' => $subscription->status ?? null,
+                    'latest_invoice' => is_object($latestInvoice) ? ($latestInvoice->id ?? null) : $latestInvoice,
+                    'invoice_status' => is_object($latestInvoice) ? ($latestInvoice->status ?? null) : null,
+                    'payment_intent' => is_object($pi) ? ($pi->id ?? null) : $pi,
+                ]);
                 return response()->json([
                     'paid' => false,
                     'donation_id' => $donation->id,
                     'subscription_id' => $subscription->id,
                     'subscription_status' => $subscription->status ?? null,
+                    'invoice_id' => is_object($latestInvoice) ? ($latestInvoice->id ?? null) : null,
                     'message' => 'Subscription created but payment client_secret is missing. Check Stripe subscription latest_invoice/payment_intent.',
                 ], 200);
             }
