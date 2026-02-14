@@ -41,7 +41,9 @@ class GeneralDonationController extends Controller
         }
 
         $request->validate([
-            'payment_method' => 'required|string',
+            // For PaymentElement flows, payment_method is created on frontend during confirmPayment.
+            // For legacy flows, allow passing a payment_method id (pm_*) and we will use it.
+            'payment_method' => 'nullable|string',
             'email'          => 'required|email',
             'name'           => 'nullable|string',
             'amount'         => 'required|integer|min:1',
@@ -56,13 +58,16 @@ class GeneralDonationController extends Controller
 
         try {
             // 1. Create or Get Customer
-            $customer = $this->stripe->customers->create([
+            $customerPayload = [
                 'email' => $request->email,
                 'name'  => $request->name,
-                'payment_method' => $request->payment_method,
-                'invoice_settings' => ['default_payment_method' => $request->payment_method],
                 'metadata' => ['purpose' => $request->donation_for],
-            ]);
+            ];
+            if ($request->filled('payment_method')) {
+                $customerPayload['payment_method'] = $request->payment_method;
+                $customerPayload['invoice_settings'] = ['default_payment_method' => $request->payment_method];
+            }
+            $customer = $this->stripe->customers->create($customerPayload);
 
             // 2. Create Product & Price dynamically
             $product = $this->stripe->products->create(['name' => 'Donation: ' . $request->donation_for]);
@@ -73,17 +78,22 @@ class GeneralDonationController extends Controller
                 'product'     => $product->id,
             ]);
 
-            // 3. Create Subscription
+            // 3. Create Subscription (default_incomplete so frontend can confirm via PaymentElement if needed)
             $subscription = $this->stripe->subscriptions->create([
                 'customer' => $customer->id,
                 'items'    => [['price' => $price->id]],
-                'off_session' => true,
-                'confirm' => true,
-                'payment_behavior' => 'allow_incomplete',
+                'payment_behavior' => 'default_incomplete',
+                'payment_settings' => [
+                    'save_default_payment_method' => 'on_subscription',
+                ],
                 'metadata' => ['purpose' => $request->donation_for],
+                'expand' => ['latest_invoice.payment_intent'],
             ]);
 
             $goal = FundRaisa::latest()->first();
+
+            $pi = $subscription->latest_invoice?->payment_intent ?? null;
+            $clientSecret = is_object($pi) ? ($pi->client_secret ?? null) : null;
 
             $donation = GeneralDonation::create([
                 'fund_raisa_id'          => $goal?->id,
@@ -104,7 +114,24 @@ class GeneralDonationController extends Controller
                 'country'                => $request->country,
             ]);
 
-            return response()->json(['paid' => true, 'donation_id' => $donation->id], 200);
+            // If Stripe created a PaymentIntent for the first invoice, frontend must confirm it (3DS/wallets)
+            if ($clientSecret) {
+                return response()->json([
+                    'paid' => false,
+                    'donation_id' => $donation->id,
+                    'subscription_id' => $subscription->id,
+                    'client_secret' => $clientSecret,
+                    'pi_status' => is_object($pi) ? ($pi->status ?? null) : null,
+                    'subscription_status' => $subscription->status ?? null,
+                ], 200);
+            }
+
+            return response()->json([
+                'paid' => ($subscription->status === 'active'),
+                'donation_id' => $donation->id,
+                'subscription_id' => $subscription->id,
+                'subscription_status' => $subscription->status ?? null,
+            ], 200);
         } catch (Exception $e) {
             Log::error('Stripe Recurring Error: ' . $e->getMessage());
             return response()->json(['paid' => false, 'error' => $e->getMessage()], 500);
@@ -127,7 +154,9 @@ class GeneralDonationController extends Controller
         }
 
         $request->validate([
-            'payment_method' => 'required|string',
+            // For PaymentElement flows, payment_method is created on frontend during confirmPayment.
+            // For legacy flows, allow passing a payment_method id (pm_*) and we will confirm server-side.
+            'payment_method' => 'nullable|string',
             'email'          => 'required|email',
             'amount'         => 'required|integer|min:1',
             'donation_for'   => 'required|string',
@@ -141,19 +170,31 @@ class GeneralDonationController extends Controller
             $customer = $this->stripe->customers->create([
                 'email' => $request->email,
                 'name'  => $request->name,
-                'payment_method' => $request->payment_method,
             ]);
 
-            $pi = $this->stripe->paymentIntents->create([
+            // Create PI without confirming so PaymentElement can confirm (wallets/3DS)
+            $piPayload = [
                 'amount'   => (int) $request->amount * 100,
                 'currency' => 'usd',
                 'customer' => $customer->id,
-                'payment_method' => $request->payment_method,
-                'confirm'  => true,
-                'off_session' => true,
+                'receipt_email' => $request->email,
                 'description'   => 'One-time Donation: ' . $request->donation_for,
-                'automatic_payment_methods' => ['enabled' => true, 'allow_redirects' => 'never'],
-            ]);
+                'metadata' => [
+                    'type' => 'general_donation_one_time',
+                    'purpose' => $request->donation_for,
+                ],
+                'automatic_payment_methods' => ['enabled' => true],
+            ];
+
+            // Legacy: if payment_method provided, confirm server-side (may still require_action)
+            if ($request->filled('payment_method')) {
+                $piPayload['payment_method'] = $request->payment_method;
+                $piPayload['confirm'] = true;
+                $piPayload['off_session'] = false;
+                $piPayload['automatic_payment_methods'] = ['enabled' => true, 'allow_redirects' => 'never'];
+            }
+
+            $pi = $this->stripe->paymentIntents->create($piPayload);
 
             $goal = FundRaisa::latest()->first();
 
@@ -175,7 +216,23 @@ class GeneralDonationController extends Controller
                 'country'            => $request->country,
             ]);
 
-            return response()->json(['paid' => $pi->status === 'succeeded', 'donation_id' => $donation->id]);
+            // If not yet succeeded, frontend should confirm with client_secret
+            if ($pi->status !== 'succeeded' && !empty($pi->client_secret)) {
+                return response()->json([
+                    'paid' => false,
+                    'donation_id' => $donation->id,
+                    'payment_intent_id' => $pi->id,
+                    'client_secret' => $pi->client_secret,
+                    'pi_status' => $pi->status,
+                ], 200);
+            }
+
+            return response()->json([
+                'paid' => ($pi->status === 'succeeded'),
+                'donation_id' => $donation->id,
+                'payment_intent_id' => $pi->id,
+                'pi_status' => $pi->status,
+            ]);
         } catch (Exception $e) {
             Log::error('Stripe OneTime Error: ' . $e->getMessage());
             return response()->json(['paid' => false, 'message' => $e->getMessage()], 500);
