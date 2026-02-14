@@ -87,13 +87,40 @@ class GeneralDonationController extends Controller
                     'save_default_payment_method' => 'on_subscription',
                 ],
                 'metadata' => ['purpose' => $request->donation_for],
-                'expand' => ['latest_invoice.payment_intent'],
+                'expand' => ['latest_invoice', 'latest_invoice.payment_intent'],
             ]);
 
             $goal = FundRaisa::latest()->first();
 
-            $pi = $subscription->latest_invoice?->payment_intent ?? null;
-            $clientSecret = is_object($pi) ? ($pi->client_secret ?? null) : null;
+            // Extract PaymentIntent client_secret for the first invoice
+            $pi = null;
+            $clientSecret = null;
+            $latestInvoice = $subscription->latest_invoice ?? null;
+
+            try {
+                // If latest_invoice isn't expanded, retrieve it
+                if (is_string($latestInvoice) && $latestInvoice !== '') {
+                    $latestInvoice = $this->stripe->invoices->retrieve($latestInvoice, [
+                        'expand' => ['payment_intent'],
+                    ]);
+                }
+
+                if (is_object($latestInvoice)) {
+                    $pi = $latestInvoice->payment_intent ?? null;
+
+                    // If payment_intent isn't expanded, retrieve it
+                    if (is_string($pi) && $pi !== '') {
+                        $pi = $this->stripe->paymentIntents->retrieve($pi);
+                    }
+
+                    if (is_object($pi)) {
+                        $clientSecret = $pi->client_secret ?? null;
+                    }
+                }
+            } catch (\Throwable $e) {
+                // Ignore extraction failures; we'll return a safe response below.
+                $clientSecret = null;
+            }
 
             $donation = GeneralDonation::create([
                 'fund_raisa_id'          => $goal?->id,
@@ -115,7 +142,7 @@ class GeneralDonationController extends Controller
             ]);
 
             // If Stripe created a PaymentIntent for the first invoice, frontend must confirm it (3DS/wallets)
-            if ($clientSecret) {
+            if (!empty($clientSecret)) {
                 return response()->json([
                     'paid' => false,
                     'donation_id' => $donation->id,
@@ -123,6 +150,17 @@ class GeneralDonationController extends Controller
                     'client_secret' => $clientSecret,
                     'pi_status' => is_object($pi) ? ($pi->status ?? null) : null,
                     'subscription_status' => $subscription->status ?? null,
+                ], 200);
+            }
+
+            // If subscription isn't active and we still have no client_secret, avoid frontend IntegrationError
+            if (($subscription->status ?? null) !== 'active') {
+                return response()->json([
+                    'paid' => false,
+                    'donation_id' => $donation->id,
+                    'subscription_id' => $subscription->id,
+                    'subscription_status' => $subscription->status ?? null,
+                    'message' => 'Subscription created but payment client_secret is missing. Check Stripe subscription latest_invoice/payment_intent.',
                 ], 200);
             }
 
