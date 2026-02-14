@@ -182,9 +182,11 @@ Route::get('/alumniFee', [AlumniFeePersonPriceApiController::class, 'index']);
 Route::post('/create-payment-intent', [App\Http\Controllers\Api\GeneralDonationController::class, 'createPaymentIntent']);
 //paypal
 Route::prefix('paypal')->group(function () {
+    // One-Time Donation Routes
     Route::post('/create-order', [GeneralDonationController::class, 'createPaypalOrder']);
     Route::post('/capture-order', [GeneralDonationController::class, 'capturePaypalOrder']);
-    // Recurring (The new ones we just created)
-    // Route::post('/create-subscription', [GeneralDonationController::class, 'createPaypalSubscription']);
-    // Route::post('/confirm-subscription', [GeneralDonationController::class, 'confirmPaypalSubscription']);
+
+    // Recurring Donation Routes (Monthly/Yearly)
+    Route::post('/create-subscription', [GeneralDonationController::class, 'createPaypalSubscription']);
+    Route::post('/save-subscription', [GeneralDonationController::class, 'savePaypalSubscription']);
 });
