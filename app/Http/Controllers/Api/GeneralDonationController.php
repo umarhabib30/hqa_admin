@@ -30,16 +30,16 @@ class GeneralDonationController extends Controller
      */
     public function recurringDonation(Request $request)
     {
-        // Normalize payment method key (frontend may send different names)
         $pm =
             $request->input('payment_method') ??
             $request->input('paymentMethod') ??
             $request->input('payment_method_id') ??
             $request->input('paymentMethodId');
+    
         if (!empty($pm) && !$request->filled('payment_method')) {
             $request->merge(['payment_method' => $pm]);
         }
-
+    
         $request->validate([
             'payment_method' => 'nullable|string',
             'email'          => 'required|email',
@@ -52,31 +52,56 @@ class GeneralDonationController extends Controller
             'city'           => 'required|string|max:255',
             'state'          => 'required|string|max:255',
             'country'        => 'required|string|max:255',
+            // optional: customer_id if you want to reuse the same customer in call #2
+            'customer_id'    => 'nullable|string',
         ]);
     
         try {
             $paymentMethodId = $request->filled('payment_method') ? $request->payment_method : null;
-
-            // 1) Create Customer with default PM
-            $customer = $this->stripe->customers->create([
-                'email' => $request->email,
-                'name'  => $request->name,
-                
-                'metadata' => ['purpose' => $request->donation_for],
-            ]);
-
-            // If frontend provided a PaymentMethod (pm_*), attach + set as default for invoices.
-            // This enables Stripe to immediately create/attempt the first invoice PaymentIntent.
-            if (!empty($paymentMethodId)) {
-                $this->stripe->paymentMethods->attach($paymentMethodId, [
-                    'customer' => $customer->id,
-                ]);
-                $this->stripe->customers->update($customer->id, [
-                    'invoice_settings' => [
-                        'default_payment_method' => $paymentMethodId,
-                    ],
+    
+            // ✅ Reuse customer if provided, otherwise create new
+            if ($request->filled('customer_id')) {
+                $customer = $this->stripe->customers->retrieve($request->customer_id, []);
+            } else {
+                $customer = $this->stripe->customers->create([
+                    'email' => $request->email,
+                    'name'  => $request->name,
+                    'metadata' => ['purpose' => $request->donation_for],
                 ]);
             }
+    
+            /**
+             * ✅ IMPORTANT FIX:
+             * If no pm_... provided, return a SetupIntent client_secret.
+             * Frontend will confirmSetup() and then call this endpoint again with pm_...
+             */
+            if (empty($paymentMethodId)) {
+                $si = $this->stripe->setupIntents->create([
+                    'customer' => $customer->id,
+                    'usage' => 'off_session',
+                    'payment_method_types' => ['card'],
+                    'metadata' => ['purpose' => $request->donation_for],
+                ]);
+    
+                return response()->json([
+                    'paid' => false,
+                    'client_secret' => $si->client_secret,   // ✅ seti_...
+                    'intent_type' => 'setup_intent',
+                    'customer_id' => $customer->id,
+                    'payment_method_provided' => false,
+                ], 200);
+            }
+    
+            // ✅ Attach PM + set as default for invoices
+            $this->stripe->paymentMethods->attach($paymentMethodId, [
+                'customer' => $customer->id,
+            ]);
+    
+            $this->stripe->customers->update($customer->id, [
+                'invoice_settings' => [
+                    'default_payment_method' => $paymentMethodId,
+                ],
+            ]);
     
             // 2) Create Product & Price
             $product = $this->stripe->products->create([
@@ -90,146 +115,39 @@ class GeneralDonationController extends Controller
                 'product'     => $product->id,
             ]);
     
-            // 3) Create Subscription and force immediate payment attempt
-            $subscriptionPayload = [
+            // 3) Create Subscription and expand PI
+            $subscription = $this->stripe->subscriptions->create([
                 'customer' => $customer->id,
                 'items'    => [['price' => $price->id]],
-    
-                // ensure automatic charge
                 'collection_method' => 'charge_automatically',
-    
-                // make Stripe create a PI for the first invoice
                 'payment_behavior' => 'default_incomplete',
-    
+                'default_payment_method' => $paymentMethodId,
                 'payment_settings' => [
                     'save_default_payment_method' => 'on_subscription',
-                    // helps guarantee PI creation in many setups
-                    'payment_method_types' => ['card'],
                 ],
-    
-                'expand' => ['latest_invoice.payment_intent', 'pending_setup_intent'],
+                'expand' => ['latest_invoice.payment_intent'],
                 'metadata' => ['purpose' => $request->donation_for],
-            ];
-
-            // Set subscription-level default (helps invoices pick up a PM immediately)
-            if (!empty($paymentMethodId)) {
-                $subscriptionPayload['default_payment_method'] = $paymentMethodId;
-            }
-
-            $subscription = $this->stripe->subscriptions->create($subscriptionPayload);
+            ]);
     
-            // --- Fetch invoice + PI safely ---
-            $invoiceRef = $subscription->latest_invoice ?? null;
-            $invoiceId =
-                is_string($invoiceRef) ? $invoiceRef : ($invoiceRef->id ?? null);
-
-            $invoice = null;
-            if (!empty($invoiceId)) {
-                $invoice = $this->stripe->invoices->retrieve($invoiceId, [
-                    'expand' => ['payment_intent'],
-                ]);
-            }
-
-            $paymentIntent = $invoice->payment_intent ?? null;
-
-            $invoiceStatus = $invoice ? ($invoice->status ?? null) : null;
-
-            // Only draft invoices can be finalized.
-            // Finalization is what triggers PaymentIntent creation for charge_automatically invoices.
-            if (!empty($invoiceId) && $invoiceStatus === 'draft') {
-                $invoice = $this->stripe->invoices->finalizeInvoice($invoiceId, [
-                    'expand' => ['payment_intent'],
-                ]);
-                $invoiceStatus = $invoice->status ?? null;
-                $paymentIntent = $invoice->payment_intent ?? null;
-            }
-
-            // If invoice is already open (finalized) but PI is still missing, attempt to pay it.
-            // This can happen if the invoice was finalized but no default payment method was set at that moment.
-            $pmForInvoicePay = $paymentMethodId ?: ($invoice->default_payment_method ?? null);
-            if (!empty($invoiceId) && !$paymentIntent && $invoiceStatus === 'open' && !empty($pmForInvoicePay)) {
-                $invoice = $this->stripe->invoices->pay($invoiceId, [
-                    'payment_method' => $pmForInvoicePay,
-                    'expand' => ['payment_intent'],
-                ]);
-                $invoiceStatus = $invoice->status ?? null;
-                $paymentIntent = $invoice->payment_intent ?? null;
-            }
+            $invoice = $subscription->latest_invoice ?? null;
+            $pi = $invoice?->payment_intent ?? null;
     
-            // PI could be ID string
-            if (is_string($paymentIntent)) {
-                $paymentIntent = $this->stripe->paymentIntents->retrieve($paymentIntent);
-            }
+            // ✅ If PI exists, return client_secret so frontend can confirmPayment if required (3DS etc)
+            $clientSecret = $pi?->client_secret;
     
             $paid = ($subscription->status === 'active');
-            $setupIntent = $subscription->pending_setup_intent ?? null;
-            if (is_string($setupIntent)) {
-                $setupIntent = $this->stripe->setupIntents->retrieve($setupIntent);
-            }
-
-            // Stripe may create either:
-            // - PaymentIntent (first invoice payment), or
-            // - pending_setup_intent (collect a PM first, eg trial/if PI not generated)
-            $intentType = null;
-            $clientSecret = null;
-            if (!$paid && $paymentIntent && !empty($paymentIntent->client_secret)) {
-                $intentType = 'payment_intent';
-                $clientSecret = $paymentIntent->client_secret;
-            } elseif (!$paid && $setupIntent && !empty($setupIntent->client_secret)) {
-                $intentType = 'setup_intent';
-                $clientSecret = $setupIntent->client_secret;
-            }
-    
-            // Save donation
-            $goal = FundRaisa::latest()->first();
-    
-            $donation = GeneralDonation::create([
-                'fund_raisa_id'          => $goal?->id,
-                'donation_for'           => $request->donation_for,
-                'name'                   => $request->name,
-                'email'                  => $request->email,
-                'amount'                 => (int) $request->amount,
-                'payment_id'             => $subscription->id,
-                'donation_mode'          => 'stripe',
-                'frequency'              => $request->interval,
-                'stripe_customer_id'     => $customer->id,
-                'stripe_subscription_id' => $subscription->id,
-                'status'                 => $paid ? 'paid' : 'pending',
-                'address1'               => $request->address1,
-                'address2'               => $request->address2,
-                'city'                   => $request->city,
-                'state'                  => $request->state,
-                'country'                => $request->country,
-            ]);
-    
-            Log::info('Stripe subscription created', [
-                'subscription_id' => $subscription->id,
-                'subscription_status' => $subscription->status,
-                'payment_method_provided' => !empty($paymentMethodId),
-                'invoice_id' => $invoiceId,
-                'invoice_status' => $invoice->status ?? null,
-                'invoice_type' => gettype($subscription->latest_invoice),
-                'pi_type' => $paymentIntent ? gettype($paymentIntent) : null,
-                'pi_status' => $paymentIntent->status ?? null,
-                'has_pending_setup_intent' => !empty($subscription->pending_setup_intent),
-                'si_type' => $setupIntent ? gettype($setupIntent) : null,
-                'si_status' => $setupIntent->status ?? null,
-                'intent_type' => $intentType,
-                'has_client_secret' => !empty($clientSecret),
-            ]);
     
             return response()->json([
                 'paid' => $paid,
-                'donation_id' => $donation->id,
                 'subscription_id' => $subscription->id,
-                'client_secret' => $clientSecret,
                 'subscription_status' => $subscription->status,
-                'pi_status' => $paymentIntent->status ?? null,
-                'si_status' => $setupIntent->status ?? null,
-                'intent_type' => $intentType,
-                'invoice_id' => $invoiceId,
-                'invoice_status' => $invoice->status ?? null,
-                'payment_method_provided' => !empty($paymentMethodId),
+                'invoice_id' => $invoice?->id,
+                'invoice_status' => $invoice?->status,
+                'intent_type' => $clientSecret ? 'payment_intent' : null,
+                'client_secret' => $clientSecret, // ✅ pi_... if needed
+                'customer_id' => $customer->id,
+                'payment_method_provided' => true,
+                'pi_status' => $pi?->status,
             ], 200);
     
         } catch (Exception $e) {
