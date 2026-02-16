@@ -107,7 +107,7 @@ class GeneralDonationController extends Controller
                     'payment_method_types' => ['card'],
                 ],
     
-                'expand' => ['latest_invoice.payment_intent'],
+                'expand' => ['latest_invoice.payment_intent', 'pending_setup_intent'],
                 'metadata' => ['purpose' => $request->donation_for],
             ];
 
@@ -162,9 +162,23 @@ class GeneralDonationController extends Controller
             }
     
             $paid = ($subscription->status === 'active');
-            $clientSecret = (!$paid && $paymentIntent && !empty($paymentIntent->client_secret))
-                ? $paymentIntent->client_secret
-                : null;
+            $setupIntent = $subscription->pending_setup_intent ?? null;
+            if (is_string($setupIntent)) {
+                $setupIntent = $this->stripe->setupIntents->retrieve($setupIntent);
+            }
+
+            // Stripe may create either:
+            // - PaymentIntent (first invoice payment), or
+            // - pending_setup_intent (collect a PM first, eg trial/if PI not generated)
+            $intentType = null;
+            $clientSecret = null;
+            if (!$paid && $paymentIntent && !empty($paymentIntent->client_secret)) {
+                $intentType = 'payment_intent';
+                $clientSecret = $paymentIntent->client_secret;
+            } elseif (!$paid && $setupIntent && !empty($setupIntent->client_secret)) {
+                $intentType = 'setup_intent';
+                $clientSecret = $setupIntent->client_secret;
+            }
     
             // Save donation
             $goal = FundRaisa::latest()->first();
@@ -191,11 +205,16 @@ class GeneralDonationController extends Controller
             Log::info('Stripe subscription created', [
                 'subscription_id' => $subscription->id,
                 'subscription_status' => $subscription->status,
+                'payment_method_provided' => !empty($paymentMethodId),
                 'invoice_id' => $invoiceId,
                 'invoice_status' => $invoice->status ?? null,
                 'invoice_type' => gettype($subscription->latest_invoice),
                 'pi_type' => $paymentIntent ? gettype($paymentIntent) : null,
                 'pi_status' => $paymentIntent->status ?? null,
+                'has_pending_setup_intent' => !empty($subscription->pending_setup_intent),
+                'si_type' => $setupIntent ? gettype($setupIntent) : null,
+                'si_status' => $setupIntent->status ?? null,
+                'intent_type' => $intentType,
                 'has_client_secret' => !empty($clientSecret),
             ]);
     
@@ -206,6 +225,11 @@ class GeneralDonationController extends Controller
                 'client_secret' => $clientSecret,
                 'subscription_status' => $subscription->status,
                 'pi_status' => $paymentIntent->status ?? null,
+                'si_status' => $setupIntent->status ?? null,
+                'intent_type' => $intentType,
+                'invoice_id' => $invoiceId,
+                'invoice_status' => $invoice->status ?? null,
+                'payment_method_provided' => !empty($paymentMethodId),
             ], 200);
     
         } catch (Exception $e) {
