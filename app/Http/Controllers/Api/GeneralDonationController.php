@@ -113,12 +113,25 @@ class GeneralDonationController extends Controller
 
             $paymentIntent = $invoice->payment_intent ?? null;
 
-            // If invoice is draft or still missing PI, finalize THIS first invoice.
+            $invoiceStatus = $invoice ? ($invoice->status ?? null) : null;
+
+            // Only draft invoices can be finalized.
             // Finalization is what triggers PaymentIntent creation for charge_automatically invoices.
-            if (!empty($invoiceId) && (!$paymentIntent || (($invoice->status ?? null) === 'draft'))) {
+            if (!empty($invoiceId) && $invoiceStatus === 'draft') {
                 $invoice = $this->stripe->invoices->finalizeInvoice($invoiceId, [
                     'expand' => ['payment_intent'],
                 ]);
+                $invoiceStatus = $invoice->status ?? null;
+                $paymentIntent = $invoice->payment_intent ?? null;
+            }
+
+            // If invoice is already open (finalized) but PI is still missing, attempt to pay it.
+            // This can happen if the invoice was finalized but no default payment method was set at that moment.
+            if (!empty($invoiceId) && !$paymentIntent && $invoiceStatus === 'open') {
+                $invoice = $this->stripe->invoices->pay($invoiceId, [
+                    'expand' => ['payment_intent'],
+                ]);
+                $invoiceStatus = $invoice->status ?? null;
                 $paymentIntent = $invoice->payment_intent ?? null;
             }
     
