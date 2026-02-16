@@ -49,10 +49,7 @@ class GeneralDonationController extends Controller
             $customer = $this->stripe->customers->create([
                 'email' => $request->email,
                 'name'  => $request->name,
-                'payment_method' => 'card',
-                'invoice_settings' => [
-                    'default_payment_method' => 'card',
-                ],
+                
                 'metadata' => ['purpose' => $request->donation_for],
             ]);
     
