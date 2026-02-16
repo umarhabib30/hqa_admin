@@ -45,30 +45,35 @@ class GeneralDonationController extends Controller
         ]);
 
         try {
-            // 1. Create or Get Customer
+            // 1) Create Customer
             $customer = $this->stripe->customers->create([
                 'email' => $request->email,
                 'name'  => $request->name,
                 'payment_method' => $request->payment_method,
-                'invoice_settings' => ['default_payment_method' => $request->payment_method],
-                'metadata' => ['purpose' => $request->donation_for],
+                'invoice_settings' => [
+                    'default_payment_method' => $request->payment_method
+                ],
+                'metadata' => [
+                    'purpose' => $request->donation_for
+                ],
             ]);
 
-            // 2. Create Product & Price dynamically
-            $product = $this->stripe->products->create(['name' => 'Donation: ' . $request->donation_for]);
-            $price   = $this->stripe->prices->create([
+            // 2) Create Product & Price dynamically
+            $product = $this->stripe->products->create([
+                'name' => 'Donation: ' . $request->donation_for
+            ]);
+
+            $price = $this->stripe->prices->create([
                 'unit_amount' => (int) $request->amount * 100,
                 'currency'    => 'usd',
                 'recurring'   => ['interval' => $request->interval],
                 'product'     => $product->id,
             ]);
 
-            // 3. Create Subscription
+            // 3) Create Subscription (default_incomplete gives PI for SCA)
             $subscription = $this->stripe->subscriptions->create([
                 'customer' => $customer->id,
                 'items'    => [['price' => $price->id]],
-                // Subscriptions API does not support `confirm` / `off_session`.
-                // Use default_incomplete so we can return a PaymentIntent client_secret for SCA flows.
                 'payment_behavior' => 'default_incomplete',
                 'payment_settings' => [
                     'save_default_payment_method' => 'on_subscription',
@@ -77,6 +82,29 @@ class GeneralDonationController extends Controller
                 'metadata' => ['purpose' => $request->donation_for],
             ]);
 
+            // --- IMPORTANT: reliably get PaymentIntent (invoice/PI might be IDs) ---
+            $invoice = $subscription->latest_invoice ?? null;
+
+            // latest_invoice may be an ID string
+            if (is_string($invoice)) {
+                $invoice = $this->stripe->invoices->retrieve($invoice, [
+                    'expand' => ['payment_intent']
+                ]);
+            }
+
+            $paymentIntent = $invoice->payment_intent ?? null;
+
+            // payment_intent may be an ID string
+            if (is_string($paymentIntent)) {
+                $paymentIntent = $this->stripe->paymentIntents->retrieve($paymentIntent);
+            }
+
+            $paid = ($subscription->status === 'active');
+            $clientSecret = (!$paid && $paymentIntent && !empty($paymentIntent->client_secret))
+                ? $paymentIntent->client_secret
+                : null;
+
+            // Save Donation
             $goal = FundRaisa::latest()->first();
 
             $donation = GeneralDonation::create([
@@ -90,7 +118,7 @@ class GeneralDonationController extends Controller
                 'frequency'              => $request->interval,
                 'stripe_customer_id'     => $customer->id,
                 'stripe_subscription_id' => $subscription->id,
-                'status'                 => ($subscription->status === 'active') ? 'paid' : 'pending',
+                'status'                 => $paid ? 'paid' : 'pending',
                 'address1'               => $request->address1,
                 'address2'               => $request->address2,
                 'city'                   => $request->city,
@@ -98,22 +126,30 @@ class GeneralDonationController extends Controller
                 'country'                => $request->country,
             ]);
 
-            $paid = ($subscription->status === 'active');
-            $paymentIntent = $subscription->latest_invoice->payment_intent ?? null;
+            // Debug logs (remove later)
+            Log::info('Stripe subscription created', [
+                'subscription_id' => $subscription->id,
+                'subscription_status' => $subscription->status,
+                'invoice_type' => gettype($subscription->latest_invoice),
+                'pi_type' => $paymentIntent ? gettype($paymentIntent) : null,
+                'pi_status' => $paymentIntent->status ?? null,
+                'has_client_secret' => !empty($clientSecret),
+            ]);
 
             return response()->json([
                 'paid' => $paid,
                 'donation_id' => $donation->id,
                 'subscription_id' => $subscription->id,
-                // If not active yet, the frontend should confirm using this client_secret.
-                'client_secret' => (!$paid && $paymentIntent && !empty($paymentIntent->client_secret))
-                    ? $paymentIntent->client_secret
-                    : null,
+                'client_secret' => $clientSecret,
                 'subscription_status' => $subscription->status,
+                'pi_status' => $paymentIntent->status ?? null,
             ], 200);
         } catch (Exception $e) {
             Log::error('Stripe Recurring Error: ' . $e->getMessage());
-            return response()->json(['paid' => false, 'error' => $e->getMessage()], 500);
+            return response()->json([
+                'paid' => false,
+                'error' => $e->getMessage()
+            ], 500);
         }
     }
 
