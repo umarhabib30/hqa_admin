@@ -26,7 +26,7 @@ class GeneralDonationController extends Controller
     }
 
     /**
-     * Recurring donation (Stripe)
+     * Recurring donation (Stripe)dd
      */
     public function recurringDonation(Request $request)
     {
@@ -145,6 +145,10 @@ class GeneralDonationController extends Controller
                         }
 
                         if (is_object($pi)) {
+                            // Sometimes expanded objects don't include client_secret; retrieve by id to be safe.
+                            if (empty($pi->client_secret) && !empty($pi->id)) {
+                                $pi = $this->stripe->paymentIntents->retrieve($pi->id);
+                            }
                             $clientSecret = $pi->client_secret ?? null;
                         }
                     }
