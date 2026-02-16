@@ -30,6 +30,16 @@ class GeneralDonationController extends Controller
      */
     public function recurringDonation(Request $request)
     {
+        // Normalize payment method key (frontend may send different names)
+        $pm =
+            $request->input('payment_method') ??
+            $request->input('paymentMethod') ??
+            $request->input('payment_method_id') ??
+            $request->input('paymentMethodId');
+        if (!empty($pm) && !$request->filled('payment_method')) {
+            $request->merge(['payment_method' => $pm]);
+        }
+
         $request->validate([
             'payment_method' => 'nullable|string',
             'email'          => 'required|email',
@@ -45,6 +55,8 @@ class GeneralDonationController extends Controller
         ]);
     
         try {
+            $paymentMethodId = $request->filled('payment_method') ? $request->payment_method : null;
+
             // 1) Create Customer with default PM
             $customer = $this->stripe->customers->create([
                 'email' => $request->email,
@@ -55,13 +67,13 @@ class GeneralDonationController extends Controller
 
             // If frontend provided a PaymentMethod (pm_*), attach + set as default for invoices.
             // This enables Stripe to immediately create/attempt the first invoice PaymentIntent.
-            if ($request->filled('payment_method')) {
-                $this->stripe->paymentMethods->attach($request->payment_method, [
+            if (!empty($paymentMethodId)) {
+                $this->stripe->paymentMethods->attach($paymentMethodId, [
                     'customer' => $customer->id,
                 ]);
                 $this->stripe->customers->update($customer->id, [
                     'invoice_settings' => [
-                        'default_payment_method' => $request->payment_method,
+                        'default_payment_method' => $paymentMethodId,
                     ],
                 ]);
             }
@@ -79,7 +91,7 @@ class GeneralDonationController extends Controller
             ]);
     
             // 3) Create Subscription and force immediate payment attempt
-            $subscription = $this->stripe->subscriptions->create([
+            $subscriptionPayload = [
                 'customer' => $customer->id,
                 'items'    => [['price' => $price->id]],
     
@@ -97,7 +109,14 @@ class GeneralDonationController extends Controller
     
                 'expand' => ['latest_invoice.payment_intent'],
                 'metadata' => ['purpose' => $request->donation_for],
-            ]);
+            ];
+
+            // Set subscription-level default (helps invoices pick up a PM immediately)
+            if (!empty($paymentMethodId)) {
+                $subscriptionPayload['default_payment_method'] = $paymentMethodId;
+            }
+
+            $subscription = $this->stripe->subscriptions->create($subscriptionPayload);
     
             // --- Fetch invoice + PI safely ---
             $invoiceRef = $subscription->latest_invoice ?? null;
@@ -127,8 +146,10 @@ class GeneralDonationController extends Controller
 
             // If invoice is already open (finalized) but PI is still missing, attempt to pay it.
             // This can happen if the invoice was finalized but no default payment method was set at that moment.
-            if (!empty($invoiceId) && !$paymentIntent && $invoiceStatus === 'open') {
+            $pmForInvoicePay = $paymentMethodId ?: ($invoice->default_payment_method ?? null);
+            if (!empty($invoiceId) && !$paymentIntent && $invoiceStatus === 'open' && !empty($pmForInvoicePay)) {
                 $invoice = $this->stripe->invoices->pay($invoiceId, [
+                    'payment_method' => $pmForInvoicePay,
                     'expand' => ['payment_intent'],
                 ]);
                 $invoiceStatus = $invoice->status ?? null;
