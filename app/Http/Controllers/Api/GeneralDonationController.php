@@ -125,29 +125,93 @@ class GeneralDonationController extends Controller
                 'payment_settings' => [
                     'save_default_payment_method' => 'on_subscription',
                 ],
-                'expand' => ['latest_invoice.payment_intent'],
+                'expand' => ['latest_invoice.payment_intent', 'pending_setup_intent'],
                 'metadata' => ['purpose' => $request->donation_for],
             ]);
-    
-            $invoice = $subscription->latest_invoice ?? null;
+
+            // --- Ensure we are dealing with the FIRST (current) invoice, not the upcoming preview ---
+            $invoiceRef = $subscription->latest_invoice ?? null;
+            $invoiceId = is_string($invoiceRef) ? $invoiceRef : ($invoiceRef->id ?? null);
+
+            $invoice = null;
+            if (!empty($invoiceId)) {
+                $invoice = $this->stripe->invoices->retrieve($invoiceId, [
+                    'expand' => ['payment_intent'],
+                ]);
+
+                // If it's still a draft, finalize it so Stripe can create the PaymentIntent.
+                if (($invoice->status ?? null) === 'draft') {
+                    $invoice = $this->stripe->invoices->finalizeInvoice($invoiceId, [
+                        'expand' => ['payment_intent'],
+                    ]);
+                }
+
+                // Re-fetch once more (helps when PI is created asynchronously at finalization)
+                $invoice = $this->stripe->invoices->retrieve($invoiceId, [
+                    'expand' => ['payment_intent'],
+                ]);
+            }
+
             $pi = $invoice?->payment_intent ?? null;
-    
-            // ✅ If PI exists, return client_secret so frontend can confirmPayment if required (3DS etc)
-            $clientSecret = $pi?->client_secret;
-    
-            $paid = ($subscription->status === 'active');
-    
+            if (is_string($pi)) {
+                $pi = $this->stripe->paymentIntents->retrieve($pi);
+            }
+
+            $setupIntent = $subscription->pending_setup_intent ?? null;
+            if (is_string($setupIntent)) {
+                $setupIntent = $this->stripe->setupIntents->retrieve($setupIntent);
+            }
+
+            // Decide what the frontend should confirm *immediately*.
+            $intentType = null;
+            $clientSecret = null;
+            if ($pi && !empty($pi->client_secret)) {
+                $intentType = 'payment_intent';
+                $clientSecret = $pi->client_secret;
+            } elseif ($setupIntent && !empty($setupIntent->client_secret)) {
+                $intentType = 'setup_intent';
+                $clientSecret = $setupIntent->client_secret;
+            }
+
+            $paid =
+                ($subscription->status === 'active' || $subscription->status === 'trialing') ||
+                (!empty($invoice) && !empty($invoice->paid)) ||
+                (!empty($pi) && ($pi->status ?? null) === 'succeeded');
+
+            // Save donation record (recurring)
+            $goal = FundRaisa::latest()->first();
+            $donation = GeneralDonation::create([
+                'fund_raisa_id'          => $goal?->id,
+                'donation_for'           => $request->donation_for,
+                'name'                   => $request->name,
+                'email'                  => $request->email,
+                'amount'                 => (int) $request->amount,
+                'payment_id'             => $subscription->id,
+                'donation_mode'          => 'stripe',
+                'frequency'              => $request->interval,
+                'stripe_customer_id'     => $customer->id,
+                'stripe_subscription_id' => $subscription->id,
+                'status'                 => $paid ? 'paid' : 'pending',
+                'address1'               => $request->address1,
+                'address2'               => $request->address2,
+                'city'                   => $request->city,
+                'state'                  => $request->state,
+                'country'                => $request->country,
+            ]);
+
             return response()->json([
                 'paid' => $paid,
+                'donation_id' => $donation->id,
                 'subscription_id' => $subscription->id,
                 'subscription_status' => $subscription->status,
-                'invoice_id' => $invoice?->id,
+                'invoice_id' => $invoiceId,
                 'invoice_status' => $invoice?->status,
-                'intent_type' => $clientSecret ? 'payment_intent' : null,
-                'client_secret' => $clientSecret, // ✅ pi_... if needed
+                'intent_type' => $intentType,                 // payment_intent | setup_intent | null
+                'client_secret' => $clientSecret,             // pi_... or seti_...
+                'pi_status' => $pi?->status,
+                'si_status' => $setupIntent?->status,
                 'customer_id' => $customer->id,
                 'payment_method_provided' => true,
-                'pi_status' => $pi?->status,
             ], 200);
     
         } catch (Exception $e) {
