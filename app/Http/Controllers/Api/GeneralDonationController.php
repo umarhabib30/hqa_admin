@@ -52,6 +52,19 @@ class GeneralDonationController extends Controller
                 
                 'metadata' => ['purpose' => $request->donation_for],
             ]);
+
+            // If frontend provided a PaymentMethod (pm_*), attach + set as default for invoices.
+            // This enables Stripe to immediately create/attempt the first invoice PaymentIntent.
+            if ($request->filled('payment_method')) {
+                $this->stripe->paymentMethods->attach($request->payment_method, [
+                    'customer' => $customer->id,
+                ]);
+                $this->stripe->customers->update($customer->id, [
+                    'invoice_settings' => [
+                        'default_payment_method' => $request->payment_method,
+                    ],
+                ]);
+            }
     
             // 2) Create Product & Price
             $product = $this->stripe->products->create([
@@ -87,32 +100,26 @@ class GeneralDonationController extends Controller
             ]);
     
             // --- Fetch invoice + PI safely ---
-            $invoice = $subscription->latest_invoice ?? null;
-    
-            // if invoice is ID string, retrieve it expanded
-            if (is_string($invoice)) {
-                $invoice = $this->stripe->invoices->retrieve($invoice, [
-                    'expand' => ['payment_intent']
+            $invoiceRef = $subscription->latest_invoice ?? null;
+            $invoiceId =
+                is_string($invoiceRef) ? $invoiceRef : ($invoiceRef->id ?? null);
+
+            $invoice = null;
+            if (!empty($invoiceId)) {
+                $invoice = $this->stripe->invoices->retrieve($invoiceId, [
+                    'expand' => ['payment_intent'],
                 ]);
             }
-    
+
             $paymentIntent = $invoice->payment_intent ?? null;
-    
-            // If still missing, manually create the invoice and finalize it
-            // (this forces a PI in stubborn cases)
-            if (!$paymentIntent) {
-                $createdInvoice = $this->stripe->invoices->create([
-                    'customer' => $customer->id,
-                    'subscription' => $subscription->id,
-                    'collection_method' => 'charge_automatically',
-                    'auto_advance' => true,
+
+            // If invoice is draft or still missing PI, finalize THIS first invoice.
+            // Finalization is what triggers PaymentIntent creation for charge_automatically invoices.
+            if (!empty($invoiceId) && (!$paymentIntent || (($invoice->status ?? null) === 'draft'))) {
+                $invoice = $this->stripe->invoices->finalizeInvoice($invoiceId, [
+                    'expand' => ['payment_intent'],
                 ]);
-    
-                $finalInvoice = $this->stripe->invoices->finalizeInvoice($createdInvoice->id, [
-                    'expand' => ['payment_intent']
-                ]);
-    
-                $paymentIntent = $finalInvoice->payment_intent ?? null;
+                $paymentIntent = $invoice->payment_intent ?? null;
             }
     
             // PI could be ID string
@@ -150,6 +157,8 @@ class GeneralDonationController extends Controller
             Log::info('Stripe subscription created', [
                 'subscription_id' => $subscription->id,
                 'subscription_status' => $subscription->status,
+                'invoice_id' => $invoiceId,
+                'invoice_status' => $invoice->status ?? null,
                 'invoice_type' => gettype($subscription->latest_invoice),
                 'pi_type' => $paymentIntent ? gettype($paymentIntent) : null,
                 'pi_status' => $paymentIntent->status ?? null,
