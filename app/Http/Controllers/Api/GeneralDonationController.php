@@ -77,7 +77,8 @@ class GeneralDonationController extends Controller
                 $si = $this->stripe->setupIntents->create([
                     'customer' => $customer->id,
                     'usage' => 'off_session',
-                    'payment_method_types' => ['card'],
+                    // Let Stripe manage eligible payment method types automatically
+                    'automatic_payment_methods' => ['enabled' => true],
                     'metadata' => ['purpose' => $request->donation_for],
                 ]);
     
