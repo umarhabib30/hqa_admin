@@ -100,11 +100,29 @@ class GeneralDonationController extends Controller
             $latestInvoice = $subscription->latest_invoice ?? null;
 
             try {
+                // If latest_invoice is missing, re-fetch subscription with expand
+                if (empty($latestInvoice) && !empty($subscription->id)) {
+                    $subscription = $this->stripe->subscriptions->retrieve($subscription->id, [
+                        'expand' => ['latest_invoice', 'latest_invoice.payment_intent'],
+                    ]);
+                    $latestInvoice = $subscription->latest_invoice ?? null;
+                }
+
                 // If latest_invoice isn't expanded, retrieve it
                 if (is_string($latestInvoice) && $latestInvoice !== '') {
                     $latestInvoice = $this->stripe->invoices->retrieve($latestInvoice, [
                         'expand' => ['payment_intent'],
                     ]);
+                }
+
+                // Fallback: if we still don't have an invoice object, list invoices by subscription
+                if (!is_object($latestInvoice) && !empty($subscription->id)) {
+                    $invoices = $this->stripe->invoices->all([
+                        'subscription' => $subscription->id,
+                        'limit' => 1,
+                        'expand' => ['data.payment_intent'],
+                    ]);
+                    $latestInvoice = $invoices->data[0] ?? null;
                 }
 
                 if (is_object($latestInvoice)) {
