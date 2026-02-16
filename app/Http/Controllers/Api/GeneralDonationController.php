@@ -67,9 +67,13 @@ class GeneralDonationController extends Controller
             $subscription = $this->stripe->subscriptions->create([
                 'customer' => $customer->id,
                 'items'    => [['price' => $price->id]],
-                'off_session' => true,
-                'confirm' => true,
-                'payment_behavior' => 'allow_incomplete',
+                // Subscriptions API doesn't accept `confirm` (or `off_session`) on create.
+                // Use an incomplete subscription and confirm the first invoice PaymentIntent on the frontend if required (3DS/SCA).
+                'payment_behavior' => 'default_incomplete',
+                'payment_settings' => [
+                    'save_default_payment_method' => 'on_subscription',
+                ],
+                'expand' => ['latest_invoice.payment_intent'],
                 'metadata' => ['purpose' => $request->donation_for],
             ]);
 
@@ -94,7 +98,19 @@ class GeneralDonationController extends Controller
                 'country'                => $request->country,
             ]);
 
-            return response()->json(['paid' => true, 'donation_id' => $donation->id], 200);
+            $paid = ($subscription->status === 'active' || $subscription->status === 'trialing');
+            $paymentIntent = $subscription->latest_invoice->payment_intent ?? null;
+
+            return response()->json([
+                'paid' => $paid,
+                'donation_id' => $donation->id,
+                'subscription_id' => $subscription->id,
+                'subscription_status' => $subscription->status,
+                // Frontend should confirm this PaymentIntent when subscription isn't active yet.
+                'client_secret' => (!$paid && $paymentIntent && !empty($paymentIntent->client_secret))
+                    ? $paymentIntent->client_secret
+                    : null,
+            ], 200);
         } catch (Exception $e) {
             Log::error('Stripe Recurring Error: ' . $e->getMessage());
             return response()->json(['paid' => false, 'error' => $e->getMessage()], 500);
