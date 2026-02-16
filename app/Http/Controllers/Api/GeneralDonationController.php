@@ -31,7 +31,7 @@ class GeneralDonationController extends Controller
     public function recurringDonation(Request $request)
     {
         $request->validate([
-            'payment_method' => 'required|string',
+            'payment_method' => 'nullable|string',
             'email'          => 'required|email',
             'name'           => 'nullable|string',
             'amount'         => 'required|integer|min:1',
@@ -49,9 +49,9 @@ class GeneralDonationController extends Controller
             $customer = $this->stripe->customers->create([
                 'email' => $request->email,
                 'name'  => $request->name,
-                'payment_method' => $request->payment_method,
+                'payment_method' => 'card',
                 'invoice_settings' => [
-                    'default_payment_method' => $request->payment_method,
+                    'default_payment_method' => 'card',
                 ],
                 'metadata' => ['purpose' => $request->donation_for],
             ]);
