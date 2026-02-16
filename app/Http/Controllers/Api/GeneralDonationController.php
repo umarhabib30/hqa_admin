@@ -79,7 +79,7 @@ class GeneralDonationController extends Controller
             ]);
 
             // 3. Create Subscription (default_incomplete so frontend can confirm via PaymentElement if needed)
-            $subscription = $this->stripe->subscriptions->create([
+            $subscriptionPayload = [
                 'customer' => $customer->id,
                 'items'    => [['price' => $price->id]],
                 'collection_method' => 'charge_automatically',
@@ -90,7 +90,12 @@ class GeneralDonationController extends Controller
                 ],
                 'metadata' => ['purpose' => $request->donation_for],
                 'expand' => ['latest_invoice', 'latest_invoice.payment_intent'],
-            ]);
+            ];
+            if ($request->filled('payment_method')) {
+                // If frontend already created a payment method (pm_*), let Stripe attempt payment automatically.
+                $subscriptionPayload['default_payment_method'] = $request->payment_method;
+            }
+            $subscription = $this->stripe->subscriptions->create($subscriptionPayload);
 
             $goal = FundRaisa::latest()->first();
 
@@ -100,9 +105,9 @@ class GeneralDonationController extends Controller
             $latestInvoice = $subscription->latest_invoice ?? null;
 
             try {
-                // Stripe can be slightly eventually-consistent right after subscription creation.
+                // Stripe can be eventually-consistent right after subscription creation.
                 // Retry fetching invoice/payment_intent a few times before giving up.
-                for ($attempt = 0; $attempt < 5 && empty($clientSecret); $attempt++) {
+                for ($attempt = 0; $attempt < 15 && empty($clientSecret); $attempt++) {
                     // If latest_invoice is missing, re-fetch subscription with expand
                     if (empty($latestInvoice) && !empty($subscription->id)) {
                         $subscription = $this->stripe->subscriptions->retrieve($subscription->id, [
@@ -118,20 +123,31 @@ class GeneralDonationController extends Controller
                         ]);
                     }
 
-                    // Fallback: if we still don't have an invoice object, list invoices by subscription
+                    // Fallback: list invoices by subscription (pick one with payment_intent)
                     if (!is_object($latestInvoice) && !empty($subscription->id)) {
                         $invoices = $this->stripe->invoices->all([
                             'subscription' => $subscription->id,
-                            'limit' => 1,
-                            'expand' => ['data.payment_intent'],
+                            'limit' => 5,
                         ]);
-                        $latestInvoice = $invoices->data[0] ?? null;
+                        $latestInvoice = null;
+                        foreach (($invoices->data ?? []) as $inv) {
+                            if (!empty($inv->payment_intent)) {
+                                $latestInvoice = $inv;
+                                break;
+                            }
+                        }
+                        $latestInvoice = $latestInvoice ?: ($invoices->data[0] ?? null);
                     }
 
                     if (is_object($latestInvoice)) {
                         // If invoice is draft, finalize so a PaymentIntent gets created
                         if (($latestInvoice->status ?? null) === 'draft' && !empty($latestInvoice->id)) {
                             $this->stripe->invoices->finalizeInvoice($latestInvoice->id);
+                            $latestInvoice = $this->stripe->invoices->retrieve($latestInvoice->id, [
+                                'expand' => ['payment_intent'],
+                            ]);
+                        } elseif (!empty($latestInvoice->id) && (empty($latestInvoice->payment_intent) || is_string($latestInvoice->payment_intent))) {
+                            // Ensure payment_intent is expanded
                             $latestInvoice = $this->stripe->invoices->retrieve($latestInvoice->id, [
                                 'expand' => ['payment_intent'],
                             ]);
@@ -149,11 +165,20 @@ class GeneralDonationController extends Controller
                             if (empty($pi->client_secret) && !empty($pi->id)) {
                                 $pi = $this->stripe->paymentIntents->retrieve($pi->id);
                             }
+
+                            // If a payment_method was provided, try to confirm server-side to actually attempt the charge.
+                            // If 3DS/SCA is required, Stripe will return requires_action and frontend must confirm with client_secret.
+                            if ($request->filled('payment_method') && !empty($pi->id) && in_array(($pi->status ?? null), ['requires_payment_method', 'requires_confirmation'], true)) {
+                                $pi = $this->stripe->paymentIntents->confirm($pi->id, [
+                                    'payment_method' => $request->payment_method,
+                                ]);
+                            }
+
                             $clientSecret = $pi->client_secret ?? null;
                         }
                     }
 
-                    // Small delay before retry
+                    // Small delay before retry (up to ~3.75s total)
                     if (empty($clientSecret)) {
                         usleep(250000); // 250ms
                     }
@@ -188,6 +213,8 @@ class GeneralDonationController extends Controller
                     'paid' => false,
                     'donation_id' => $donation->id,
                     'subscription_id' => $subscription->id,
+                    'invoice_id' => is_object($latestInvoice) ? ($latestInvoice->id ?? null) : null,
+                    'payment_intent_id' => is_object($pi) ? ($pi->id ?? null) : (is_string($pi) ? $pi : null),
                     'client_secret' => $clientSecret,
                     'pi_status' => is_object($pi) ? ($pi->status ?? null) : null,
                     'subscription_status' => $subscription->status ?? null,
