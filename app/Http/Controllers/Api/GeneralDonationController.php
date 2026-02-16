@@ -30,20 +30,8 @@ class GeneralDonationController extends Controller
      */
     public function recurringDonation(Request $request)
     {
-        // Normalize payment method key (frontend may send different names)
-        $pm =
-            $request->input('payment_method') ??
-            $request->input('paymentMethod') ??
-            $request->input('payment_method_id') ??
-            $request->input('paymentMethodId');
-        if (!empty($pm) && !$request->filled('payment_method')) {
-            $request->merge(['payment_method' => $pm]);
-        }
-
         $request->validate([
-            // For PaymentElement flows, payment_method is created on frontend during confirmPayment.
-            // For legacy flows, allow passing a payment_method id (pm_*) and we will use it.
-            'payment_method' => 'nullable|string',
+            'payment_method' => 'required|string',
             'email'          => 'required|email',
             'name'           => 'nullable|string',
             'amount'         => 'required|integer|min:1',
@@ -58,16 +46,13 @@ class GeneralDonationController extends Controller
 
         try {
             // 1. Create or Get Customer
-            $customerPayload = [
+            $customer = $this->stripe->customers->create([
                 'email' => $request->email,
                 'name'  => $request->name,
+                'payment_method' => $request->payment_method,
+                'invoice_settings' => ['default_payment_method' => $request->payment_method],
                 'metadata' => ['purpose' => $request->donation_for],
-            ];
-            if ($request->filled('payment_method')) {
-                $customerPayload['payment_method'] = $request->payment_method;
-                $customerPayload['invoice_settings'] = ['default_payment_method' => $request->payment_method];
-            }
-            $customer = $this->stripe->customers->create($customerPayload);
+            ]);
 
             // 2. Create Product & Price dynamically
             $product = $this->stripe->products->create(['name' => 'Donation: ' . $request->donation_for]);
@@ -78,59 +63,17 @@ class GeneralDonationController extends Controller
                 'product'     => $product->id,
             ]);
 
-            // 3. Create Subscription (default_incomplete so frontend can confirm via PaymentElement if needed)
+            // 3. Create Subscription
             $subscription = $this->stripe->subscriptions->create([
                 'customer' => $customer->id,
                 'items'    => [['price' => $price->id]],
-                'collection_method' => 'charge_automatically',
-                'payment_behavior' => 'default_incomplete',
-                'payment_settings' => [
-                    'payment_method_types' => ['card'],
-                    'save_default_payment_method' => 'on_subscription',
-                ],
+                'off_session' => true,
+                'confirm' => true,
+                'payment_behavior' => 'allow_incomplete',
                 'metadata' => ['purpose' => $request->donation_for],
-                'expand' => ['latest_invoice', 'latest_invoice.payment_intent'],
             ]);
 
             $goal = FundRaisa::latest()->first();
-
-            // Extract PaymentIntent client_secret for the first invoice
-            $pi = null;
-            $clientSecret = null;
-            $latestInvoice = $subscription->latest_invoice ?? null;
-
-            try {
-                // If latest_invoice isn't expanded, retrieve it
-                if (is_string($latestInvoice) && $latestInvoice !== '') {
-                    $latestInvoice = $this->stripe->invoices->retrieve($latestInvoice, [
-                        'expand' => ['payment_intent'],
-                    ]);
-                }
-
-                if (is_object($latestInvoice)) {
-                    // If invoice is draft, finalize so a PaymentIntent gets created
-                    if (($latestInvoice->status ?? null) === 'draft' && !empty($latestInvoice->id)) {
-                        $this->stripe->invoices->finalizeInvoice($latestInvoice->id);
-                        $latestInvoice = $this->stripe->invoices->retrieve($latestInvoice->id, [
-                            'expand' => ['payment_intent'],
-                        ]);
-                    }
-
-                    $pi = $latestInvoice->payment_intent ?? null;
-
-                    // If payment_intent isn't expanded, retrieve it
-                    if (is_string($pi) && $pi !== '') {
-                        $pi = $this->stripe->paymentIntents->retrieve($pi);
-                    }
-
-                    if (is_object($pi)) {
-                        $clientSecret = $pi->client_secret ?? null;
-                    }
-                }
-            } catch (\Throwable $e) {
-                // Ignore extraction failures; we'll return a safe response below.
-                $clientSecret = null;
-            }
 
             $donation = GeneralDonation::create([
                 'fund_raisa_id'          => $goal?->id,
@@ -151,48 +94,13 @@ class GeneralDonationController extends Controller
                 'country'                => $request->country,
             ]);
 
-            // If Stripe created a PaymentIntent for the first invoice, frontend must confirm it (3DS/wallets)
-            if (!empty($clientSecret)) {
-                return response()->json([
-                    'paid' => false,
-                    'donation_id' => $donation->id,
-                    'subscription_id' => $subscription->id,
-                    'client_secret' => $clientSecret,
-                    'pi_status' => is_object($pi) ? ($pi->status ?? null) : null,
-                    'subscription_status' => $subscription->status ?? null,
-                ], 200);
-            }
-
-            // If subscription isn't active and we still have no client_secret, avoid frontend IntegrationError
-            if (($subscription->status ?? null) !== 'active') {
-                Log::warning('Stripe recurring missing client_secret', [
-                    'subscription_id' => $subscription->id ?? null,
-                    'subscription_status' => $subscription->status ?? null,
-                    'latest_invoice' => is_object($latestInvoice) ? ($latestInvoice->id ?? null) : $latestInvoice,
-                    'invoice_status' => is_object($latestInvoice) ? ($latestInvoice->status ?? null) : null,
-                    'payment_intent' => is_object($pi) ? ($pi->id ?? null) : $pi,
-                ]);
-                return response()->json([
-                    'paid' => false,
-                    'donation_id' => $donation->id,
-                    'subscription_id' => $subscription->id,
-                    'subscription_status' => $subscription->status ?? null,
-                    'invoice_id' => is_object($latestInvoice) ? ($latestInvoice->id ?? null) : null,
-                    'message' => 'Subscription created but payment client_secret is missing. Check Stripe subscription latest_invoice/payment_intent.',
-                ], 200);
-            }
-
-            return response()->json([
-                'paid' => ($subscription->status === 'active'),
-                'donation_id' => $donation->id,
-                'subscription_id' => $subscription->id,
-                'subscription_status' => $subscription->status ?? null,
-            ], 200);
+            return response()->json(['paid' => true, 'donation_id' => $donation->id], 200);
         } catch (Exception $e) {
             Log::error('Stripe Recurring Error: ' . $e->getMessage());
             return response()->json(['paid' => false, 'error' => $e->getMessage()], 500);
         }
     }
+
 
     /**
      * One-time donation (Stripe)
