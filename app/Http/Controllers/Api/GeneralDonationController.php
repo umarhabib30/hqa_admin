@@ -43,70 +43,94 @@ class GeneralDonationController extends Controller
             'state'          => 'required|string|max:255',
             'country'        => 'required|string|max:255',
         ]);
-
+    
         try {
-            // 1) Create Customer
+            // 1) Create Customer with default PM
             $customer = $this->stripe->customers->create([
                 'email' => $request->email,
                 'name'  => $request->name,
                 'payment_method' => $request->payment_method,
                 'invoice_settings' => [
-                    'default_payment_method' => $request->payment_method
+                    'default_payment_method' => $request->payment_method,
                 ],
-                'metadata' => [
-                    'purpose' => $request->donation_for
-                ],
+                'metadata' => ['purpose' => $request->donation_for],
             ]);
-
-            // 2) Create Product & Price dynamically
+    
+            // 2) Create Product & Price
             $product = $this->stripe->products->create([
                 'name' => 'Donation: ' . $request->donation_for
             ]);
-
+    
             $price = $this->stripe->prices->create([
                 'unit_amount' => (int) $request->amount * 100,
                 'currency'    => 'usd',
                 'recurring'   => ['interval' => $request->interval],
                 'product'     => $product->id,
             ]);
-
-            // 3) Create Subscription (default_incomplete gives PI for SCA)
+    
+            // 3) Create Subscription and force immediate payment attempt
             $subscription = $this->stripe->subscriptions->create([
                 'customer' => $customer->id,
                 'items'    => [['price' => $price->id]],
+    
+                // ensure automatic charge
+                'collection_method' => 'charge_automatically',
+    
+                // make Stripe create a PI for the first invoice
                 'payment_behavior' => 'default_incomplete',
+    
                 'payment_settings' => [
                     'save_default_payment_method' => 'on_subscription',
+                    // helps guarantee PI creation in many setups
+                    'payment_method_types' => ['card'],
                 ],
+    
                 'expand' => ['latest_invoice.payment_intent'],
                 'metadata' => ['purpose' => $request->donation_for],
             ]);
-
-            // --- IMPORTANT: reliably get PaymentIntent (invoice/PI might be IDs) ---
+    
+            // --- Fetch invoice + PI safely ---
             $invoice = $subscription->latest_invoice ?? null;
-
-            // latest_invoice may be an ID string
+    
+            // if invoice is ID string, retrieve it expanded
             if (is_string($invoice)) {
                 $invoice = $this->stripe->invoices->retrieve($invoice, [
                     'expand' => ['payment_intent']
                 ]);
             }
-
+    
             $paymentIntent = $invoice->payment_intent ?? null;
-
-            // payment_intent may be an ID string
+    
+            // If still missing, manually create the invoice and finalize it
+            // (this forces a PI in stubborn cases)
+            if (!$paymentIntent) {
+                $createdInvoice = $this->stripe->invoices->create([
+                    'customer' => $customer->id,
+                    'subscription' => $subscription->id,
+                    'collection_method' => 'charge_automatically',
+                    'auto_advance' => true,
+                ]);
+    
+                $finalInvoice = $this->stripe->invoices->finalizeInvoice($createdInvoice->id, [
+                    'expand' => ['payment_intent']
+                ]);
+    
+                $paymentIntent = $finalInvoice->payment_intent ?? null;
+            }
+    
+            // PI could be ID string
             if (is_string($paymentIntent)) {
                 $paymentIntent = $this->stripe->paymentIntents->retrieve($paymentIntent);
             }
-
+    
             $paid = ($subscription->status === 'active');
             $clientSecret = (!$paid && $paymentIntent && !empty($paymentIntent->client_secret))
                 ? $paymentIntent->client_secret
                 : null;
-
-            // Save Donation
+    
+            // Save donation
             $goal = FundRaisa::latest()->first();
-
+    
             $donation = GeneralDonation::create([
                 'fund_raisa_id'          => $goal?->id,
                 'donation_for'           => $request->donation_for,
@@ -125,8 +149,7 @@ class GeneralDonationController extends Controller
                 'state'                  => $request->state,
                 'country'                => $request->country,
             ]);
-
-            // Debug logs (remove later)
+    
             Log::info('Stripe subscription created', [
                 'subscription_id' => $subscription->id,
                 'subscription_status' => $subscription->status,
@@ -135,7 +158,7 @@ class GeneralDonationController extends Controller
                 'pi_status' => $paymentIntent->status ?? null,
                 'has_client_secret' => !empty($clientSecret),
             ]);
-
+    
             return response()->json([
                 'paid' => $paid,
                 'donation_id' => $donation->id,
@@ -144,15 +167,12 @@ class GeneralDonationController extends Controller
                 'subscription_status' => $subscription->status,
                 'pi_status' => $paymentIntent->status ?? null,
             ], 200);
+    
         } catch (Exception $e) {
             Log::error('Stripe Recurring Error: ' . $e->getMessage());
-            return response()->json([
-                'paid' => false,
-                'error' => $e->getMessage()
-            ], 500);
+            return response()->json(['paid' => false, 'error' => $e->getMessage()], 500);
         }
     }
-
 
     /**
      * One-time donation (Stripe)
