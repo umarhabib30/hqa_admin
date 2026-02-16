@@ -67,13 +67,9 @@ class GeneralDonationController extends Controller
             $subscription = $this->stripe->subscriptions->create([
                 'customer' => $customer->id,
                 'items'    => [['price' => $price->id]],
-                // Subscriptions API does not support `confirm` / `off_session`.
-                // Use default_incomplete so we can return a PaymentIntent client_secret for SCA flows.
-                'payment_behavior' => 'default_incomplete',
-                'payment_settings' => [
-                    'save_default_payment_method' => 'on_subscription',
-                ],
-                'expand' => ['latest_invoice.payment_intent'],
+                'off_session' => true,
+                'confirm' => true,
+                'payment_behavior' => 'allow_incomplete',
                 'metadata' => ['purpose' => $request->donation_for],
             ]);
 
@@ -98,45 +94,20 @@ class GeneralDonationController extends Controller
                 'country'                => $request->country,
             ]);
 
-            $paid = ($subscription->status === 'active');
-            $paymentIntent = $subscription->latest_invoice->payment_intent ?? null;
-
-            return response()->json([
-                'paid' => $paid,
-                'donation_id' => $donation->id,
-                'subscription_id' => $subscription->id,
-                // If not active yet, the frontend should confirm using this client_secret.
-                'client_secret' => (!$paid && $paymentIntent && !empty($paymentIntent->client_secret))
-                    ? $paymentIntent->client_secret
-                    : null,
-                'subscription_status' => $subscription->status,
-            ], 200);
+            return response()->json(['paid' => true, 'donation_id' => $donation->id], 200);
         } catch (Exception $e) {
             Log::error('Stripe Recurring Error: ' . $e->getMessage());
             return response()->json(['paid' => false, 'error' => $e->getMessage()], 500);
         }
     }
 
-
     /**
      * One-time donation (Stripe)
      */
     public function oneTimeDonation(Request $request)
     {
-        // Normalize payment method key (frontend may send different names)
-        $pm =
-            $request->input('payment_method') ??
-            $request->input('paymentMethod') ??
-            $request->input('payment_method_id') ??
-            $request->input('paymentMethodId');
-        if (!empty($pm) && !$request->filled('payment_method')) {
-            $request->merge(['payment_method' => $pm]);
-        }
-
         $request->validate([
-            // For PaymentElement flows, payment_method is created on frontend during confirmPayment.
-            // For legacy flows, allow passing a payment_method id (pm_*) and we will confirm server-side.
-            'payment_method' => 'nullable|string',
+            'payment_method' => 'required|string',
             'email'          => 'required|email',
             'amount'         => 'required|integer|min:1',
             'donation_for'   => 'required|string',
@@ -150,31 +121,19 @@ class GeneralDonationController extends Controller
             $customer = $this->stripe->customers->create([
                 'email' => $request->email,
                 'name'  => $request->name,
+                'payment_method' => $request->payment_method,
             ]);
 
-            // Create PI without confirming so PaymentElement can confirm (wallets/3DS)
-            $piPayload = [
+            $pi = $this->stripe->paymentIntents->create([
                 'amount'   => (int) $request->amount * 100,
                 'currency' => 'usd',
                 'customer' => $customer->id,
-                'receipt_email' => $request->email,
+                'payment_method' => $request->payment_method,
+                'confirm'  => true,
+                'off_session' => true,
                 'description'   => 'One-time Donation: ' . $request->donation_for,
-                'metadata' => [
-                    'type' => 'general_donation_one_time',
-                    'purpose' => $request->donation_for,
-                ],
-                'automatic_payment_methods' => ['enabled' => true],
-            ];
-
-            // Legacy: if payment_method provided, confirm server-side (may still require_action)
-            if ($request->filled('payment_method')) {
-                $piPayload['payment_method'] = $request->payment_method;
-                $piPayload['confirm'] = true;
-                $piPayload['off_session'] = false;
-                $piPayload['automatic_payment_methods'] = ['enabled' => true, 'allow_redirects' => 'never'];
-            }
-
-            $pi = $this->stripe->paymentIntents->create($piPayload);
+                'automatic_payment_methods' => ['enabled' => true, 'allow_redirects' => 'never'],
+            ]);
 
             $goal = FundRaisa::latest()->first();
 
@@ -196,23 +155,7 @@ class GeneralDonationController extends Controller
                 'country'            => $request->country,
             ]);
 
-            // If not yet succeeded, frontend should confirm with client_secret
-            if ($pi->status !== 'succeeded' && !empty($pi->client_secret)) {
-                return response()->json([
-                    'paid' => false,
-                    'donation_id' => $donation->id,
-                    'payment_intent_id' => $pi->id,
-                    'client_secret' => $pi->client_secret,
-                    'pi_status' => $pi->status,
-                ], 200);
-            }
-
-            return response()->json([
-                'paid' => ($pi->status === 'succeeded'),
-                'donation_id' => $donation->id,
-                'payment_intent_id' => $pi->id,
-                'pi_status' => $pi->status,
-            ]);
+            return response()->json(['paid' => $pi->status === 'succeeded', 'donation_id' => $donation->id]);
         } catch (Exception $e) {
             Log::error('Stripe OneTime Error: ' . $e->getMessage());
             return response()->json(['paid' => false, 'message' => $e->getMessage()], 500);
@@ -301,175 +244,5 @@ class GeneralDonationController extends Controller
         } catch (Exception $e) {
             return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
         }
-    }
-    /**
-     * Create PayPal Subscription (Recurring)
-     */
-    public function createPaypalSubscription(Request $request)
-    {
-        $request->validate([
-            'amount'       => 'required|numeric|min:1',
-            'interval'     => 'required|string|in:month,year',
-            'donation_for' => 'required|string',
-            'name'         => 'required|string',
-            'email'        => 'required|email',
-            'return_url'   => 'nullable|url',
-            'cancel_url'   => 'nullable|url',
-            // Include address validation if you want to save it before the redirect
-        ]);
-
-        try {
-            $provider = new PayPalClient;
-            $provider->setApiCredentials(config('paypal'));
-            $provider->setCurrency(config('paypal.currency', 'USD'));
-            $provider->getAccessToken();
-
-            // 1. DYNAMIC PRODUCT CREATION
-            $productData = [
-                "name" => "Donation Service",
-                "description" => "Recurring donation for " . config('app.name'),
-                "type" => "SERVICE",
-                // PayPal Catalog Products API expects a fixed enum value (e.g. CHARITY/NONPROFIT/SOFTWARE).
-                "category" => "CHARITY"
-            ];
-
-            // Avoid creating duplicate products by using a consistent Request-ID
-            $request_id = 'PRODUCT-' . md5('donation-service-fixed');
-            $product = $provider->createProduct($productData, $request_id);
-            if (isset($product['error'])) {
-                throw new Exception("PayPal Product Error: " . json_encode($product));
-            }
-            $productId = $product['id'] ?? null;
-            if (!$productId) {
-                throw new Exception("PayPal Product Error: Missing product id. Response: " . json_encode($product));
-            }
-
-            // 2. CREATE DYNAMIC PLAN
-            $planName = "Donation: " . $request->donation_for . " ($" . $request->amount . ")";
-            $planDetails = [
-                "product_id" => $productId,
-                "name" => $planName,
-                "description" => $planName,
-                "status" => "ACTIVE",
-                "billing_cycles" => [
-                    [
-                        "frequency" => [
-                            "interval_unit" => strtoupper($request->interval == 'month' ? 'MONTH' : 'YEAR'),
-                            "interval_count" => 1
-                        ],
-                        "tenure_type" => "REGULAR",
-                        "sequence" => 1,
-                        "total_cycles" => 0, // Infinite until canceled
-                        "pricing_scheme" => [
-                            "fixed_price" => [
-                                "value" => number_format($request->amount, 2, '.', ''),
-                                "currency_code" => "USD"
-                            ]
-                        ]
-                    ]
-                ],
-                "payment_preferences" => [
-                    "auto_bill_outstanding" => true,
-                    "setup_fee" => ["value" => "0", "currency_code" => "USD"],
-                    "setup_fee_failure_action" => "CONTINUE",
-                    "payment_failure_threshold" => 3
-                ]
-            ];
-
-            $plan = $provider->createPlan($planDetails);
-
-            if (isset($plan['error'])) {
-                throw new Exception("PayPal Plan Error: " . json_encode($plan));
-            }
-            if (empty($plan['id'])) {
-                throw new Exception("PayPal Plan Error: Missing plan id. Response: " . json_encode($plan));
-            }
-
-            // 3. CREATE SUBSCRIPTION
-            $defaultReturnUrl = url('/subscribe?paypal=success');
-            $defaultCancelUrl = url('/subscribe?paypal=cancel');
-            $returnUrl = $request->input('return_url') ?: $defaultReturnUrl;
-            $cancelUrl = $request->input('cancel_url') ?: $defaultCancelUrl;
-
-            // Split full name into given/surname (best-effort)
-            $nameParts = preg_split('/\s+/', trim((string) $request->name)) ?: [];
-            $givenName = $nameParts[0] ?? 'Donor';
-            $surname = count($nameParts) > 1 ? implode(' ', array_slice($nameParts, 1)) : ' ';
-
-            $subscriptionData = [
-                "plan_id" => $plan['id'],
-                "subscriber" => [
-                    "name" => [
-                        "given_name" => $givenName,
-                        "surname" => $surname,
-                    ],
-                    "email_address" => $request->email,
-                ],
-                "application_context" => [
-                    "brand_name" => config('app.name'),
-                    "locale" => "en-US",
-                    // Let PayPal decide whether to show wallet vs card (if eligible).
-                    // Subscriptions often still require PayPal login, depending on account/region.
-                    "landing_page" => "NO_PREFERENCE",
-                    "shipping_preference" => "NO_SHIPPING",
-                    "user_action" => "SUBSCRIBE_NOW",
-                    "return_url" => $returnUrl,
-                    "cancel_url" => $cancelUrl,
-                ]
-            ];
-
-            $subscription = $provider->createSubscription($subscriptionData);
-
-            if (isset($subscription['error'])) {
-                throw new Exception("PayPal Subscription Error: " . json_encode($subscription));
-            }
-
-            // 4. OPTIONAL: Save a pending record
-            // Since PayPal subscriptions are approved on the frontend, 
-            // you might want to save the record here as 'pending' 
-            // and update it later via Webhook or a 'complete' endpoint.
-
-            return response()->json($subscription);
-        } catch (Exception $e) {
-            Log::error('PayPal Subscription Error: ' . $e->getMessage());
-            return response()->json([
-                'error' => 'Failed to create subscription',
-                'details' => $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Confirm and Save PayPal Subscription (Call this after Frontend success)
-     */
-    public function savePaypalSubscription(Request $request)
-    {
-        $request->validate([
-            'subscriptionID' => 'required',
-            'amount'         => 'required',
-            'email'          => 'required|email',
-            'donation_for'   => 'required',
-            'interval'       => 'required',
-        ]);
-
-        $goal = FundRaisa::latest()->first();
-
-        $donation = GeneralDonation::create([
-            'fund_raisa_id'   => $goal?->id,
-            'donation_for'    => $request->donation_for,
-            'name'            => $request->name,
-            'email'           => $request->email,
-            'amount'          => $request->amount,
-            'payment_id'      => $request->subscriptionID,
-            'donation_mode'   => 'paypal',
-            'frequency'       => $request->interval, // 'month' or 'year'
-            'status'          => 'paid', // Or 'active'
-            'address1'        => $request->address1,
-            'city'            => $request->city,
-            'state'           => $request->state,
-            'country'         => $request->country,
-        ]);
-
-        return response()->json(['status' => 'success', 'donation' => $donation]);
     }
 }
