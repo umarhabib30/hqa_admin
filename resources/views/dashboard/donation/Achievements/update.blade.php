@@ -100,19 +100,48 @@
 
                 <!-- CARD DESC -->
                 <div>
-                    <label class="block text-sm font-medium text-gray-600 mb-1">
-                        Card Description (one per line)
+                    <label class="block text-sm font-medium text-gray-600 mb-2">
+                        Card Description Points
                     </label>
 
-                    <textarea name="card_desc[]" rows="4"
-                        class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#00285E] focus:outline-none">
-    @foreach(old('card_desc', $achievement->card_desc ?? []) as $desc){{ $desc }}
-    @endforeach
-        </textarea>
+                    @php
+                        $points = old('card_desc');
+                        if (!is_array($points)) {
+                            $points = $achievement->card_desc ?? [];
+                        }
+                        $points = array_values(array_filter($points ?? [], fn ($v) => trim((string) $v) !== ''));
+                        if (count($points) === 0) {
+                            $points = [''];
+                        }
+                    @endphp
 
-                    @error('card_desc')
-                        <p class="text-sm text-red-500 mt-1">{{ $message }}</p>
-                    @enderror
+                    <div id="points-wrapper" class="space-y-3">
+                        @foreach($points as $desc)
+                            <div class="flex gap-2 items-center point-row">
+                                <input type="text" name="card_desc[]"
+                                    value="{{ $desc }}"
+                                    placeholder="• Achievement point"
+                                    class="w-full px-4 py-3 rounded-lg border border-gray-300
+                                           focus:ring-2 focus:ring-[#00285E] focus:outline-none">
+
+                                <button type="button"
+                                    onclick="removePoint(this)"
+                                    class="shrink-0 px-3 py-3 text-sm rounded-lg
+                                           border border-red-500 text-red-600
+                                           hover:bg-red-500 hover:text-white transition">
+                                    Remove
+                                </button>
+                            </div>
+                        @endforeach
+                    </div>
+
+                    <button type="button"
+                        onclick="addPoint()"
+                        class="mt-3 px-4 py-2 text-sm rounded-lg
+                               border border-[#00285E] text-[#00285E]
+                               hover:bg-[#00285E] hover:text-white transition">
+                        + Add Point
+                    </button>
                 </div>
 
 
@@ -131,7 +160,7 @@
                     <button type="submit" class="px-8 py-3 rounded-lg cursor-pointer
                                        border-2 border-[#00285E]
                                        text-[#00285E] font-semibold
-                                    hover:bg-#00285E hover:text-white
+                                       hover:bg-[#00285E] hover:text-white
                                        transition-all duration-300
                                        active:scale-95">
                         Update Achievement
@@ -146,3 +175,52 @@
     </div>
 
 @endsection
+
+<script>
+    function addPoint() {
+        const wrapper = document.getElementById('points-wrapper');
+        const row = document.createElement('div');
+        row.className = 'flex gap-2 items-center point-row';
+
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.name = 'card_desc[]';
+        input.placeholder = '• Another achievement point';
+        input.className = `
+            w-full px-4 py-3 rounded-lg border border-gray-300
+            focus:ring-2 focus:ring-[#00285E] focus:outline-none
+        `;
+
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.textContent = 'Remove';
+        btn.className = `
+            shrink-0 px-3 py-3 text-sm rounded-lg
+            border border-red-500 text-red-600
+            hover:bg-red-500 hover:text-white transition
+        `;
+        btn.addEventListener('click', function () {
+            removePoint(btn);
+        });
+
+        row.appendChild(input);
+        row.appendChild(btn);
+        wrapper.appendChild(row);
+    }
+
+    function removePoint(buttonEl) {
+        const wrapper = document.getElementById('points-wrapper');
+        const rows = wrapper.querySelectorAll('.point-row');
+        const row = buttonEl.closest('.point-row');
+        if (!row) return;
+
+        // Keep at least one input row. If it's the last one, just clear its input.
+        if (rows.length <= 1) {
+            const input = row.querySelector('input[name="card_desc[]"]');
+            if (input) input.value = '';
+            return;
+        }
+
+        row.remove();
+    }
+</script>

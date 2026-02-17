@@ -3,6 +3,13 @@
     $typeLabel = $isRecurring
         ? 'Recurring (' . ($donation->frequency === 'month' ? 'Monthly' : ($donation->frequency === 'year' ? 'Yearly' : $donation->frequency)) . ')'
         : 'One-time';
+
+    $honorLine = null;
+    if (!empty($donation->honor_type) && !empty($donation->honor_name)) {
+        $honorLine = $donation->honor_type === 'memory'
+            ? 'In the memory of ' . $donation->honor_name
+            : 'In the honor of ' . $donation->honor_name;
+    }
 @endphp
 <!DOCTYPE html>
 <html lang="en">
@@ -41,11 +48,35 @@
                     <td style="padding:6px 0; color:#6b7280; font-size:13px;">Purpose</td>
                     <td style="padding:6px 0; color:#111827;">{{ $donation->donation_for ?? '—' }}</td>
                 </tr>
+                @if(!empty($honorLine))
+                    <tr>
+                        <td style="padding:6px 0; color:#6b7280; font-size:13px;">Honor</td>
+                        <td style="padding:6px 0; color:#111827;">{{ $honorLine }}</td>
+                    </tr>
+                @endif
                 <tr>
                     <td style="padding:6px 0; color:#6b7280; font-size:13px;">Submitted at</td>
                     <td style="padding:6px 0; color:#111827;">{{ $donation->created_at?->format('M d, Y \a\t H:i') ?? '—' }}</td>
                 </tr>
             </table>
+
+            @if(!empty($payload) && is_array($payload))
+                <p style="color:#374151; margin:0 0 8px 0;"><strong>Payload details</strong></p>
+                <table style="width:100%; border-collapse:collapse; margin-bottom:20px;">
+                    @foreach($payload as $k => $v)
+                        <tr>
+                            <td style="padding:6px 0; color:#6b7280; font-size:13px; width:180px;">{{ $k }}</td>
+                            <td style="padding:6px 0; color:#111827; font-size:13px;">
+                                @if(is_array($v))
+                                    {{ json_encode($v) }}
+                                @else
+                                    {{ (string) $v }}
+                                @endif
+                            </td>
+                        </tr>
+                    @endforeach
+                </table>
+            @endif
 
             <a href="{{ url('/admin/donations') }}"
                style="display:inline-block; margin-top:16px; padding:12px 20px; background:#00285E; color:white; text-decoration:none; border-radius:8px; font-size:14px;">

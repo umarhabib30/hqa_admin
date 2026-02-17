@@ -14,32 +14,6 @@
             @csrf
 
 
-            <!-- MAIN TITLE -->
-            {{-- <div>
-                <label class="block text-sm font-medium text-gray-600 mb-1">
-                    Main Title
-                </label>
-                <input type="text" name="main_title"
-                    placeholder="e.g. Gold Donation Campaign"
-                    class="w-full px-4 py-3 rounded-lg
-                           border border-gray-300
-                           focus:ring-2 focus:ring-[#00285E]
-                           focus:outline-none">
-            </div>
-
-            <!-- MAIN DESC -->
-            <div>
-                <label class="block text-sm font-medium text-gray-600 mb-1">
-                    Main Description
-                </label>
-                <textarea name="main_desc" rows="3"
-                    placeholder="Short description about achievement"
-                    class="w-full px-4 py-3 rounded-lg
-                           border border-gray-300
-                           focus:ring-2 focus:ring-[#00285E]
-                           focus:outline-none"></textarea>
-            </div> --}}
-
             <!-- DIVIDER -->
             <hr class="my-6">
 
@@ -52,7 +26,7 @@
                 <label class="block text-sm font-medium text-gray-600 mb-1">
                     Card Title
                 </label>
-                <input type="text" name="card_title"
+                <input type="text" name="card_title" value="{{ old('card_title') }}"
                     placeholder="e.g. Platinum Supporter"
                     class="w-full px-4 py-3 rounded-lg
                            border border-gray-300
@@ -68,7 +42,7 @@
                     <label class="block text-sm font-medium text-gray-600 mb-1">
                         Card Price
                     </label>
-                    <input type="number" name="card_price"
+                    <input type="number" name="card_price" value="{{ old('card_price') }}"
                         placeholder="e.g. 5000"
                         class="w-full px-4 py-3 rounded-lg
                                border border-gray-300
@@ -81,7 +55,7 @@
                     <label class="block text-sm font-medium text-gray-600 mb-1">
                         Card Percentage
                     </label>
-                    <input type="number" name="card_percentage"
+                    <input type="number" name="card_percentage" value="{{ old('card_percentage') }}"
                         placeholder="e.g. 75"
                         class="w-full px-4 py-3 rounded-lg
                                border border-gray-300
@@ -98,10 +72,20 @@
                 </label>
 
                 <div id="points-wrapper" class="space-y-3">
-                    <input type="text" name="card_desc[]"
-                        placeholder="• First achievement point"
-                        class="w-full px-4 py-3 rounded-lg border border-gray-300
-                   focus:ring-2 focus:ring-[#00285E] focus:outline-none">
+                    <div class="flex gap-2 items-center point-row">
+                        <input type="text" name="card_desc[]" value="{{ old('card_desc[]') }}"
+                            placeholder="• First achievement point"
+                            class="w-full px-4 py-3 rounded-lg border border-gray-300
+                                   focus:ring-2 focus:ring-[#00285E] focus:outline-none">
+
+                        <button type="button"
+                            onclick="removePoint(this)"
+                            class="shrink-0 px-3 py-3 text-sm rounded-lg
+                                   border border-red-500 text-red-600
+                                   hover:bg-red-500 hover:text-white transition">
+                            Remove
+                        </button>
+                    </div>
                 </div>
 
                 <button type="button"
@@ -151,6 +135,9 @@
 <script>
     function addPoint() {
         const wrapper = document.getElementById('points-wrapper');
+        const row = document.createElement('div');
+        row.className = 'flex gap-2 items-center point-row';
+
         const input = document.createElement('input');
 
         input.type = 'text';
@@ -161,6 +148,36 @@
         focus:ring-2 focus:ring-[#00285E] focus:outline-none
     `;
 
-        wrapper.appendChild(input);
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.textContent = 'Remove';
+        btn.className = `
+            shrink-0 px-3 py-3 text-sm rounded-lg
+            border border-red-500 text-red-600
+            hover:bg-red-500 hover:text-white transition
+        `;
+        btn.addEventListener('click', function () {
+            removePoint(btn);
+        });
+
+        row.appendChild(input);
+        row.appendChild(btn);
+        wrapper.appendChild(row);
+    }
+
+    function removePoint(buttonEl) {
+        const wrapper = document.getElementById('points-wrapper');
+        const rows = wrapper.querySelectorAll('.point-row');
+        const row = buttonEl.closest('.point-row');
+        if (!row) return;
+
+        // Keep at least one input row. If it's the last one, just clear its input.
+        if (rows.length <= 1) {
+            const input = row.querySelector('input[name="card_desc[]"]');
+            if (input) input.value = '';
+            return;
+        }
+
+        row.remove();
     }
 </script>

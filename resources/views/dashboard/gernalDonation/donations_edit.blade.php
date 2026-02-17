@@ -102,16 +102,15 @@
                     <input type="text" name="donation_for" value="{{ old('donation_for', $donation->donation_for) }}" required
                         list="donation_for_list"
                         class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#00285E] focus:border-transparent @error('donation_for') border-red-500 @enderror"
-                        placeholder="e.g. Scholarship-Hafiz, HQA Annual fundraiser">
+                        placeholder="e.g. Greatest Need, Hafiz Scholarship">
                     <datalist id="donation_for_list">
-                        <option value="Scholarship-Hafiz">
-                        <option value="Katy campus – Maintenance Expenses">
-                        <option value="Construction of Richmond Campus">
-                        <option value="HQA Annual fundraiser">
-                        <option value="HQA Semi-annual fundraiser">
+                        <option value="Greatest Need">
+                        <option value="Faculty/staff support">
+                        <option value="Hafiz Scholarship">
+                        <option value="Financial aid">
+                        <option value="HQA Katy deficits">
+                        <option value="HQA Richmond">
                         <option value="Other">
-                        <option value="In the memory of">
-                        <option value="In the honor of">
                     </datalist>
                     @error('donation_for')
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>

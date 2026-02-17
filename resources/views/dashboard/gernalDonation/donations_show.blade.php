@@ -140,6 +140,8 @@
                                     Pledged
                                 @elseif ($donation->donation_mode === 'stripe')
                                     Stripe
+                                @elseif ($donation->donation_mode === 'paypal')
+                                    PayPal
                                 @else
                                     Unknown
                                 @endif

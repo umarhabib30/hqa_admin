@@ -132,14 +132,13 @@
                         <select name="donation_for" required
                             class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-4 focus:ring-[#00285E]/10 focus:border-[#00285E] outline-none transition-all">
                             <option value="">Select Purpose</option>
-                            <option value="Scholarship-Hafiz">Scholarship-Hafiz</option>
-                            <option value="Katy campus – Maintenance Expenses">Katy campus – Maintenance Expenses</option>
-                            <option value="Construction of Richmond Campus">Construction of Richmond Campus</option>
-                            <option value="HQA Annual fundraiser">HQA Annual fundraiser</option>
-                            <option value="HQA Semi-annual fundraiser">HQA Semi-annual fundraiser</option>
-                            <option value="Other">Other</option>
-                            <option value="In the memory of">In the memory of</option>
-                            <option value="In the honor of">In the honor of</option>
+                            <option value="Greatest Need" {{ old('donation_for') == 'Greatest Need' ? 'selected' : '' }}>Greatest Need</option>
+                            <option value="Faculty/staff support" {{ old('donation_for') == 'Faculty/staff support' ? 'selected' : '' }}>Faculty/staff support</option>
+                            <option value="Hafiz Scholarship" {{ old('donation_for') == 'Hafiz Scholarship' ? 'selected' : '' }}>Hafiz Scholarship</option>
+                            <option value="Financial aid" {{ old('donation_for') == 'Financial aid' ? 'selected' : '' }}>Financial aid</option>
+                            <option value="HQA Katy deficits" {{ old('donation_for') == 'HQA Katy deficits' ? 'selected' : '' }}>HQA Katy deficits</option>
+                            <option value="HQA Richmond" {{ old('donation_for') == 'HQA Richmond' ? 'selected' : '' }}>HQA Richmond</option>
+                            <option value="Other" {{ old('donation_for') == 'Other' ? 'selected' : '' }}>Other</option>
                         </select>
                     </div>
 
@@ -229,6 +228,8 @@
                                            Pledged
                                        @elseif ($donation->donation_mode === 'stripe')
                                            Stripe
+                                       @elseif ($donation->donation_mode === 'paypal')
+                                           PayPal
                                        @else
                                            Unknown
                                        @endif

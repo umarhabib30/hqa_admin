@@ -3,17 +3,111 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Mail\GeneralDonationConfirmationMail;
+use App\Mail\GeneralDonationReceivedMail;
 use App\Models\FundRaisa;
 use App\Models\GeneralDonation;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 use Stripe\StripeClient;
 use Srmklive\PayPal\Services\PayPal as PayPalClient;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 use Exception;
 
 class GeneralDonationController extends Controller
 {
     protected $stripe;
+
+    private const DONATION_PURPOSES = [
+        'Greatest Need',
+        'Faculty/staff support',
+        'Hafiz Scholarship',
+        'Financial aid',
+        'HQA Katy deficits',
+        'HQA Richmond',
+        'Other',
+    ];
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function buildSafePayload(Request $request, ?GeneralDonation $donation = null): array
+    {
+        $payload = $request->except([
+            // don't email secrets or internal payment handles
+            'client_secret',
+            'payment_method',
+            'paymentMethod',
+            'payment_method_id',
+            'paymentMethodId',
+        ]);
+
+        // normalize honor fields for email
+        if ($request->filled('honorType')) {
+            $payload['honorType'] = $request->input('honorType');
+        }
+        if ($request->filled('honorName')) {
+            $payload['honorName'] = $request->input('honorName');
+        }
+
+        if ($donation) {
+            $payload = array_merge($payload, [
+                'donation_id' => $donation->id,
+                'donation_mode' => $donation->donation_mode,
+                'frequency' => $donation->frequency,
+                'status' => $donation->status,
+                'payment_id' => $donation->payment_id,
+                'stripe_customer_id' => $donation->stripe_customer_id,
+                'stripe_subscription_id' => $donation->stripe_subscription_id,
+                'honor_line' => $this->formatHonorLine($donation->honor_type, $donation->honor_name),
+            ]);
+        }
+
+        return $payload;
+    }
+
+    private function formatHonorLine(?string $honorType, ?string $honorName): ?string
+    {
+        $honorType = $honorType ? trim((string) $honorType) : null;
+        $honorName = $honorName ? trim((string) $honorName) : null;
+        if (empty($honorType) || empty($honorName)) return null;
+
+        return $honorType === 'memory'
+            ? 'In the memory of ' . $honorName
+            : 'In the honor of ' . $honorName;
+    }
+
+    /**
+     * Send confirmation to donor and notification to super admins.
+     *
+     * @param array<string, mixed> $payload
+     */
+    private function sendDonationEmails(GeneralDonation $donation, array $payload = []): void
+    {
+        try {
+            if (!empty($donation->email)) {
+                Mail::to($donation->email)->queue(new GeneralDonationConfirmationMail($donation, $payload));
+            }
+
+            $superAdmins = User::where('role', 'super_admin')->get();
+            $sentToAnyAdmin = false;
+            foreach ($superAdmins as $admin) {
+                if (!empty($admin->email)) {
+                    Mail::to($admin->email)->queue(new GeneralDonationReceivedMail($donation, $payload));
+                    $sentToAnyAdmin = true;
+                }
+            }
+
+            // Fallback to configured admin email if there are no super admins.
+            if (!$sentToAnyAdmin && !empty(config('mail.admin_email'))) {
+                Mail::to(config('mail.admin_email'))->queue(new GeneralDonationReceivedMail($donation, $payload));
+            }
+        } catch (\Throwable $e) {
+            // Don't fail the payment flow if mail/queue fails.
+        }
+    }
 
     public function __construct()
     {
@@ -47,7 +141,9 @@ class GeneralDonationController extends Controller
             'name'           => 'nullable|string',
             'amount'         => 'required|integer|min:1',
             'interval'       => 'required|string|in:month,year',
-            'donation_for'   => 'required|string|max:255',
+            'donation_for'   => ['required', 'string', 'max:255', Rule::in(self::DONATION_PURPOSES)],
+            'honorType'      => 'nullable|string|in:memory,honor',
+            'honorName'      => 'nullable|string|max:255|required_with:honorType',
             'address1'       => 'required|string|max:255',
             'address2'       => 'nullable|string|max:255',
             'city'           => 'required|string|max:255',
@@ -79,7 +175,11 @@ class GeneralDonationController extends Controller
                     'usage' => 'off_session',
                     // Let Stripe manage eligible payment method types automatically
                     'automatic_payment_methods' => ['enabled' => true],
-                    'metadata' => ['purpose' => $request->donation_for],
+                    'metadata' => array_filter([
+                        'purpose' => $request->donation_for,
+                        'honor_type' => $request->input('honorType'),
+                        'honor_name' => $request->input('honorName'),
+                    ]),
                 ]);
     
                 return response()->json([
@@ -171,6 +271,8 @@ class GeneralDonationController extends Controller
             $donation = GeneralDonation::create([
                 'fund_raisa_id'          => $goal?->id,
                 'donation_for'           => $request->donation_for,
+                'honor_type'             => $request->input('honorType'),
+                'honor_name'             => $request->input('honorName'),
                 'name'                   => $request->name,
                 'email'                  => $request->email,
                 'amount'                 => (int) $request->amount,
@@ -186,6 +288,10 @@ class GeneralDonationController extends Controller
                 'state'                  => $request->state,
                 'country'                => $request->country,
             ]);
+
+            if ($paid) {
+                $this->sendDonationEmails($donation, $this->buildSafePayload($request, $donation));
+            }
     
             return response()->json([
                 'paid' => $paid,
@@ -234,7 +340,9 @@ class GeneralDonationController extends Controller
             'payment_method' => 'nullable|string',
             'email'          => 'required|email',
             'amount'         => 'required|integer|min:1',
-            'donation_for'   => 'required|string',
+            'donation_for'   => ['required', 'string', Rule::in(self::DONATION_PURPOSES)],
+            'honorType'      => 'nullable|string|in:memory,honor',
+            'honorName'      => 'nullable|string|max:255|required_with:honorType',
             'address1'       => 'required|string',
             'city'           => 'required|string',
             'state'          => 'required|string',
@@ -276,6 +384,8 @@ class GeneralDonationController extends Controller
             $donation = GeneralDonation::create([
                 'fund_raisa_id'      => $goal?->id,
                 'donation_for'       => $request->donation_for,
+                'honor_type'         => $request->input('honorType'),
+                'honor_name'         => $request->input('honorName'),
                 'name'               => $request->name,
                 'email'              => $request->email,
                 'amount'             => (int) $request->amount,
@@ -290,6 +400,10 @@ class GeneralDonationController extends Controller
                 'state'              => $request->state,
                 'country'            => $request->country,
             ]);
+
+            if ($pi->status === 'succeeded') {
+                $this->sendDonationEmails($donation, $this->buildSafePayload($request, $donation));
+            }
 
             // If not yet succeeded, frontend should confirm with client_secret
             if ($pi->status !== 'succeeded' && !empty($pi->client_secret)) {
@@ -355,7 +469,9 @@ class GeneralDonationController extends Controller
             'orderID'      => 'required',
             'email'        => 'required|email',
             'amount'       => 'required|numeric',
-            'donation_for' => 'required|string',
+            'donation_for' => ['required', 'string', Rule::in(self::DONATION_PURPOSES)],
+            'honorType'    => 'nullable|string|in:memory,honor',
+            'honorName'    => 'nullable|string|max:255|required_with:honorType',
             'address1'     => 'required|string',
             'city'         => 'required|string',
             'state'        => 'required|string',
@@ -375,6 +491,8 @@ class GeneralDonationController extends Controller
                 $donation = GeneralDonation::create([
                     'fund_raisa_id'   => $goal?->id,
                     'donation_for'    => $request->donation_for,
+                    'honor_type'      => $request->input('honorType'),
+                    'honor_name'      => $request->input('honorName'),
                     'name'            => $request->name,
                     'email'           => $request->email,
                     'amount'          => $request->amount,
@@ -388,6 +506,8 @@ class GeneralDonationController extends Controller
                     'state'           => $request->state,
                     'country'         => $request->country,
                 ]);
+
+                $this->sendDonationEmails($donation, $this->buildSafePayload($request, $donation));
 
                 return response()->json(['status' => 'success', 'donation' => $donation]);
             }
@@ -405,7 +525,9 @@ class GeneralDonationController extends Controller
         $request->validate([
             'amount'       => 'required|numeric|min:1',
             'interval'     => 'required|string|in:month,year',
-            'donation_for' => 'required|string',
+            'donation_for' => ['required', 'string', Rule::in(self::DONATION_PURPOSES)],
+            'honorType'    => 'nullable|string|in:memory,honor',
+            'honorName'    => 'nullable|string|max:255|required_with:honorType',
             'name'         => 'required|string',
             'email'        => 'required|email',
             'return_url'   => 'nullable|url',
@@ -543,7 +665,9 @@ class GeneralDonationController extends Controller
             'subscriptionID' => 'required',
             'amount'         => 'required',
             'email'          => 'required|email',
-            'donation_for'   => 'required',
+            'donation_for'   => ['required', 'string', Rule::in(self::DONATION_PURPOSES)],
+            'honorType'      => 'nullable|string|in:memory,honor',
+            'honorName'      => 'nullable|string|max:255|required_with:honorType',
             'interval'       => 'required',
         ]);
 
@@ -552,6 +676,8 @@ class GeneralDonationController extends Controller
         $donation = GeneralDonation::create([
             'fund_raisa_id'   => $goal?->id,
             'donation_for'    => $request->donation_for,
+            'honor_type'      => $request->input('honorType'),
+            'honor_name'      => $request->input('honorName'),
             'name'            => $request->name,
             'email'           => $request->email,
             'amount'          => $request->amount,
@@ -564,6 +690,8 @@ class GeneralDonationController extends Controller
             'state'           => $request->state,
             'country'         => $request->country,
         ]);
+
+        $this->sendDonationEmails($donation, $this->buildSafePayload($request, $donation));
 
         return response()->json(['status' => 'success', 'donation' => $donation]);
     }

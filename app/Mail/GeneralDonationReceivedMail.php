@@ -11,7 +11,10 @@ class GeneralDonationReceivedMail extends Mailable
 {
     use Queueable, SerializesModels;
 
-    public function __construct(public GeneralDonation $donation)
+    /**
+     * @param array<string, mixed> $payload
+     */
+    public function __construct(public GeneralDonation $donation, public array $payload = [])
     {
     }
 
@@ -23,6 +26,7 @@ class GeneralDonationReceivedMail extends Mailable
         return $this->subject('New general donation (' . $type . ') – ' . $name)
             ->view('emails.donation.general-received', [
                 'donation' => $this->donation,
+                'payload' => $this->payload,
             ]);
     }
 }
