@@ -43,6 +43,12 @@
                     <td style="padding:6px 0; color:#6b7280; font-size:13px;">Purpose</td>
                     <td style="padding:6px 0; color:#111827;">{{ $donation->donation_for ?? '—' }}</td>
                 </tr>
+                @if(($donation->donation_for ?? null) === 'Other' && !empty($donation->other_purpose))
+                    <tr>
+                        <td style="padding:6px 0; color:#6b7280; font-size:13px;">Other purpose</td>
+                        <td style="padding:6px 0; color:#111827;">{{ $donation->other_purpose }}</td>
+                    </tr>
+                @endif
                 @if(!empty($honorLine))
                     <tr>
                         <td style="padding:6px 0; color:#6b7280; font-size:13px;">Honor</td>

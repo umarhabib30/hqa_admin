@@ -2,7 +2,11 @@
 <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 
 @section('content')
-    <div x-data="{ showAdd: false }" class="w-full px-4 sm:px-6 lg:px-8 py-8">
+    <div x-data="{
+        showAdd: false,
+        purpose: @js(old('donation_for', '')),
+        honorType: @js(old('honorType', '')),
+    }" class="w-full px-4 sm:px-6 lg:px-8 py-8">
         {{-- Header Section --}}
         <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-8 border-b border-gray-100 pb-6">
             <div>
@@ -129,7 +133,7 @@
                         <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
                             Purpose <span class="text-red-500">*</span>
                         </label>
-                        <select name="donation_for" required
+                        <select name="donation_for" required x-model="purpose"
                             class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-4 focus:ring-[#00285E]/10 focus:border-[#00285E] outline-none transition-all">
                             <option value="">Select Purpose</option>
                             <option value="Greatest Need" {{ old('donation_for') == 'Greatest Need' ? 'selected' : '' }}>Greatest Need</option>
@@ -140,6 +144,38 @@
                             <option value="HQA Richmond" {{ old('donation_for') == 'HQA Richmond' ? 'selected' : '' }}>HQA Richmond</option>
                             <option value="Other" {{ old('donation_for') == 'Other' ? 'selected' : '' }}>Other</option>
                         </select>
+                    </div>
+
+                    <div class="md:col-span-2" x-show="purpose === 'Other'" x-cloak>
+                        <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                            Other Purpose <span class="text-red-500">*</span>
+                        </label>
+                        <input name="otherPurpose" value="{{ old('otherPurpose') }}"
+                            x-bind:required="purpose === 'Other'"
+                            placeholder="Please specify"
+                            class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-4 focus:ring-[#00285E]/10 focus:border-[#00285E] outline-none transition-all" />
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                            Honor / Memory
+                        </label>
+                        <select name="honorType" x-model="honorType"
+                            class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-4 focus:ring-[#00285E]/10 focus:border-[#00285E] outline-none transition-all">
+                            <option value="">— None —</option>
+                            <option value="honor" {{ old('honorType') == 'honor' ? 'selected' : '' }}>In the honor of</option>
+                            <option value="memory" {{ old('honorType') == 'memory' ? 'selected' : '' }}>In the memory of</option>
+                        </select>
+                    </div>
+
+                    <div class="md:col-span-2" x-show="honorType !== ''" x-cloak>
+                        <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                            Relationship to the donor <span class="text-red-500">*</span>
+                        </label>
+                        <input name="honorName" value="{{ old('honorName') }}"
+                            x-bind:required="honorType !== ''"
+                            placeholder="Relationship to the donor"
+                            class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-4 focus:ring-[#00285E]/10 focus:border-[#00285E] outline-none transition-all" />
                     </div>
 
                     <div class="md:col-span-2">
@@ -217,7 +253,12 @@
                                         <span class="text-xs text-gray-500">{{ $donation->email ?? '—' }}</span>
                                     </div>
                                 </td>
-                                <td class="px-4 py-3 text-sm text-gray-600 max-w-[200px]">{{ $donation->donation_for }}</td>
+                                <td class="px-4 py-3 text-sm text-gray-600 max-w-[220px]">
+                                    {{ $donation->donation_for }}
+                                    @if($donation->donation_for === 'Other' && !empty($donation->other_purpose))
+                                        <div class="text-xs text-gray-500 mt-0.5">({{ $donation->other_purpose }})</div>
+                                    @endif
+                                </td>
                                 <td class="px-4 py-3 font-semibold text-gray-900">${{ number_format($donation->amount, 2) }}</td>
                                 {{-- make badge for donation mode --}}
                                 <td class="px-4 py-3 text-right">

@@ -26,7 +26,10 @@
             @csrf
             @method('PUT')
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div x-data="{
+                purpose: @js(old('donation_for', $donation->donation_for)),
+                honorType: @js(old('honorType', $donation->honor_type)),
+            }" class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Name</label>
                     <input type="text" name="name" value="{{ old('name', $donation->name) }}"
@@ -97,22 +100,55 @@
                     @enderror
                 </div>
 
-                <div class="md:col-span-3">
+                <div class="md:col-span-2">
                     <label class="block text-sm font-medium text-gray-700 mb-2">Purpose (Donation for) <span class="text-red-500">*</span></label>
-                    <input type="text" name="donation_for" value="{{ old('donation_for', $donation->donation_for) }}" required
-                        list="donation_for_list"
-                        class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#00285E] focus:border-transparent @error('donation_for') border-red-500 @enderror"
-                        placeholder="e.g. Greatest Need, Hafiz Scholarship">
-                    <datalist id="donation_for_list">
-                        <option value="Greatest Need">
-                        <option value="Faculty/staff support">
-                        <option value="Hafiz Scholarship">
-                        <option value="Financial aid">
-                        <option value="HQA Katy deficits">
-                        <option value="HQA Richmond">
-                        <option value="Other">
-                    </datalist>
+                    <select name="donation_for" required x-model="purpose"
+                        class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#00285E] focus:border-transparent @error('donation_for') border-red-500 @enderror">
+                        <option value="">Select Purpose</option>
+                        <option value="Greatest Need">Greatest Need</option>
+                        <option value="Faculty/staff support">Faculty/staff support</option>
+                        <option value="Hafiz Scholarship">Hafiz Scholarship</option>
+                        <option value="Financial aid">Financial aid</option>
+                        <option value="HQA Katy deficits">HQA Katy deficits</option>
+                        <option value="HQA Richmond">HQA Richmond</option>
+                        <option value="Other">Other</option>
+                    </select>
                     @error('donation_for')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <div class="md:col-span-1" x-show="purpose === 'Other'" x-cloak>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Other Purpose <span class="text-red-500">*</span></label>
+                    <input type="text" name="otherPurpose" value="{{ old('otherPurpose', $donation->other_purpose) }}"
+                        x-bind:required="purpose === 'Other'"
+                        class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#00285E] focus:border-transparent @error('otherPurpose') border-red-500 @enderror"
+                        placeholder="Please specify">
+                    @error('otherPurpose')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <div class="md:col-span-1">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Honor / Memory</label>
+                    <select name="honorType" x-model="honorType"
+                        class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#00285E] focus:border-transparent @error('honorType') border-red-500 @enderror">
+                        <option value="">— None —</option>
+                        <option value="honor">In the honor of</option>
+                        <option value="memory">In the memory of</option>
+                    </select>
+                    @error('honorType')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <div class="md:col-span-2" x-show="honorType !== ''" x-cloak>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Person Name <span class="text-red-500">*</span></label>
+                    <input type="text" name="honorName" value="{{ old('honorName', $donation->honor_name) }}"
+                        x-bind:required="honorType !== ''"
+                        class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#00285E] focus:border-transparent @error('honorName') border-red-500 @enderror"
+                        placeholder="Name of person">
+                    @error('honorName')
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                     @enderror
                 </div>

@@ -9,9 +9,20 @@ use App\Mail\GeneralDonationConfirmationMail;
 use App\Mail\GeneralDonationReceivedMail;
 use App\Models\User;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Validation\Rule;
 
 class DonationAdminController extends Controller
 {
+    private const DONATION_PURPOSES = [
+        'Greatest Need',
+        'Faculty/staff support',
+        'Hafiz Scholarship',
+        'Financial aid',
+        'HQA Katy deficits',
+        'HQA Richmond',
+        'Other',
+    ];
+
     public function index()
     {
         // Fetch all donations, newest first
@@ -23,13 +34,27 @@ class DonationAdminController extends Controller
 
     public function store(Request $request)
     {
+        // Normalize honor fields if frontend sends snake_case
+        if ($request->filled('honor_type') && !$request->filled('honorType')) {
+            $request->merge(['honorType' => $request->input('honor_type')]);
+        }
+        if ($request->filled('honor_name') && !$request->filled('honorName')) {
+            $request->merge(['honorName' => $request->input('honor_name')]);
+        }
+        if ($request->filled('other_purpose') && !$request->filled('otherPurpose')) {
+            $request->merge(['otherPurpose' => $request->input('other_purpose')]);
+        }
+
         $validated = $request->validate([
             'name' => 'nullable|string|max:255',
             'email' => 'nullable|email|max:255',
             'amount' => 'required|numeric|min:0.01',
             'donation_mode' => 'required|in:paid_now,pledged',
             'payment_id' => 'nullable|string|max:255|unique:general_donations,payment_id',
-            'donation_for' => 'required|string|max:255',
+            'donation_for' => ['required', 'string', 'max:255', Rule::in(self::DONATION_PURPOSES)],
+            'otherPurpose' => 'nullable|string|max:255|required_if:donation_for,Other',
+            'honorType'    => 'nullable|string|in:memory,honor',
+            'honorName'    => 'nullable|string|max:255|required_with:honorType',
             'fund_raisa_id' => 'nullable|integer|exists:fund_raisas,id',
 
             // ✅ NEW ADDRESS FIELDS
@@ -45,6 +70,9 @@ class DonationAdminController extends Controller
         $donation = GeneralDonation::create([
             'fund_raisa_id' => $goalId,
             'donation_for'  => $validated['donation_for'],
+            'other_purpose' => ($validated['donation_for'] ?? null) === 'Other' ? ($validated['otherPurpose'] ?? null) : null,
+            'honor_type'    => $validated['honorType'] ?? null,
+            'honor_name'    => $validated['honorName'] ?? null,
             'name'          => $validated['name'] ?? null,
             'email'         => $validated['email'] ?? null,
             'amount'        => $validated['amount'],
@@ -77,13 +105,27 @@ class DonationAdminController extends Controller
 
     public function update(Request $request, GeneralDonation $donation)
     {
+        // Normalize honor fields if frontend sends snake_case
+        if ($request->filled('honor_type') && !$request->filled('honorType')) {
+            $request->merge(['honorType' => $request->input('honor_type')]);
+        }
+        if ($request->filled('honor_name') && !$request->filled('honorName')) {
+            $request->merge(['honorName' => $request->input('honor_name')]);
+        }
+        if ($request->filled('other_purpose') && !$request->filled('otherPurpose')) {
+            $request->merge(['otherPurpose' => $request->input('other_purpose')]);
+        }
+
         $validated = $request->validate([
             'name'          => 'nullable|string|max:255',
             'email'         => 'nullable|email|max:255',
             'amount'        => 'required|numeric|min:0',
-            'donation_mode' => 'required|in:paid_now,pledged,stripe',
+            'donation_mode' => 'required|in:paid_now,pledged,stripe,paypal',
             'payment_id'    => 'nullable|string|max:255|unique:general_donations,payment_id,' . $donation->id,
-            'donation_for'  => 'required|string|max:255',
+            'donation_for'  => ['required', 'string', 'max:255', Rule::in(self::DONATION_PURPOSES)],
+            'otherPurpose'  => 'nullable|string|max:255|required_if:donation_for,Other',
+            'honorType'     => 'nullable|string|in:memory,honor',
+            'honorName'     => 'nullable|string|max:255|required_with:honorType',
             'fund_raisa_id' => 'nullable|integer|exists:fund_raisas,id',
             'address1'      => 'required|string|max:255',
             'address2'      => 'nullable|string|max:255',
@@ -97,6 +139,9 @@ class DonationAdminController extends Controller
         $donation->update([
             'fund_raisa_id'  => $validated['fund_raisa_id'] ?? null,
             'donation_for'   => $validated['donation_for'],
+            'other_purpose'  => ($validated['donation_for'] ?? null) === 'Other' ? ($validated['otherPurpose'] ?? null) : null,
+            'honor_type'     => $validated['honorType'] ?? null,
+            'honor_name'     => $validated['honorName'] ?? null,
             'name'           => $validated['name'] ?? null,
             'email'          => $validated['email'] ?? null,
             'amount'         => $validated['amount'],

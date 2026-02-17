@@ -21,6 +21,7 @@ class GeneralDonation extends Model
         'donation_for',
         'honor_type',
         'honor_name',
+        'other_purpose',
         'address1',
         'address2',
         'city',

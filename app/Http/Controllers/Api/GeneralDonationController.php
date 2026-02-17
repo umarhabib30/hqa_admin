@@ -51,6 +51,9 @@ class GeneralDonationController extends Controller
         if ($request->filled('honorName')) {
             $payload['honorName'] = $request->input('honorName');
         }
+        if ($request->filled('otherPurpose')) {
+            $payload['otherPurpose'] = $request->input('otherPurpose');
+        }
 
         if ($donation) {
             $payload = array_merge($payload, [
@@ -62,6 +65,7 @@ class GeneralDonationController extends Controller
                 'stripe_customer_id' => $donation->stripe_customer_id,
                 'stripe_subscription_id' => $donation->stripe_subscription_id,
                 'honor_line' => $this->formatHonorLine($donation->honor_type, $donation->honor_name),
+                'other_purpose' => $donation->other_purpose,
             ]);
         }
 
@@ -114,6 +118,20 @@ class GeneralDonationController extends Controller
         $this->stripe = new StripeClient(config('services.stripe.secret'));
     }
 
+    private function normalizeDonationExtras(Request $request): void
+    {
+        // Accept both camelCase and snake_case from various clients
+        if ($request->filled('honor_type') && !$request->filled('honorType')) {
+            $request->merge(['honorType' => $request->input('honor_type')]);
+        }
+        if ($request->filled('honor_name') && !$request->filled('honorName')) {
+            $request->merge(['honorName' => $request->input('honor_name')]);
+        }
+        if ($request->filled('other_purpose') && !$request->filled('otherPurpose')) {
+            $request->merge(['otherPurpose' => $request->input('other_purpose')]);
+        }
+    }
+
     public function show()
     {
         return view('subscribe_dynamic');
@@ -124,6 +142,8 @@ class GeneralDonationController extends Controller
      */
     public function recurringDonation(Request $request)
     {
+        $this->normalizeDonationExtras($request);
+
         // normalize pm key
         $pm =
             $request->input('payment_method') ??
@@ -142,6 +162,7 @@ class GeneralDonationController extends Controller
             'amount'         => 'required|integer|min:1',
             'interval'       => 'required|string|in:month,year',
             'donation_for'   => ['required', 'string', 'max:255', Rule::in(self::DONATION_PURPOSES)],
+            'otherPurpose'   => 'nullable|string|max:255|required_if:donation_for,Other',
             'honorType'      => 'nullable|string|in:memory,honor',
             'honorName'      => 'nullable|string|max:255|required_with:honorType',
             'address1'       => 'required|string|max:255',
@@ -179,6 +200,7 @@ class GeneralDonationController extends Controller
                         'purpose' => $request->donation_for,
                         'honor_type' => $request->input('honorType'),
                         'honor_name' => $request->input('honorName'),
+                        'other_purpose' => $request->input('otherPurpose'),
                     ]),
                 ]);
     
@@ -271,6 +293,7 @@ class GeneralDonationController extends Controller
             $donation = GeneralDonation::create([
                 'fund_raisa_id'          => $goal?->id,
                 'donation_for'           => $request->donation_for,
+                'other_purpose'          => $request->donation_for === 'Other' ? $request->input('otherPurpose') : null,
                 'honor_type'             => $request->input('honorType'),
                 'honor_name'             => $request->input('honorName'),
                 'name'                   => $request->name,
@@ -324,6 +347,8 @@ class GeneralDonationController extends Controller
      */
     public function oneTimeDonation(Request $request)
     {
+        $this->normalizeDonationExtras($request);
+
         // Normalize payment method key (frontend may send different names)
         $pm =
             $request->input('payment_method') ??
@@ -341,6 +366,7 @@ class GeneralDonationController extends Controller
             'email'          => 'required|email',
             'amount'         => 'required|integer|min:1',
             'donation_for'   => ['required', 'string', Rule::in(self::DONATION_PURPOSES)],
+            'otherPurpose'   => 'nullable|string|max:255|required_if:donation_for,Other',
             'honorType'      => 'nullable|string|in:memory,honor',
             'honorName'      => 'nullable|string|max:255|required_with:honorType',
             'address1'       => 'required|string',
@@ -384,6 +410,7 @@ class GeneralDonationController extends Controller
             $donation = GeneralDonation::create([
                 'fund_raisa_id'      => $goal?->id,
                 'donation_for'       => $request->donation_for,
+                'other_purpose'      => $request->donation_for === 'Other' ? $request->input('otherPurpose') : null,
                 'honor_type'         => $request->input('honorType'),
                 'honor_name'         => $request->input('honorName'),
                 'name'               => $request->name,
@@ -465,11 +492,14 @@ class GeneralDonationController extends Controller
      */
     public function capturePaypalOrder(Request $request)
     {
+        $this->normalizeDonationExtras($request);
+
         $request->validate([
             'orderID'      => 'required',
             'email'        => 'required|email',
             'amount'       => 'required|numeric',
             'donation_for' => ['required', 'string', Rule::in(self::DONATION_PURPOSES)],
+            'otherPurpose' => 'nullable|string|max:255|required_if:donation_for,Other',
             'honorType'    => 'nullable|string|in:memory,honor',
             'honorName'    => 'nullable|string|max:255|required_with:honorType',
             'address1'     => 'required|string',
@@ -491,6 +521,7 @@ class GeneralDonationController extends Controller
                 $donation = GeneralDonation::create([
                     'fund_raisa_id'   => $goal?->id,
                     'donation_for'    => $request->donation_for,
+                    'other_purpose'   => $request->donation_for === 'Other' ? $request->input('otherPurpose') : null,
                     'honor_type'      => $request->input('honorType'),
                     'honor_name'      => $request->input('honorName'),
                     'name'            => $request->name,
@@ -522,10 +553,13 @@ class GeneralDonationController extends Controller
      */
     public function createPaypalSubscription(Request $request)
     {
+        $this->normalizeDonationExtras($request);
+
         $request->validate([
             'amount'       => 'required|numeric|min:1',
             'interval'     => 'required|string|in:month,year',
             'donation_for' => ['required', 'string', Rule::in(self::DONATION_PURPOSES)],
+            'otherPurpose' => 'nullable|string|max:255|required_if:donation_for,Other',
             'honorType'    => 'nullable|string|in:memory,honor',
             'honorName'    => 'nullable|string|max:255|required_with:honorType',
             'name'         => 'required|string',
@@ -661,11 +695,14 @@ class GeneralDonationController extends Controller
      */
     public function savePaypalSubscription(Request $request)
     {
+        $this->normalizeDonationExtras($request);
+
         $request->validate([
             'subscriptionID' => 'required',
             'amount'         => 'required',
             'email'          => 'required|email',
             'donation_for'   => ['required', 'string', Rule::in(self::DONATION_PURPOSES)],
+            'otherPurpose'   => 'nullable|string|max:255|required_if:donation_for,Other',
             'honorType'      => 'nullable|string|in:memory,honor',
             'honorName'      => 'nullable|string|max:255|required_with:honorType',
             'interval'       => 'required',
@@ -676,6 +713,7 @@ class GeneralDonationController extends Controller
         $donation = GeneralDonation::create([
             'fund_raisa_id'   => $goal?->id,
             'donation_for'    => $request->donation_for,
+            'other_purpose'   => $request->donation_for === 'Other' ? $request->input('otherPurpose') : null,
             'honor_type'      => $request->input('honorType'),
             'honor_name'      => $request->input('honorName'),
             'name'            => $request->name,

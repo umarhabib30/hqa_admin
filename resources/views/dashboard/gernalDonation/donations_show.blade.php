@@ -60,6 +60,15 @@
                             <p class="text-[10px] text-blue-400 uppercase font-black tracking-widest mb-1">Purpose of
                                 Donation</p>
                             <p class="text-[#00285E] font-bold text-lg">{{ $donation->donation_for }}</p>
+                            @if($donation->donation_for === 'Other' && !empty($donation->other_purpose))
+                                <p class="text-sm text-gray-600 font-semibold mt-1">{{ $donation->other_purpose }}</p>
+                            @endif
+                            @if(!empty($donation->honor_type) && !empty($donation->honor_name))
+                                <p class="text-sm text-gray-600 font-semibold mt-1">
+                                    {{ $donation->honor_type === 'memory' ? 'In the memory of' : 'In the honor of' }}
+                                    {{ $donation->honor_name }}
+                                </p>
+                            @endif
                         </div>
                     </div>
                 </div>
