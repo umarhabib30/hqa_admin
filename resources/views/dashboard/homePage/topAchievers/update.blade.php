@@ -2,7 +2,7 @@
 @section('content')
 
     <div class="max-w-4xl mx-auto bg-white p-6 rounded-xl shadow">
-        <h2 class="text-2xl font-semibold mb-6">Edit Top Achiever</h2>
+        <h2 class="text-2xl font-semibold mb-6">Edit Home Top Achiever</h2>
 
         @if ($errors->any())
             <div class="mb-6 p-4 rounded-lg bg-red-50 border border-red-200 text-red-700">

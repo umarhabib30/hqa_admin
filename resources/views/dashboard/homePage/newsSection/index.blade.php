@@ -5,7 +5,7 @@
     <div>
         <!-- HEADER -->
         <div class="flex justify-between items-center mb-6">
-            <h1 class="text-2xl font-semibold">Media Section</h1>
+            <h1 class="text-2xl font-semibold">Home News Section</h1>
 
             <a href="{{ route('news.create') }}" class="px-6 py-3 border-2 border-[#00285E] text-[#00285E]
                        rounded-xl hover:bg-[#00285E] hover:text-white transition">

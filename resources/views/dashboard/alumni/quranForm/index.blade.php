@@ -5,7 +5,7 @@
         <!-- HEADER -->
         <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
             <h1 class="text-[24px] md:text-[28px] font-semibold text-gray-800">
-                Alumni Forms
+                Alumni Form
             </h1>
 
             {{-- <a href="{{ route('alumniForm.create') }}"

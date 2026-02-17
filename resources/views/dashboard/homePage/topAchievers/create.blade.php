@@ -2,7 +2,7 @@
 @section('content')
 
     <div class="max-w-4xl mx-auto bg-white p-6 rounded-xl shadow">
-        <h2 class="text-2xl font-semibold mb-6">Add Top Achiever</h2>
+        <h2 class="text-2xl font-semibold mb-6">Add Home Top Achiever</h2>
 
         <form method="POST" enctype="multipart/form-data" action="{{ route('topAchievers.store') }}" class="space-y-6">
             @csrf

@@ -9,7 +9,7 @@
             <div>
                 <h1 class="text-4xl font-extrabold text-gray-900 tracking-tight leading-none">
                     Home <span
-                        class="text-transparent bg-clip-text bg-gradient-to-r from-[#00285E] to-blue-600">PopUps</span>
+                        class="text-transparent bg-clip-text bg-gradient-to-r from-[#00285E] to-blue-600">PopUp</span>
                 </h1>
                 <p class="text-gray-500 mt-2 font-medium">Elevate your user engagement with custom alerts.</p>
             </div>

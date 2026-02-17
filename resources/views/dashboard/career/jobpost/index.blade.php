@@ -4,7 +4,7 @@
         {{-- Header Section --}}
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
             <div>
-                <h1 class="text-3xl font-bold text-[#00285E]">Teacher Job Posts</h1>
+                <h1 class="text-3xl font-bold text-[#00285E]">Teacher Job Post</h1>
                 <p class="text-gray-500 text-sm">Manage and monitor all active job listings.</p>
             </div>
 

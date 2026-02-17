@@ -2,7 +2,7 @@
 @section('content')
 
 <div class="max-w-3xl mx-auto bg-white p-6 rounded-xl shadow">
-    <h2 class="text-2xl font-semibold mb-6">Add Home Memory</h2>
+    <h2 class="text-2xl font-semibold mb-6">Add Home Alumni</h2>
 
     <form method="POST" enctype="multipart/form-data"
         action="{{ route('memories.store') }}"

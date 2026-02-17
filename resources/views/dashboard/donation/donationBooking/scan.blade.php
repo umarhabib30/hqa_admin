@@ -3,7 +3,7 @@
 <div class="max-w-7xl mx-auto px-4 py-6 space-y-6">
     <div class="flex items-center justify-between">
         <div>
-            <h1 class="text-2xl font-bold text-gray-800">Donation Booking Check-in</h1>
+            <h1 class="text-2xl font-bold text-gray-800">Scan Check-in</h1>
             <p class="text-sm text-gray-600">Use your mobile camera to scan the QR code from the ticket PDF.</p>
         </div>
         <a href="{{ route('donationBooking.index') }}"

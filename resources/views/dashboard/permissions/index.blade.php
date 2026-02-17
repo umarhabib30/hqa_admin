@@ -6,7 +6,7 @@
     <!-- HEADER -->
     <div class="mb-6">
         <h1 class="text-[20px] md:text-[24px] font-medium text-gray-800">
-            User Permissions Management
+            Permissions
         </h1>
         {{-- <p class="text-sm text-gray-600 mt-2">Set permissions for each user individually. Super Admin has access to all features and is not listed here.</p> --}}
     </div>

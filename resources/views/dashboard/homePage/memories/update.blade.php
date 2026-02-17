@@ -2,7 +2,7 @@
 @section('content')
 
 <div class="max-w-3xl mx-auto bg-white p-6 rounded-xl shadow">
-    <h2 class="text-2xl font-semibold mb-6">Edit Home Memory</h2>
+    <h2 class="text-2xl font-semibold mb-6">Edit Home Alumni</h2>
 
     <form method="POST" enctype="multipart/form-data"
         action="{{ route('memories.update',$memory->id) }}"

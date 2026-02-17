@@ -7,7 +7,7 @@
         {{-- HEADER --}}
         <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
             <h1 class="text-2xl sm:text-3xl font-bold text-gray-800">
-                Event Booking Dashboard
+                Donation Booking
             </h1>
 
             {{-- RIGHT SIDE ACTIONS --}}

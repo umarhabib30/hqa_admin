@@ -7,10 +7,10 @@
     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
         <div>
             <h1 class="text-[24px] md:text-[28px] font-semibold text-gray-800">
-                Alumni Subscribe Emails
+                Alumni Mail
             </h1>
             <p class="text-sm text-gray-500">
-                Dashboard / Alumni / Subscribe Emails
+                Dashboard / Alumni / Mail
             </p>
         </div>
 

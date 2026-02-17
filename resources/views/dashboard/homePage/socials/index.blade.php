@@ -6,7 +6,7 @@
     <!-- HEADER -->
     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
         <h1 class="text-[24px] md:text-[28px] font-semibold text-gray-800">
-            Social Links
+            Home Socials Section
         </h1>
 
         <a href="{{ route('socials.create') }}"

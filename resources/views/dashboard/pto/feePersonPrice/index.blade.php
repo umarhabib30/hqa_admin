@@ -2,7 +2,7 @@
 
 @section('content')
     <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
-        <h1 class="text-2xl font-bold text-gray-800">Fee Per Person</h1>
+        <h1 class="text-2xl font-bold text-gray-800">PTO Fee Person</h1>
 
         <a href="{{ route('fee.create') }}"
             class="px-5 py-2 bg-[#00285E] text-white rounded-lg
