@@ -438,6 +438,7 @@ class GeneralDonationController extends Controller
             return response()->json(['paid' => false, 'error' => $e->getMessage()], 500);
         }
     }
+    
 
     /**
      * One-time donation (Stripe)
