@@ -340,69 +340,68 @@ class GeneralDonationController extends Controller
             return response()->json(['paid' => false, 'error' => $e->getMessage()], 500);
         }
     }
-
-    /**
-     * One-time donation (Stripe)
-     */
-    public function oneTimeDonation(Request $request)
+    public function confirmOneTimeDonation(Request $request)
     {
         $this->normalizeDonationExtras($request);
 
-        // Normalize payment method key (frontend may send different names)
-        $pm =
-            $request->input('payment_method') ??
-            $request->input('paymentMethod') ??
-            $request->input('payment_method_id') ??
-            $request->input('paymentMethodId');
-        if (!empty($pm) && !$request->filled('payment_method')) {
-            $request->merge(['payment_method' => $pm]);
-        }
-
         $request->validate([
-            // For PaymentElement flows, payment_method is created on frontend during confirmPayment.
-            // For legacy flows, allow passing a payment_method id (pm_*) and we will confirm server-side.
-            'payment_method' => 'nullable|string',
+            'payment_intent_id' => 'required|string',
+
+            // We re-send details so we can store address etc
             'email'          => 'required|email',
+            'name'           => 'required|string',
             'amount'         => 'required|integer|min:1',
+
             'donation_for'   => ['required', 'string', Rule::in(self::DONATION_PURPOSES)],
             'otherPurpose'   => 'nullable|string|max:255|required_if:donation_for,Other',
+
             'honorType'      => 'nullable|string|in:memory,honor',
             'honorName'      => 'nullable|string|max:255|required_with:honorType',
+
             'address1'       => 'required|string',
+            'address2'       => 'nullable|string',
             'city'           => 'required|string',
             'state'          => 'required|string',
             'country'        => 'required|string',
         ]);
 
         try {
-            $customer = $this->stripe->customers->create([
-                'email' => $request->email,
-                'name'  => $request->name,
-            ]);
+            $pi = $this->stripe->paymentIntents->retrieve($request->payment_intent_id, []);
 
-            // Create PI without confirming so PaymentElement can confirm (wallets/3DS)
-            $piPayload = [
-                'amount'   => (int) $request->amount * 100,
-                'currency' => 'usd',
-                'customer' => $customer->id,
-                'receipt_email' => $request->email,
-                'description'   => 'One-time Donation: ' . $request->donation_for,
-                'metadata' => [
-                    'type' => 'general_donation_one_time',
-                    'purpose' => $request->donation_for,
-                ],
-                'automatic_payment_methods' => ['enabled' => true],
-            ];
-
-            // Legacy: if payment_method provided, confirm server-side (may still require_action)
-            if ($request->filled('payment_method')) {
-                $piPayload['payment_method'] = $request->payment_method;
-                $piPayload['confirm'] = true;
-                $piPayload['off_session'] = false;
-                $piPayload['automatic_payment_methods'] = ['enabled' => true, 'allow_redirects' => 'never'];
+            // ✅ Must be succeeded
+            if (($pi->status ?? null) !== 'succeeded') {
+                return response()->json([
+                    'paid' => false,
+                    'message' => 'Payment not completed.',
+                    'pi_status' => $pi->status ?? null,
+                ], 400);
             }
 
-            $pi = $this->stripe->paymentIntents->create($piPayload);
+            // ✅ Basic anti-tamper checks
+            $piAmount = (int)($pi->amount ?? 0) / 100;
+            if ((int)$piAmount !== (int)$request->amount) {
+                return response()->json([
+                    'paid' => false,
+                    'message' => 'Amount mismatch.',
+                ], 400);
+            }
+
+            if (!empty($pi->receipt_email) && strtolower($pi->receipt_email) !== strtolower($request->email)) {
+                return response()->json([
+                    'paid' => false,
+                    'message' => 'Email mismatch.',
+                ], 400);
+            }
+
+            // ✅ Idempotency: don’t create duplicates
+            $existing = GeneralDonation::where('payment_id', $pi->id)->first();
+            if ($existing) {
+                return response()->json([
+                    'paid' => true,
+                    'donation_id' => $existing->id,
+                    'message' => 'Already saved.',
+                ], 200);
+            }
 
             $goal = FundRaisa::latest()->first();
 
@@ -414,12 +413,12 @@ class GeneralDonationController extends Controller
                 'honor_name'         => $request->input('honorName'),
                 'name'               => $request->name,
                 'email'              => $request->email,
-                'amount'             => (int) $request->amount,
+                'amount'             => (int)$request->amount,
                 'payment_id'         => $pi->id,
                 'donation_mode'      => 'stripe',
                 'frequency'          => 'one_time',
-                'stripe_customer_id' => $customer->id,
-                'status'             => ($pi->status === 'succeeded') ? 'paid' : 'pending',
+                'stripe_customer_id' => $pi->customer ?? null,
+                'status'             => 'paid',
                 'address1'           => $request->address1,
                 'address2'           => $request->address2,
                 'city'               => $request->city,
@@ -427,27 +426,134 @@ class GeneralDonationController extends Controller
                 'country'            => $request->country,
             ]);
 
-            if ($pi->status === 'succeeded') {
-                $this->sendDonationEmails($donation, $this->buildSafePayload($request, $donation));
+            $this->sendDonationEmails($donation, $this->buildSafePayload($request, $donation));
+
+            return response()->json([
+                'paid' => true,
+                'donation_id' => $donation->id,
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('Stripe Confirm OneTime Error: ' . $e->getMessage());
+            return response()->json(['paid' => false, 'error' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * One-time donation (Stripe)
+     */
+    public function oneTimeDonation(Request $request)
+    {
+        $this->normalizeDonationExtras($request);
+
+        // Normalize payment method key (optional legacy)
+        $pm =
+            $request->input('payment_method') ??
+            $request->input('paymentMethod') ??
+            $request->input('payment_method_id') ??
+            $request->input('paymentMethodId');
+
+        if (!empty($pm) && !$request->filled('payment_method')) {
+            $request->merge(['payment_method' => $pm]);
+        }
+
+        $request->validate([
+            'payment_method' => 'nullable|string',
+            'email'          => 'required|email',
+            'name'           => 'required|string',
+            'amount'         => 'required|integer|min:1',
+
+            'donation_for'   => ['required', 'string', Rule::in(self::DONATION_PURPOSES)],
+            'otherPurpose'   => 'nullable|string|max:255|required_if:donation_for,Other',
+
+            'honorType'      => 'nullable|string|in:memory,honor',
+            'honorName'      => 'nullable|string|max:255|required_with:honorType',
+
+            'address1'       => 'required|string',
+            'address2'       => 'nullable|string',
+            'city'           => 'required|string',
+            'state'          => 'required|string',
+            'country'        => 'required|string',
+        ]);
+
+        try {
+            $customer = $this->stripe->customers->create([
+                'email' => $request->email,
+                'name'  => $request->name,
+            ]);
+
+            $piPayload = [
+                'amount'   => (int)$request->amount * 100,
+                'currency' => 'usd',
+                'customer' => $customer->id,
+                'receipt_email' => $request->email,
+                'description'   => 'One-time Donation: ' . $request->donation_for,
+
+                // ✅ Save minimal metadata (don’t store address here)
+                'metadata' => array_filter([
+                    'type'          => 'general_donation_one_time',
+                    'purpose'       => $request->donation_for,
+                    'other_purpose' => $request->donation_for === 'Other' ? $request->input('otherPurpose') : null,
+                    'honor_type'    => $request->input('honorType'),
+                    'honor_name'    => $request->input('honorName'),
+                ]),
+
+                'automatic_payment_methods' => ['enabled' => true],
+            ];
+
+            // Optional legacy server-side confirm if payment_method passed
+            if ($request->filled('payment_method')) {
+                $piPayload['payment_method'] = $request->payment_method;
+                $piPayload['confirm'] = true;
+                $piPayload['off_session'] = false;
+                $piPayload['automatic_payment_methods'] = ['enabled' => true, 'allow_redirects' => 'never'];
             }
 
-            // If not yet succeeded, frontend should confirm with client_secret
-            if ($pi->status !== 'succeeded' && !empty($pi->client_secret)) {
+            $pi = $this->stripe->paymentIntents->create($piPayload);
+
+            // ✅ IMPORTANT: DO NOT create donation record here if not succeeded
+            if ($pi->status === 'succeeded') {
+                // If server-side confirm succeeded, you may create record immediately
+                $goal = FundRaisa::latest()->first();
+
+                $donation = GeneralDonation::create([
+                    'fund_raisa_id'      => $goal?->id,
+                    'donation_for'       => $request->donation_for,
+                    'other_purpose'      => $request->donation_for === 'Other' ? $request->input('otherPurpose') : null,
+                    'honor_type'         => $request->input('honorType'),
+                    'honor_name'         => $request->input('honorName'),
+                    'name'               => $request->name,
+                    'email'              => $request->email,
+                    'amount'             => (int)$request->amount,
+                    'payment_id'         => $pi->id,
+                    'donation_mode'      => 'stripe',
+                    'frequency'          => 'one_time',
+                    'stripe_customer_id' => $customer->id,
+                    'status'             => 'paid',
+                    'address1'           => $request->address1,
+                    'address2'           => $request->address2,
+                    'city'               => $request->city,
+                    'state'              => $request->state,
+                    'country'            => $request->country,
+                ]);
+
+                $this->sendDonationEmails($donation, $this->buildSafePayload($request, $donation));
+
                 return response()->json([
-                    'paid' => false,
+                    'paid' => true,
                     'donation_id' => $donation->id,
                     'payment_intent_id' => $pi->id,
-                    'client_secret' => $pi->client_secret,
                     'pi_status' => $pi->status,
                 ], 200);
             }
 
+            // ✅ Normal PaymentElement flow: return PI secret, frontend confirms
             return response()->json([
-                'paid' => ($pi->status === 'succeeded'),
-                'donation_id' => $donation->id,
+                'paid' => false,
                 'payment_intent_id' => $pi->id,
+                'client_secret' => $pi->client_secret,
+                'customer_id' => $customer->id,
                 'pi_status' => $pi->status,
-            ]);
+            ], 200);
         } catch (Exception $e) {
             Log::error('Stripe OneTime Error: ' . $e->getMessage());
             return response()->json(['paid' => false, 'message' => $e->getMessage()], 500);

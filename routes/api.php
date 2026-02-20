@@ -190,3 +190,5 @@ Route::prefix('paypal')->group(function () {
     Route::post('/create-subscription', [GeneralDonationController::class, 'createPaypalSubscription']);
     Route::post('/save-subscription', [GeneralDonationController::class, 'savePaypalSubscription']);
 });
+
+Route::post('/confirm-one-time-donation', [GeneralDonationController::class, 'confirmOneTimeDonation']);
