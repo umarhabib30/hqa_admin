@@ -196,6 +196,7 @@ class GeneralDonationController extends Controller
                     'usage' => 'off_session',
                     // Let Stripe manage eligible payment method types automatically
                     'automatic_payment_methods' => ['enabled' => true],
+                    'excluded_payment_method_types' => ['amazon_pay'],
                     'metadata' => array_filter([
                         'purpose' => $request->donation_for,
                         'honor_type' => $request->input('honorType'),
