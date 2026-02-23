@@ -92,24 +92,31 @@ class GeneralDonationController extends Controller
     {
         try {
             if (!empty($donation->email)) {
-                Mail::to($donation->email)->queue(new GeneralDonationConfirmationMail($donation, $payload));
+                Mail::to($donation->email)->send(new GeneralDonationConfirmationMail($donation, $payload));
             }
 
             $superAdmins = User::where('role', 'super_admin')->get();
             $sentToAnyAdmin = false;
             foreach ($superAdmins as $admin) {
                 if (!empty($admin->email)) {
-                    Mail::to($admin->email)->queue(new GeneralDonationReceivedMail($donation, $payload));
+                    Mail::to($admin->email)->send(new GeneralDonationReceivedMail($donation, $payload));
                     $sentToAnyAdmin = true;
                 }
             }
 
             // Fallback to configured admin email if there are no super admins.
             if (!$sentToAnyAdmin && !empty(config('mail.admin_email'))) {
-                Mail::to(config('mail.admin_email'))->queue(new GeneralDonationReceivedMail($donation, $payload));
+                Mail::to(config('mail.admin_email'))->send(new GeneralDonationReceivedMail($donation, $payload));
             }
         } catch (\Throwable $e) {
             // Don't fail the payment flow if mail/queue fails.
+            Log::error('Donation email failed (API)', [
+                'donation_id' => $donation->id ?? null,
+                'donation_mode' => $donation->donation_mode ?? null,
+                'frequency' => $donation->frequency ?? null,
+                'to_donor' => $donation->email ?? null,
+                'error' => $e->getMessage(),
+            ]);
         }
     }
 
