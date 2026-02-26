@@ -19,6 +19,8 @@ class ApplyCouponController extends Controller
             'email' => 'required|email',
             'amount' => 'required|numeric|min:0',
             'coupon_code' => 'required|string',
+            // seats requested for booking; default to 1 if not provided by older clients
+            'seats' => 'nullable|integer|min:1|max:1000',
         ]);
 
         $code = CouponCode::with('coupon')->where('coupon_code', $data['coupon_code'])->first();
@@ -39,6 +41,20 @@ class ApplyCouponController extends Controller
 
         $coupon = $code->coupon;
         $amount = (float) $data['amount'];
+        $seatsRequested = (int) ($data['seats'] ?? 1);
+
+        $seatsAllowed = (int) ($coupon->seats_allowed ?? 1);
+        if ($seatsRequested > $seatsAllowed) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Coupon code is only valid for up to ' . $seatsAllowed . ' seat(s).',
+                'data' => [
+                    'seats_requested' => $seatsRequested,
+                    'seats_allowed' => $seatsAllowed,
+                ],
+            ], 400);
+        }
+
         $discount = 0;
 
         if ($coupon->coupon_type === 'percentage') {
@@ -88,6 +104,8 @@ class ApplyCouponController extends Controller
                 'coupon_value_display' => $coupon->coupon_type === 'percentage'
                     ? $couponValue . '%'
                     : '$' . number_format($couponValue, 2),
+                'seats_requested' => $seatsRequested,
+                'seats_allowed' => $seatsAllowed,
                 'original_amount' => $amount,
                 'discount_applied' => $discount,
                 'remaining_amount' => $payable,

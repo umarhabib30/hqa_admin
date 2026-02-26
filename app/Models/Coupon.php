@@ -12,11 +12,13 @@ class Coupon extends Model
         'discount_price',
         'discount_percentage',
         'quantity',
+        'seats_allowed',
     ];
 
     protected $casts = [
         'discount_price' => 'decimal:2',
         'discount_percentage' => 'decimal:2',
+        'seats_allowed' => 'integer',
     ];
 
     /**

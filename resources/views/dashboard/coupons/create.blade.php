@@ -96,6 +96,24 @@
             @enderror
         </div>
 
+        <!-- Seats Allowed -->
+        <div>
+            <label for="seats_allowed" class="block text-sm font-medium text-gray-700 mb-2">Seats Allowed <span class="text-red-500">*</span></label>
+            <input type="number"
+                   id="seats_allowed"
+                   name="seats_allowed"
+                   value="{{ old('seats_allowed', 1) }}"
+                   placeholder="e.g. 1"
+                   min="1"
+                   max="1000"
+                   required
+                   class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#00285E] focus:border-transparent @error('seats_allowed') border-red-500 @enderror">
+            <p class="mt-1 text-xs text-gray-500">Maximum number of seats that can be booked using one coupon code.</p>
+            @error('seats_allowed')
+            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+            @enderror
+        </div>
+
         <div class="flex justify-end gap-4 pt-4 border-t">
             <a href="{{ route('coupons.index') }}"
                 class="px-6 py-3 border rounded-lg hover:bg-gray-50 transition">

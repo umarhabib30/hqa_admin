@@ -38,6 +38,7 @@
                         <th class="px-4 py-3 border-b border-gray-200">Discount Price</th>
                         <th class="px-4 py-3 border-b border-gray-200">Discount %</th>
                         <th class="px-4 py-3 border-b border-gray-200">Total Codes</th>
+                        <th class="px-4 py-3 border-b border-gray-200">Seats Allowed</th>
                         <th class="px-4 py-3 border-b border-gray-200">Used</th>
                         <th class="px-4 py-3 border-b border-gray-200">Available</th>
                         <th class="px-4 py-3 border-b border-gray-200">Status</th>
@@ -68,6 +69,7 @@
                         @endif
                     </td>
                     <td class="p-4 text-center">{{ $coupon->total_codes ?? 0 }}</td>
+                    <td class="p-4 text-center">{{ (int) ($coupon->seats_allowed ?? 1) }}</td>
                     <td class="p-4 text-center">{{ $coupon->used_codes ?? 0 }}</td>
                     <td class="p-4 text-center">{{ ($coupon->total_codes ?? 0) - ($coupon->used_codes ?? 0) }}</td>
                     <td class="p-4 text-center">
@@ -115,7 +117,7 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="9" class="px-4 py-10 text-center text-gray-500">No coupons found.</td>
+                    <td colspan="10" class="px-4 py-10 text-center text-gray-500">No coupons found.</td>
                 </tr>
                 @endforelse
                 </tbody>
@@ -142,6 +144,7 @@
                         @if($coupon->discount_percentage)
                             <p><strong>Discount %:</strong> <span class="text-green-600 font-semibold">{{ $coupon->discount_percentage }}%</span></p>
                         @endif
+                        <p><strong>Seats Allowed:</strong> <span class="font-semibold">{{ (int) ($coupon->seats_allowed ?? 1) }}</span></p>
                     </div>
                 </div>
                 @php

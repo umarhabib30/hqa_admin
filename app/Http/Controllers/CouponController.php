@@ -64,6 +64,7 @@ class CouponController extends Controller
             'discount_price' => 'nullable|numeric|min:0.01|required_if:coupon_type,amount',
             'discount_percentage' => 'nullable|numeric|min:0.01|max:100|required_if:coupon_type,percentage',
             'quantity' => 'required|integer|min:1|max:1000',
+            'seats_allowed' => 'required|integer|min:1|max:1000',
         ]);
 
         // Create the coupon
@@ -73,6 +74,7 @@ class CouponController extends Controller
             'discount_price' => $request->coupon_type === 'amount' ? $request->discount_price : null,
             'discount_percentage' => $request->coupon_type === 'percentage' ? $request->discount_percentage : null,
             'quantity' => $request->quantity,
+            'seats_allowed' => (int) $request->seats_allowed,
         ]);
 
         // Generate unique coupon codes
@@ -141,6 +143,7 @@ class CouponController extends Controller
             'coupon_type' => 'required|in:amount,percentage',
             'discount_price' => 'nullable|numeric|min:0.01|required_if:coupon_type,amount',
             'discount_percentage' => 'nullable|numeric|min:0.01|max:100|required_if:coupon_type,percentage',
+            'seats_allowed' => 'required|integer|min:1|max:1000',
         ]);
 
         $coupon->update([
@@ -148,6 +151,7 @@ class CouponController extends Controller
             'coupon_type' => $request->coupon_type,
             'discount_price' => $request->coupon_type === 'amount' ? $request->discount_price : null,
             'discount_percentage' => $request->coupon_type === 'percentage' ? $request->discount_percentage : null,
+            'seats_allowed' => (int) $request->seats_allowed,
         ]);
 
         return redirect()
