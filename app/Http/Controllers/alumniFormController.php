@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\AlumniForm;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\AlumniFormConfirmationMail;
 
 class alumniFormController extends Controller
 {
@@ -54,7 +56,15 @@ class alumniFormController extends Controller
             unset($data['password']);
         }
 
-        AlumniForm::create($data);
+        $form = AlumniForm::create($data);
+
+        try {
+            if (!empty($form->email)) {
+                Mail::to($form->email)->send(new AlumniFormConfirmationMail($form));
+            }
+        } catch (\Throwable $mailException) {
+            // Ignore mail failures for now
+        }
 
         return redirect()->route('alumniForm.index')
             ->with('success', 'Form submitted successfully');

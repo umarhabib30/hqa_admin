@@ -6,6 +6,7 @@ use App\Models\ContactSponserModel;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\ContactSponserMail;
+use App\Mail\ContactSponserConfirmationMail;
 class ContactSponserController extends Controller
 {
     public function store(Request $request)
@@ -18,7 +19,13 @@ class ContactSponserController extends Controller
             'sponsor_type' => $request->sponsor_type,
             'message' => $request->message,
         ]);
+        // Notify admin
         Mail::to(config('mail.admin_email'))->queue(new ContactSponserMail($contact));
+
+        // Confirm to user
+        if (!empty($contact->email)) {
+            Mail::to($contact->email)->queue(new ContactSponserConfirmationMail($contact));
+        }
         return response()->json([
             'status' => true,
             'message' => 'Contact created successfully',

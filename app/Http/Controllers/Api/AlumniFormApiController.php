@@ -7,8 +7,10 @@ use App\Models\AlumniForm;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Mail;
 use Throwable;
 use Illuminate\Validation\ValidationException;
+use App\Mail\AlumniFormConfirmationMail;
 
 class AlumniFormApiController extends Controller
 {
@@ -51,6 +53,14 @@ class AlumniFormApiController extends Controller
             }
 
             $form = AlumniForm::create($data);
+
+            try {
+                if (!empty($form->email)) {
+                    Mail::to($form->email)->send(new AlumniFormConfirmationMail($form));
+                }
+            } catch (Throwable $mailException) {
+                // Don't break the API if mail fails
+            }
 
             return response()->json([
                 'status'  => true,
