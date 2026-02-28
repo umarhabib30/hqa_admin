@@ -168,7 +168,7 @@ class GeneralDonationController extends Controller
             'name'           => 'nullable|string',
             'amount'         => 'required|integer|min:1',
             'interval'       => 'required|string|in:month,year',
-            'donation_for'   => ['required', 'string', 'max:255', Rule::in(self::DONATION_PURPOSES)],
+            'donation_for'   => 'nullable',
             'otherPurpose'   => 'nullable|string|max:255|required_if:donation_for,Other',
             'honorType'      => 'nullable|string|in:memory,honor',
             'honorName'      => 'nullable|string|max:255|required_with:honorType',
@@ -360,7 +360,7 @@ class GeneralDonationController extends Controller
             'name'           => 'required|string',
             'amount'         => 'required|integer|min:1',
 
-            'donation_for'   => ['required', 'string', Rule::in(self::DONATION_PURPOSES)],
+            'donation_for'   => 'nullable',
             'otherPurpose'   => 'nullable|string|max:255|required_if:donation_for,Other',
 
             'honorType'      => 'nullable|string|in:memory,honor',
@@ -445,7 +445,7 @@ class GeneralDonationController extends Controller
             return response()->json(['paid' => false, 'error' => $e->getMessage()], 500);
         }
     }
-    
+
 
     /**
      * One-time donation (Stripe)
@@ -471,7 +471,7 @@ class GeneralDonationController extends Controller
             'name'           => 'required|string',
             'amount'         => 'required|integer|min:1',
 
-            'donation_for'   => ['required', 'string', Rule::in(self::DONATION_PURPOSES)],
+            'donation_for'   => 'nullable',
             'otherPurpose'   => 'nullable|string|max:255|required_if:donation_for,Other',
 
             'honorType'      => 'nullable|string|in:memory,honor',
@@ -612,7 +612,7 @@ class GeneralDonationController extends Controller
             'orderID'      => 'required',
             'email'        => 'required|email',
             'amount'       => 'required|numeric',
-            'donation_for' => ['required', 'string', Rule::in(self::DONATION_PURPOSES)],
+            'donation_for' => 'required',
             'otherPurpose' => 'nullable|string|max:255|required_if:donation_for,Other',
             'honorType'    => 'nullable|string|in:memory,honor',
             'honorName'    => 'nullable|string|max:255|required_with:honorType',
@@ -672,7 +672,7 @@ class GeneralDonationController extends Controller
         $request->validate([
             'amount'       => 'required|numeric|min:1',
             'interval'     => 'required|string|in:month,year',
-            'donation_for' => ['required', 'string', Rule::in(self::DONATION_PURPOSES)],
+            'donation_for' => 'nullable',
             'otherPurpose' => 'nullable|string|max:255|required_if:donation_for,Other',
             'honorType'    => 'nullable|string|in:memory,honor',
             'honorName'    => 'nullable|string|max:255|required_with:honorType',
@@ -815,7 +815,7 @@ class GeneralDonationController extends Controller
             'subscriptionID' => 'required',
             'amount'         => 'required',
             'email'          => 'required|email',
-            'donation_for'   => ['required', 'string', Rule::in(self::DONATION_PURPOSES)],
+            'donation_for'   => 'nullable',
             'otherPurpose'   => 'nullable|string|max:255|required_if:donation_for,Other',
             'honorType'      => 'nullable|string|in:memory,honor',
             'honorName'      => 'nullable|string|max:255|required_with:honorType',
