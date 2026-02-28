@@ -11,6 +11,8 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
 use Illuminate\Support\Str;
+use Dompdf\Dompdf;
+use Dompdf\Options;
 
 class DonationBookingController extends Controller
 {
@@ -454,6 +456,67 @@ class DonationBookingController extends Controller
         $event = DonationBooking::findOrFail($id);
         $event->delete();
         return redirect()->route('donationBooking.index')->with('success', 'Event deleted successfully');
+    }
+
+    public function exportPdf($id)
+    {
+        $event = DonationBooking::findOrFail($id);
+        $bookings = $event->table_bookings ?? [];
+        $rows = [];
+
+        foreach ($bookings as $tableNo => $tableBookings) {
+            foreach ($tableBookings as $booking) {
+                $entry = (array) $booking;
+                $seatTypes = DonationBooking::stripBabySittingFromSeatTypes((array) ($entry['seat_types'] ?? []));
+                $seatTypeLabel = collect($seatTypes)
+                    ->filter(fn($qty) => (int) $qty > 0)
+                    ->map(fn($qty, $type) => ucfirst((string) $type) . ': ' . (int) $qty)
+                    ->values()
+                    ->implode(', ');
+
+                $rows[] = [
+                    'table_no' => (int) $tableNo,
+                    'type' => (string) ($entry['type'] ?? 'seats'),
+                    'name' => trim(((string) ($entry['first_name'] ?? '')) . ' ' . ((string) ($entry['last_name'] ?? ''))),
+                    'email' => (string) ($entry['email'] ?? ''),
+                    'phone' => (string) ($entry['phone'] ?? ''),
+                    'seats' => DonationBooking::occupiedSeatsForBookingEntry($entry, (int) $event->seats_per_table),
+                    'seat_types' => $seatTypeLabel !== '' ? $seatTypeLabel : '-',
+                    'baby_sitting' => DonationBooking::babySittingForBookingEntry($entry),
+                    'amount' => (float) ($entry['paid_amount'] ?? 0),
+                    'payment_id' => (string) ($entry['payment_id'] ?? ''),
+                    'booked_at' => !empty($entry['booked_at']) ? Carbon::parse($entry['booked_at']) : null,
+                    'checked_in_at' => !empty($entry['checked_in_at']) ? Carbon::parse($entry['checked_in_at']) : null,
+                ];
+            }
+        }
+
+        usort($rows, function ($a, $b) {
+            $aKey = optional($a['booked_at'])->timestamp ?? 0;
+            $bKey = optional($b['booked_at'])->timestamp ?? 0;
+            return $bKey <=> $aKey;
+        });
+
+        $html = view('dashboard.donation.donationBooking.bookings_pdf', [
+            'event' => $event,
+            'rows' => $rows,
+            'generatedAt' => now(),
+        ])->render();
+
+        $options = new Options();
+        $options->set('isRemoteEnabled', true);
+
+        $dompdf = new Dompdf($options);
+        $dompdf->loadHtml($html);
+        $dompdf->setPaper('A4', 'landscape');
+        $dompdf->render();
+
+        $filename = 'donation-bookings-' . $event->id . '-' . Str::slug((string) $event->event_title) . '.pdf';
+
+        return response($dompdf->output(), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ]);
     }
 
     public function checkIn(Request $request)

@@ -143,7 +143,7 @@
 
     <div class="report-card">
         <h1 class="title">Donations Report</h1>
-        <p class="subtitle">Generated on {{ $generatedAt->format('M d, Y at h:i A') }}</p>
+
         <p class="subtitle">Date range: {{ $rangeLabel ?? 'All dates' }}</p>
     </div>
 

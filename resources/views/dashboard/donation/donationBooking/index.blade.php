@@ -22,6 +22,10 @@
 
                 {{-- EDIT / DELETE (ONLY IF EVENT EXISTS) --}}
                 @if($event)
+                    <a href="{{ route('donationBooking.export.pdf', $event->id) }}" class="bg-[#00285E] text-white px-4 py-2 rounded">
+                        Export PDF
+                    </a>
+
                     <a href="{{ route('donationBooking.edit', $event->id) }}" class="bg-[#00285E] text-white px-4 py-2 rounded">
                         Edit Event
                     </a>

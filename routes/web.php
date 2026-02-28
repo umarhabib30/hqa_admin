@@ -127,6 +127,10 @@ Route::middleware(['auth'])->group(function () {
         '/donation-booking/check-in',
         [DonationBookingController::class, 'checkIn']
     )->name('donationBooking.checkIn');
+    Route::get(
+        '/donation-booking/{id}/export/pdf',
+        [DonationBookingController::class, 'exportPdf']
+    )->name('donationBooking.export.pdf');
 
     // Donation Admin Log Route
     Route::get('/admin/donations', [DonationAdminController::class, 'index'])->name('admin.donations.index');
