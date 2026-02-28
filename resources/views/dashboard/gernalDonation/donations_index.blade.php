@@ -8,31 +8,91 @@
         honorType: @js(old('honorType', '')),
     }" class="w-full px-4 sm:px-6 lg:px-8 py-8">
         {{-- Header Section --}}
-        <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-8 border-b border-gray-100 pb-6">
-            <div>
-                <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight">
-                    Giving
-                </h1>
+        <div
+            class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8 mb-10 pb-8 border-b border-slate-200/60">
 
-            </div>
-
-            <div class="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center">
-                <div
-                    class="bg-emerald-50 text-emerald-700 px-6 py-3 rounded-2xl border border-emerald-200 flex flex-col shadow-sm">
-                    <span class="text-xs uppercase tracking-wider font-semibold opacity-70">Total Received</span>
-                    <span class="text-2xl font-black">${{ number_format($donations->sum('amount'), 2) }}</span>
+            {{-- Left Side: Title & Stats --}}
+            <div class="flex flex-col sm:flex-row sm:items-center gap-6">
+                <div>
+                    <h1 class="text-4xl font-black text-slate-900 tracking-tight mb-1">
+                        Giving
+                    </h1>
+                    <p class="text-slate-500 text-sm font-medium">Manage and track community contributions</p>
                 </div>
 
+                <div class="h-12 w-[1px] bg-slate-200 hidden sm:block"></div>
+
+                <div class="relative group">
+                    <div
+                        class="absolute -inset-1 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-2xl blur opacity-20 group-hover:opacity-30 transition duration-300">
+                    </div>
+                    <div class="relative bg-white border border-emerald-100 px-5 py-2 rounded-2xl flex flex-col shadow-sm">
+                        <span class="text-[10px] uppercase tracking-[0.15em] font-bold text-emerald-600/80">Total
+                            Revenue</span>
+                        <span class="text-2xl font-black text-slate-800 tabular-nums">
+                            ${{ number_format($donations->sum('amount'), 2) }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Right Side: Actions --}}
+            <div class="flex flex-col md:flex-row items-stretch md:items-center gap-4">
+
+                {{-- Export Filter Form --}}
+                <form method="GET" action="{{ route('admin.donations.export.pdf') }}"
+                    class="bg-slate-50/50 border border-slate-200 rounded-2xl p-2 pl-4 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+
+                    <div class="flex items-center gap-3">
+                        <div class="flex flex-col">
+                            <label class="text-[9px] uppercase font-bold text-slate-400 ml-1">From</label>
+                            <input type="date" name="from_date" value="{{ request('from_date') }}"
+                                class="bg-transparent border-none text-sm font-semibold text-slate-700 focus:ring-0 p-0 h-auto cursor-pointer" />
+                        </div>
+
+                        <div class="text-slate-300">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path d="M9 5l7 7-7 7"></path>
+                            </svg>
+                        </div>
+
+                        <div class="flex flex-col">
+                            <label class="text-[9px] uppercase font-bold text-slate-400 ml-1">To</label>
+                            <input type="date" name="to_date" value="{{ request('to_date') }}"
+                                class="bg-transparent border-none text-sm font-semibold text-slate-700 focus:ring-0 p-0 h-auto cursor-pointer" />
+                        </div>
+                    </div>
+
+                    <button type="submit"
+                        class="bg-white hover:bg-emerald-600 border border-slate-200 hover:border-emerald-600 text-slate-700 hover:text-white px-4 py-2.5 rounded-xl font-bold text-sm transition-all duration-200 flex items-center justify-center shadow-sm active:scale-95">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        Export PDF
+                    </button>
+                </form>
+
+                {{-- Add Toggle Button --}}
                 <button type="button" @click="showAdd = !showAdd"
-                    class="inline-flex items-center justify-center px-6 py-3 border-2 border-[#00285E] text-[#00285E] font-bold rounded-xl hover:bg-[#00285E] hover:text-white transform active:scale-95 transition-all duration-200">
-                    <svg x-show="!showAdd" class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-                    </svg>
-                    <svg x-show="showAdd" class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
-                        </path>
-                    </svg>
-                    <span x-text="showAdd ? 'Close Form' : 'Add Donation'"></span>
+                    :class="showAdd ? 'bg-rose-50 border-rose-200 text-rose-700' : 'bg-slate-900 border-slate-900 text-white'"
+                    class="inline-flex items-center justify-center px-6 py-3 border-2 font-bold rounded-2xl transform active:scale-95 transition-all duration-300 shadow-lg shadow-slate-200">
+
+                    <template x-if="!showAdd">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                        </svg>
+                    </template>
+
+                    <template x-if="showAdd">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </template>
+
+                    <span x-text="showAdd ? 'Cancel' : 'Add Donation'"></span>
                 </button>
             </div>
         </div>
@@ -121,8 +181,9 @@
                         <select name="fund_raisa_id"
                             class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-4 focus:ring-[#00285E]/10 focus:border-[#00285E] outline-none transition-all">
                             <option value="">Latest goal (default)</option>
-                            @foreach($goals ?? [] as $goal)
-                                <option value="{{ $goal->id }}" {{ old('fund_raisa_id') == $goal->id ? 'selected' : '' }}>
+                            @foreach ($goals ?? [] as $goal)
+                                <option value="{{ $goal->id }}"
+                                    {{ old('fund_raisa_id') == $goal->id ? 'selected' : '' }}>
                                     {{ $goal->goal_name ?? 'Goal #' . $goal->id }}
                                 </option>
                             @endforeach
@@ -136,12 +197,21 @@
                         <select name="donation_for" required x-model="purpose"
                             class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-4 focus:ring-[#00285E]/10 focus:border-[#00285E] outline-none transition-all">
                             <option value="">Select Purpose</option>
-                            <option value="Greatest Need" {{ old('donation_for') == 'Greatest Need' ? 'selected' : '' }}>Greatest Need</option>
-                            <option value="Faculty/staff support" {{ old('donation_for') == 'Faculty/staff support' ? 'selected' : '' }}>Faculty/staff support</option>
-                            <option value="Hafiz Scholarship" {{ old('donation_for') == 'Hafiz Scholarship' ? 'selected' : '' }}>Hafiz Scholarship</option>
-                            <option value="Financial aid" {{ old('donation_for') == 'Financial aid' ? 'selected' : '' }}>Financial aid</option>
-                            <option value="HQA Katy deficits" {{ old('donation_for') == 'HQA Katy deficits' ? 'selected' : '' }}>HQA Katy deficits</option>
-                            <option value="HQA Richmond" {{ old('donation_for') == 'HQA Richmond' ? 'selected' : '' }}>HQA Richmond</option>
+                            <option value="Greatest Need" {{ old('donation_for') == 'Greatest Need' ? 'selected' : '' }}>
+                                Greatest Need</option>
+                            <option value="Faculty/staff support"
+                                {{ old('donation_for') == 'Faculty/staff support' ? 'selected' : '' }}>Faculty/staff
+                                support</option>
+                            <option value="Hafiz Scholarship"
+                                {{ old('donation_for') == 'Hafiz Scholarship' ? 'selected' : '' }}>Hafiz Scholarship
+                            </option>
+                            <option value="Financial aid" {{ old('donation_for') == 'Financial aid' ? 'selected' : '' }}>
+                                Financial aid</option>
+                            <option value="HQA Katy deficits"
+                                {{ old('donation_for') == 'HQA Katy deficits' ? 'selected' : '' }}>HQA Katy deficits
+                            </option>
+                            <option value="HQA Richmond" {{ old('donation_for') == 'HQA Richmond' ? 'selected' : '' }}>HQA
+                                Richmond</option>
                             <option value="Other" {{ old('donation_for') == 'Other' ? 'selected' : '' }}>Other</option>
                         </select>
                     </div>
@@ -151,8 +221,7 @@
                             Other Purpose <span class="text-red-500">*</span>
                         </label>
                         <input name="otherPurpose" value="{{ old('otherPurpose') }}"
-                            x-bind:required="purpose === 'Other'"
-                            placeholder="Please specify"
+                            x-bind:required="purpose === 'Other'" placeholder="Please specify"
                             class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-4 focus:ring-[#00285E]/10 focus:border-[#00285E] outline-none transition-all" />
                     </div>
 
@@ -163,8 +232,10 @@
                         <select name="honorType" x-model="honorType"
                             class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-4 focus:ring-[#00285E]/10 focus:border-[#00285E] outline-none transition-all">
                             <option value="">— None —</option>
-                            <option value="honor" {{ old('honorType') == 'honor' ? 'selected' : '' }}>In the honor of</option>
-                            <option value="memory" {{ old('honorType') == 'memory' ? 'selected' : '' }}>In the memory of</option>
+                            <option value="honor" {{ old('honorType') == 'honor' ? 'selected' : '' }}>In the honor of
+                            </option>
+                            <option value="memory" {{ old('honorType') == 'memory' ? 'selected' : '' }}>In the memory of
+                            </option>
                         </select>
                     </div>
 
@@ -173,8 +244,7 @@
                             Relationship to the donor <span class="text-red-500">*</span>
                         </label>
                         <input name="honorName" value="{{ old('honorName') }}"
-                            x-bind:required="honorType !== ''"
-                            placeholder="Relationship to the donor"
+                            x-bind:required="honorType !== ''" placeholder="Relationship to the donor"
                             class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-4 focus:ring-[#00285E]/10 focus:border-[#00285E] outline-none transition-all" />
                     </div>
 
@@ -187,7 +257,8 @@
                     </div>
 
                     <div class="md:col-span-2">
-                        <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Address Line 2</label>
+                        <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Address Line
+                            2</label>
                         <input name="address2" value="{{ old('address2') }}"
                             class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-4 focus:ring-[#00285E]/10 focus:border-[#00285E] outline-none transition-all" />
                     </div>
@@ -243,45 +314,51 @@
                             <tr class="hover:bg-blue-50/30 transition-colors">
                                 <td class="px-4 py-3 font-mono text-sm text-gray-500">#{{ $donation->id }}</td>
                                 <td class="px-4 py-3">
-                                    <span class="px-2.5 py-0.5 bg-gray-100 text-gray-600 rounded-full text-xs font-semibold">
+                                    <span
+                                        class="px-2.5 py-0.5 bg-gray-100 text-gray-600 rounded-full text-xs font-semibold">
                                         {{ $donation->goal?->goal_name ?? '—' }}
                                     </span>
                                 </td>
                                 <td class="px-4 py-3">
                                     <div class="flex flex-col">
-                                        <span class="font-semibold text-gray-800">{{ $donation->name ?? 'Anonymous' }}</span>
+                                        <span
+                                            class="font-semibold text-gray-800">{{ $donation->name ?? 'Anonymous' }}</span>
                                         <span class="text-xs text-gray-500">{{ $donation->email ?? '—' }}</span>
                                     </div>
                                 </td>
                                 <td class="px-4 py-3 text-sm text-gray-600 max-w-[220px]">
                                     {{ $donation->donation_for }}
-                                    @if($donation->donation_for === 'Other' && !empty($donation->other_purpose))
+                                    @if ($donation->donation_for === 'Other' && !empty($donation->other_purpose))
                                         <div class="text-xs text-gray-500 mt-0.5">({{ $donation->other_purpose }})</div>
                                     @endif
                                 </td>
-                                <td class="px-4 py-3 font-semibold text-gray-900">${{ number_format($donation->amount, 2) }}</td>
+                                <td class="px-4 py-3 font-semibold text-gray-900">
+                                    ${{ number_format($donation->amount, 2) }}</td>
                                 {{-- make badge for donation mode --}}
                                 <td class="px-4 py-3 text-right">
-                                    <span class="px-2.5 py-0.5 bg-gray-100 text-gray-600 rounded-full text-xs font-semibold">
-                                       @if ($donation->donation_mode === 'paid_now')
-                                           Cash
-                                       @elseif ($donation->donation_mode === 'pledged')
-                                           Pledged
-                                       @elseif ($donation->donation_mode === 'stripe')
-                                           Stripe
-                                       @elseif ($donation->donation_mode === 'paypal')
-                                           PayPal
-                                       @else
-                                           Unknown
-                                       @endif
+                                    <span
+                                        class="px-2.5 py-0.5 bg-gray-100 text-gray-600 rounded-full text-xs font-semibold">
+                                        @if ($donation->donation_mode === 'paid_now')
+                                            Cash
+                                        @elseif ($donation->donation_mode === 'pledged')
+                                            Pledged
+                                        @elseif ($donation->donation_mode === 'stripe')
+                                            Stripe
+                                        @elseif ($donation->donation_mode === 'paypal')
+                                            PayPal
+                                        @else
+                                            Unknown
+                                        @endif
                                     </span>
                                 </td>
                                 <td class="px-4 py-3 text-right">
                                     <a href="{{ route('admin.donations.show', $donation) }}"
                                         class="inline-flex items-center px-3 py-1.5 text-sm font-bold text-[#00285E] bg-white border-2 border-[#00285E] rounded-lg hover:bg-[#00285E] hover:text-white transition-all">
                                         Details
-                                        <svg class="w-3.5 h-3.5 ml-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                        <svg class="w-3.5 h-3.5 ml-1.5" fill="none" stroke="currentColor"
+                                            viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M9 5l7 7-7 7"></path>
                                         </svg>
                                     </a>
                                 </td>
@@ -300,19 +377,40 @@
     </div>
 
     @push('scripts')
-    <script>
-        $(function() {
-            var $t = $('#donationsTable');
-            if ($t.length && $t.find('tbody tr').length > 0 && !$t.find('tbody tr td[colspan]').length) {
-                $t.DataTable({
-                    order: [[0, 'desc']],
-                    pageLength: 10,
-                    lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
-                    language: { search: 'Search:', lengthMenu: 'Show _MENU_ entries', info: 'Showing _START_ to _END_ of _TOTAL_', infoEmpty: 'Showing 0 to 0 of 0', infoFiltered: '(filtered from _MAX_)', paginate: { first: 'First', last: 'Last', next: 'Next', previous: 'Previous' }, zeroRecords: 'No matching records.' },
-                    columnDefs: [{ orderable: false, targets: -1 }]
-                });
-            }
-        });
-    </script>
+        <script>
+            $(function() {
+                var $t = $('#donationsTable');
+                if ($t.length && $t.find('tbody tr').length > 0 && !$t.find('tbody tr td[colspan]').length) {
+                    $t.DataTable({
+                        order: [
+                            [0, 'desc']
+                        ],
+                        pageLength: 10,
+                        lengthMenu: [
+                            [10, 25, 50, 100, -1],
+                            [10, 25, 50, 100, 'All']
+                        ],
+                        language: {
+                            search: 'Search:',
+                            lengthMenu: 'Show _MENU_ entries',
+                            info: 'Showing _START_ to _END_ of _TOTAL_',
+                            infoEmpty: 'Showing 0 to 0 of 0',
+                            infoFiltered: '(filtered from _MAX_)',
+                            paginate: {
+                                first: 'First',
+                                last: 'Last',
+                                next: 'Next',
+                                previous: 'Previous'
+                            },
+                            zeroRecords: 'No matching records.'
+                        },
+                        columnDefs: [{
+                            orderable: false,
+                            targets: -1
+                        }]
+                    });
+                }
+            });
+        </script>
     @endpush
 @endsection

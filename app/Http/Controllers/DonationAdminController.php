@@ -10,6 +10,8 @@ use App\Mail\GeneralDonationReceivedMail;
 use App\Models\User;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rule;
+use Dompdf\Dompdf;
+use Dompdf\Options;
 
 class DonationAdminController extends Controller
 {
@@ -30,6 +32,55 @@ class DonationAdminController extends Controller
         $goals = FundRaisa::orderByDesc('id')->get();
 
         return view('dashboard.gernalDonation.donations_index', compact('donations', 'goals'));
+    }
+
+    public function exportPdf()
+    {
+        $validated = request()->validate([
+            'from_date' => 'nullable|date',
+            'to_date' => 'nullable|date|after_or_equal:from_date',
+        ]);
+
+        $fromDate = $validated['from_date'] ?? null;
+        $toDate = $validated['to_date'] ?? null;
+
+        $query = GeneralDonation::with('goal')->latest();
+
+        if (!empty($fromDate)) {
+            $query->whereDate('created_at', '>=', $fromDate);
+        }
+
+        if (!empty($toDate)) {
+            $query->whereDate('created_at', '<=', $toDate);
+        }
+
+        $donations = $query->get();
+
+        $rangeLabel = 'All dates';
+        if (!empty($fromDate) || !empty($toDate)) {
+            $startLabel = !empty($fromDate) ? date('M d, Y', strtotime($fromDate)) : 'Beginning';
+            $endLabel = !empty($toDate) ? date('M d, Y', strtotime($toDate)) : 'Latest';
+            $rangeLabel = $startLabel . ' to ' . $endLabel;
+        }
+
+        $html = view('dashboard.gernalDonation.donations_pdf', [
+            'donations' => $donations,
+            'generatedAt' => now(),
+            'rangeLabel' => $rangeLabel,
+        ])->render();
+
+        $options = new Options();
+        $options->set('isRemoteEnabled', true);
+
+        $dompdf = new Dompdf($options);
+        $dompdf->loadHtml($html);
+        $dompdf->setPaper('A4', 'landscape');
+        $dompdf->render();
+
+        return response($dompdf->output(), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="donations-report.pdf"',
+        ]);
     }
 
     public function store(Request $request)

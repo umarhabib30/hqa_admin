@@ -130,6 +130,7 @@ Route::middleware(['auth'])->group(function () {
 
     // Donation Admin Log Route
     Route::get('/admin/donations', [DonationAdminController::class, 'index'])->name('admin.donations.index');
+    Route::get('/admin/donations/export/pdf', [DonationAdminController::class, 'exportPdf'])->name('admin.donations.export.pdf');
     Route::post('/admin/donations', [DonationAdminController::class, 'store'])->name('admin.donations.store');
     Route::get('/admin/donations/{donation}/edit', [DonationAdminController::class, 'edit'])->name('admin.donations.edit');
     Route::put('/admin/donations/{donation}', [DonationAdminController::class, 'update'])->name('admin.donations.update');
