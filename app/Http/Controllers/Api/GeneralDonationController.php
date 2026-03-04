@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Mail;
 use Stripe\StripeClient;
 use Srmklive\PayPal\Services\PayPal as PayPalClient;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Exception;
 
 class GeneralDonationController extends Controller
@@ -139,6 +139,162 @@ class GeneralDonationController extends Controller
         }
     }
 
+    /**
+     * Build one-time donation line items from request.
+     *
+     * Supports:
+     * - Legacy single item fields: amount + donation_for (+ otherPurpose)
+     * - Multi item payload: donations[] with amount + donation_for (+ otherPurpose)
+     *
+     * @return array<int, array{donation_for:string, other_purpose:?string, amount:int}>
+     */
+    private function buildOneTimeDonationItems(Request $request): array
+    {
+        $items = [];
+        $donations = $request->input('donations');
+
+        if (is_array($donations) && count($donations) > 0) {
+            foreach ($donations as $index => $entry) {
+                if (!is_array($entry)) {
+                    throw ValidationException::withMessages([
+                        "donations.$index" => 'Each donation item must be an object.',
+                    ]);
+                }
+
+                $purpose = trim((string) ($entry['donation_for'] ?? $entry['donationFor'] ?? ''));
+                $otherPurposeRaw = $entry['otherPurpose'] ?? $entry['other_purpose'] ?? null;
+                $otherPurpose = is_string($otherPurposeRaw) ? trim($otherPurposeRaw) : null;
+                $amount = (int) ($entry['amount'] ?? 0);
+
+                if ($purpose === '') {
+                    throw ValidationException::withMessages([
+                        "donations.$index.donation_for" => 'Donation purpose is required.',
+                    ]);
+                }
+
+                if ($amount < 1) {
+                    throw ValidationException::withMessages([
+                        "donations.$index.amount" => 'Amount must be at least 1.',
+                    ]);
+                }
+
+                if ($purpose === 'Other' && empty($otherPurpose)) {
+                    throw ValidationException::withMessages([
+                        "donations.$index.otherPurpose" => 'Other purpose is required when donation purpose is Other.',
+                    ]);
+                }
+
+                $items[] = [
+                    'donation_for' => $purpose,
+                    'other_purpose' => $purpose === 'Other' ? $otherPurpose : null,
+                    'amount' => $amount,
+                ];
+            }
+
+            return $items;
+        }
+
+        $purpose = trim((string) ($request->input('donation_for') ?? ''));
+        $otherPurposeRaw = $request->input('otherPurpose');
+        $otherPurpose = is_string($otherPurposeRaw) ? trim($otherPurposeRaw) : null;
+        $amount = (int) $request->input('amount', 0);
+
+        if ($amount < 1) {
+            throw ValidationException::withMessages([
+                'amount' => 'Amount must be at least 1.',
+            ]);
+        }
+
+        if ($purpose === 'Other' && empty($otherPurpose)) {
+            throw ValidationException::withMessages([
+                'otherPurpose' => 'Other purpose is required when donation purpose is Other.',
+            ]);
+        }
+
+        $items[] = [
+            'donation_for' => $purpose,
+            'other_purpose' => $purpose === 'Other' ? $otherPurpose : null,
+            'amount' => $amount,
+        ];
+
+        return $items;
+    }
+
+    /**
+     * Build recurring donation line items from request.
+     *
+     * Supports:
+     * - Legacy single item fields: amount + donation_for (+ otherPurpose)
+     * - Multi item payload: donations[] with amount + donation_for (+ otherPurpose)
+     *
+     * @return array<int, array{donation_for:string, other_purpose:?string, amount:int}>
+     */
+    private function buildRecurringDonationItems(Request $request): array
+    {
+        $items = [];
+        $donations = $request->input('donations');
+
+        if (is_array($donations) && count($donations) > 0) {
+            foreach ($donations as $index => $entry) {
+                if (!is_array($entry)) {
+                    throw ValidationException::withMessages([
+                        "donations.$index" => 'Each donation item must be an object.',
+                    ]);
+                }
+
+                $purpose = trim((string) ($entry['donation_for'] ?? $entry['donationFor'] ?? ''));
+                $otherPurposeRaw = $entry['otherPurpose'] ?? $entry['other_purpose'] ?? null;
+                $otherPurpose = is_string($otherPurposeRaw) ? trim($otherPurposeRaw) : null;
+                $amount = (int) ($entry['amount'] ?? 0);
+
+                if ($amount < 1) {
+                    throw ValidationException::withMessages([
+                        "donations.$index.amount" => 'Amount must be at least 1.',
+                    ]);
+                }
+
+                if ($purpose === 'Other' && empty($otherPurpose)) {
+                    throw ValidationException::withMessages([
+                        "donations.$index.otherPurpose" => 'Other purpose is required when donation purpose is Other.',
+                    ]);
+                }
+
+                $items[] = [
+                    'donation_for' => $purpose,
+                    'other_purpose' => $purpose === 'Other' ? $otherPurpose : null,
+                    'amount' => $amount,
+                ];
+            }
+
+            return $items;
+        }
+
+        $purpose = trim((string) ($request->input('donation_for') ?? ''));
+        $otherPurposeRaw = $request->input('otherPurpose');
+        $otherPurpose = is_string($otherPurposeRaw) ? trim($otherPurposeRaw) : null;
+        $amount = (int) $request->input('amount', 0);
+
+        if ($amount < 1) {
+            throw ValidationException::withMessages([
+                'amount' => 'Amount must be at least 1.',
+            ]);
+        }
+
+        if ($purpose === 'Other' && empty($otherPurpose)) {
+            throw ValidationException::withMessages([
+                'otherPurpose' => 'Other purpose is required when donation purpose is Other.',
+            ]);
+        }
+
+        $items[] = [
+            'donation_for' => $purpose,
+            'other_purpose' => $purpose === 'Other' ? $otherPurpose : null,
+            'amount' => $amount,
+        ];
+
+        return $items;
+    }
+
     public function show()
     {
         return view('subscribe_dynamic');
@@ -166,10 +322,15 @@ class GeneralDonationController extends Controller
             'payment_method' => 'nullable|string',
             'email'          => 'required|email',
             'name'           => 'nullable|string',
-            'amount'         => 'required|integer|min:1',
+            'amount'         => 'required_without:donations|integer|min:1',
             'interval'       => 'required|string|in:month,year',
             'donation_for'   => 'nullable',
             'otherPurpose'   => 'nullable|string|max:255|required_if:donation_for,Other',
+            'donations'      => 'nullable|array|min:1',
+            'donations.*.donation_for' => 'required_with:donations|string',
+            'donations.*.amount' => 'required_with:donations|integer|min:1',
+            'donations.*.otherPurpose' => 'nullable|string|max:255',
+            'donations.*.other_purpose' => 'nullable|string|max:255',
             'honorType'      => 'nullable|string|in:memory,honor',
             'honorName'      => 'nullable|string|max:255|required_with:honorType',
             'address1'       => 'required|string|max:255',
@@ -181,6 +342,10 @@ class GeneralDonationController extends Controller
         ]);
 
         try {
+            $items = $this->buildRecurringDonationItems($request);
+            $totalAmount = array_sum(array_column($items, 'amount'));
+            $primaryPurpose = $items[0]['donation_for'] ?? $request->donation_for;
+
             $paymentMethodId = $request->filled('payment_method') ? $request->payment_method : null;
 
             // 1) customer (reuse if provided)
@@ -190,7 +355,10 @@ class GeneralDonationController extends Controller
                 $customer = $this->stripe->customers->create([
                     'email' => $request->email,
                     'name'  => $request->name,
-                    'metadata' => ['purpose' => $request->donation_for],
+                    'metadata' => array_filter([
+                        'purpose' => $primaryPurpose,
+                        'donation_count' => (string) count($items),
+                    ]),
                 ]);
             }
 
@@ -205,7 +373,9 @@ class GeneralDonationController extends Controller
                     'automatic_payment_methods' => ['enabled' => true],
                     'excluded_payment_method_types' => ['amazon_pay'],
                     'metadata' => array_filter([
-                        'purpose' => $request->donation_for,
+                        'purpose' => $primaryPurpose,
+                        'donation_count' => (string) count($items),
+                        'total_amount' => (string) $totalAmount,
                         'honor_type' => $request->input('honorType'),
                         'honor_name' => $request->input('honorName'),
                         'other_purpose' => $request->input('otherPurpose'),
@@ -218,6 +388,8 @@ class GeneralDonationController extends Controller
                     'client_secret' => $si->client_secret,  // seti_...
                     'customer_id' => $customer->id,
                     'payment_method_provided' => false,
+                    'donations_count' => count($items),
+                    'total_amount' => $totalAmount,
                 ], 200);
             }
 
@@ -234,17 +406,23 @@ class GeneralDonationController extends Controller
                 ],
             ]);
 
-            // 2) product + price (ok to keep dynamic)
-            $product = $this->stripe->products->create([
-                'name' => 'Donation: ' . $request->donation_for,
-            ]);
+            // 2) dynamic product + price for each donation purpose
+            $subscriptionItems = [];
+            foreach ($items as $item) {
+                $label = !empty($item['donation_for']) ? $item['donation_for'] : 'General';
+                $product = $this->stripe->products->create([
+                    'name' => 'Donation: ' . $label,
+                ]);
 
-            $price = $this->stripe->prices->create([
-                'unit_amount' => (int) $request->amount * 100,
-                'currency'    => 'usd',
-                'recurring'   => ['interval' => $request->interval],
-                'product'     => $product->id,
-            ]);
+                $price = $this->stripe->prices->create([
+                    'unit_amount' => (int) $item['amount'] * 100,
+                    'currency'    => 'usd',
+                    'recurring'   => ['interval' => $request->interval],
+                    'product'     => $product->id,
+                ]);
+
+                $subscriptionItems[] = ['price' => $price->id];
+            }
 
             /**
              * 3) create subscription with expand latest_invoice.payment_intent
@@ -252,7 +430,7 @@ class GeneralDonationController extends Controller
              */
             $subscription = $this->stripe->subscriptions->create([
                 'customer' => $customer->id,
-                'items' => [['price' => $price->id]],
+                'items' => $subscriptionItems,
                 'collection_method' => 'charge_automatically',
                 'payment_behavior' => 'default_incomplete',
                 'default_payment_method' => $paymentMethodId,
@@ -260,7 +438,11 @@ class GeneralDonationController extends Controller
                     'save_default_payment_method' => 'on_subscription',
                 ],
                 'expand' => ['latest_invoice.payment_intent'],
-                'metadata' => ['purpose' => $request->donation_for],
+                'metadata' => array_filter([
+                    'purpose' => $primaryPurpose,
+                    'donation_count' => (string) count($items),
+                    'total_amount' => (string) $totalAmount,
+                ]),
             ]);
 
             $invoice = $subscription->latest_invoice ?? null;
@@ -296,37 +478,48 @@ class GeneralDonationController extends Controller
                 (($invoice->paid ?? false) === true) ||
                 ($piStatus === 'succeeded');
 
-            // save donation record (optional - keep your model logic)
+            // save one donation record per selected purpose
             $goal = FundRaisa::latest()->first();
-            $donation = GeneralDonation::create([
-                'fund_raisa_id'          => $goal?->id,
-                'donation_for'           => $request->donation_for,
-                'other_purpose'          => $request->donation_for === 'Other' ? $request->input('otherPurpose') : null,
-                'honor_type'             => $request->input('honorType'),
-                'honor_name'             => $request->input('honorName'),
-                'name'                   => $request->name,
-                'email'                  => $request->email,
-                'amount'                 => (int) $request->amount,
-                'payment_id'             => $subscription->id,
-                'donation_mode'          => 'stripe',
-                'frequency'              => $request->interval,
-                'stripe_customer_id'     => $customer->id,
-                'stripe_subscription_id' => $subscription->id,
-                'status'                 => $paid ? 'paid' : 'pending',
-                'address1'               => $request->address1,
-                'address2'               => $request->address2,
-                'city'                   => $request->city,
-                'state'                  => $request->state,
-                'country'                => $request->country,
-            ]);
+            $saved = [];
+            foreach ($items as $item) {
+                $saved[] = GeneralDonation::create([
+                    'fund_raisa_id'          => $goal?->id,
+                    'donation_for'           => $item['donation_for'],
+                    'other_purpose'          => $item['other_purpose'],
+                    'honor_type'             => $request->input('honorType'),
+                    'honor_name'             => $request->input('honorName'),
+                    'name'                   => $request->name,
+                    'email'                  => $request->email,
+                    'amount'                 => (int) $item['amount'],
+                    'payment_id'             => $subscription->id,
+                    'donation_mode'          => 'stripe',
+                    'frequency'              => $request->interval,
+                    'stripe_customer_id'     => $customer->id,
+                    'stripe_subscription_id' => $subscription->id,
+                    'status'                 => $paid ? 'paid' : 'pending',
+                    'address1'               => $request->address1,
+                    'address2'               => $request->address2,
+                    'city'                   => $request->city,
+                    'state'                  => $request->state,
+                    'country'                => $request->country,
+                ]);
+            }
+            $primaryDonation = $saved[0];
 
             if ($paid) {
-                $this->sendDonationEmails($donation, $this->buildSafePayload($request, $donation));
+                $payload = $this->buildSafePayload($request, $primaryDonation);
+                $payload['donations'] = $items;
+                $payload['donations_count'] = count($items);
+                $payload['total_amount'] = $totalAmount;
+                $this->sendDonationEmails($primaryDonation, $payload);
             }
 
             return response()->json([
                 'paid' => $paid,
-                'donation_id' => $donation->id,
+                'donation_id' => $primaryDonation->id,
+                'donation_ids' => array_map(fn($d) => $d->id, $saved),
+                'donations_count' => count($saved),
+                'total_amount' => $totalAmount,
                 'customer_id' => $customer->id,
 
                 'subscription_id' => $subscription->id,
@@ -358,10 +551,15 @@ class GeneralDonationController extends Controller
             // We re-send details so we can store address etc
             'email'          => 'required|email',
             'name'           => 'required|string',
-            'amount'         => 'required|integer|min:1',
+            'amount'         => 'required_without:donations|integer|min:1',
 
             'donation_for'   => 'nullable',
             'otherPurpose'   => 'nullable|string|max:255|required_if:donation_for,Other',
+            'donations'      => 'nullable|array|min:1',
+            'donations.*.donation_for' => 'required_with:donations|string',
+            'donations.*.amount' => 'required_with:donations|integer|min:1',
+            'donations.*.otherPurpose' => 'nullable|string|max:255',
+            'donations.*.other_purpose' => 'nullable|string|max:255',
 
             'honorType'      => 'nullable|string|in:memory,honor',
             'honorName'      => 'nullable|string|max:255|required_with:honorType',
@@ -374,6 +572,9 @@ class GeneralDonationController extends Controller
         ]);
 
         try {
+            $items = $this->buildOneTimeDonationItems($request);
+            $totalAmount = array_sum(array_column($items, 'amount'));
+
             $pi = $this->stripe->paymentIntents->retrieve($request->payment_intent_id, []);
 
             // ✅ Must be succeeded
@@ -387,7 +588,7 @@ class GeneralDonationController extends Controller
 
             // ✅ Basic anti-tamper checks
             $piAmount = (int)($pi->amount ?? 0) / 100;
-            if ((int)$piAmount !== (int)$request->amount) {
+            if ((int)$piAmount !== (int)$totalAmount) {
                 return response()->json([
                     'paid' => false,
                     'message' => 'Amount mismatch.',
@@ -413,32 +614,42 @@ class GeneralDonationController extends Controller
 
             $goal = FundRaisa::latest()->first();
 
-            $donation = GeneralDonation::create([
-                'fund_raisa_id'      => $goal?->id,
-                'donation_for'       => $request->donation_for,
-                'other_purpose'      => $request->donation_for === 'Other' ? $request->input('otherPurpose') : null,
-                'honor_type'         => $request->input('honorType'),
-                'honor_name'         => $request->input('honorName'),
-                'name'               => $request->name,
-                'email'              => $request->email,
-                'amount'             => (int)$request->amount,
-                'payment_id'         => $pi->id,
-                'donation_mode'      => 'stripe',
-                'frequency'          => 'one_time',
-                'stripe_customer_id' => $pi->customer ?? null,
-                'status'             => 'paid',
-                'address1'           => $request->address1,
-                'address2'           => $request->address2,
-                'city'               => $request->city,
-                'state'              => $request->state,
-                'country'            => $request->country,
-            ]);
+            $saved = [];
+            foreach ($items as $item) {
+                $saved[] = GeneralDonation::create([
+                    'fund_raisa_id'      => $goal?->id,
+                    'donation_for'       => $item['donation_for'],
+                    'other_purpose'      => $item['other_purpose'],
+                    'honor_type'         => $request->input('honorType'),
+                    'honor_name'         => $request->input('honorName'),
+                    'name'               => $request->name,
+                    'email'              => $request->email,
+                    'amount'             => (int)$item['amount'],
+                    'payment_id'         => $pi->id,
+                    'donation_mode'      => 'stripe',
+                    'frequency'          => 'one_time',
+                    'stripe_customer_id' => $pi->customer ?? null,
+                    'status'             => 'paid',
+                    'address1'           => $request->address1,
+                    'address2'           => $request->address2,
+                    'city'               => $request->city,
+                    'state'              => $request->state,
+                    'country'            => $request->country,
+                ]);
+            }
 
-            $this->sendDonationEmails($donation, $this->buildSafePayload($request, $donation));
+            $primaryDonation = $saved[0];
+            $payload = $this->buildSafePayload($request, $primaryDonation);
+            $payload['donations'] = $items;
+            $payload['donations_count'] = count($items);
+            $payload['total_amount'] = $totalAmount;
+            $this->sendDonationEmails($primaryDonation, $payload);
 
             return response()->json([
                 'paid' => true,
-                'donation_id' => $donation->id,
+                'donation_id' => $primaryDonation->id,
+                'donation_ids' => array_map(fn($d) => $d->id, $saved),
+                'donations_count' => count($saved),
             ], 200);
         } catch (\Exception $e) {
             Log::error('Stripe Confirm OneTime Error: ' . $e->getMessage());
@@ -469,10 +680,15 @@ class GeneralDonationController extends Controller
             'payment_method' => 'nullable|string',
             'email'          => 'required|email',
             'name'           => 'required|string',
-            'amount'         => 'required|integer|min:1',
+            'amount'         => 'required_without:donations|integer|min:1',
 
             'donation_for'   => 'nullable',
             'otherPurpose'   => 'nullable|string|max:255|required_if:donation_for,Other',
+            'donations'      => 'nullable|array|min:1',
+            'donations.*.donation_for' => 'required_with:donations|string',
+            'donations.*.amount' => 'required_with:donations|integer|min:1',
+            'donations.*.otherPurpose' => 'nullable|string|max:255',
+            'donations.*.other_purpose' => 'nullable|string|max:255',
 
             'honorType'      => 'nullable|string|in:memory,honor',
             'honorName'      => 'nullable|string|max:255|required_with:honorType',
@@ -485,23 +701,32 @@ class GeneralDonationController extends Controller
         ]);
 
         try {
+            $items = $this->buildOneTimeDonationItems($request);
+            $totalAmount = array_sum(array_column($items, 'amount'));
+            $isMulti = count($items) > 1;
+
             $customer = $this->stripe->customers->create([
                 'email' => $request->email,
                 'name'  => $request->name,
             ]);
 
+            $primaryPurpose = $items[0]['donation_for'] ?? 'General';
+
             $piPayload = [
-                'amount'   => (int)$request->amount * 100,
+                'amount'   => (int)$totalAmount * 100,
                 'currency' => 'usd',
                 'customer' => $customer->id,
                 'receipt_email' => $request->email,
-                'description'   => 'One-time Donation: ' . $request->donation_for,
+                'description'   => $isMulti
+                    ? 'One-time Donation (Multiple Purposes)'
+                    : 'One-time Donation: ' . $primaryPurpose,
 
                 // ✅ Save minimal metadata (don’t store address here)
                 'metadata' => array_filter([
                     'type'          => 'general_donation_one_time',
-                    'purpose'       => $request->donation_for,
-                    'other_purpose' => $request->donation_for === 'Other' ? $request->input('otherPurpose') : null,
+                    'purpose'       => $primaryPurpose,
+                    'other_purpose' => $items[0]['other_purpose'] ?? null,
+                    'donation_count' => (string) count($items),
                     'honor_type'    => $request->input('honorType'),
                     'honor_name'    => $request->input('honorName'),
                 ]),
@@ -524,32 +749,43 @@ class GeneralDonationController extends Controller
                 // If server-side confirm succeeded, you may create record immediately
                 $goal = FundRaisa::latest()->first();
 
-                $donation = GeneralDonation::create([
-                    'fund_raisa_id'      => $goal?->id,
-                    'donation_for'       => $request->donation_for,
-                    'other_purpose'      => $request->donation_for === 'Other' ? $request->input('otherPurpose') : null,
-                    'honor_type'         => $request->input('honorType'),
-                    'honor_name'         => $request->input('honorName'),
-                    'name'               => $request->name,
-                    'email'              => $request->email,
-                    'amount'             => (int)$request->amount,
-                    'payment_id'         => $pi->id,
-                    'donation_mode'      => 'stripe',
-                    'frequency'          => 'one_time',
-                    'stripe_customer_id' => $customer->id,
-                    'status'             => 'paid',
-                    'address1'           => $request->address1,
-                    'address2'           => $request->address2,
-                    'city'               => $request->city,
-                    'state'              => $request->state,
-                    'country'            => $request->country,
-                ]);
+                $saved = [];
+                foreach ($items as $item) {
+                    $saved[] = GeneralDonation::create([
+                        'fund_raisa_id'      => $goal?->id,
+                        'donation_for'       => $item['donation_for'],
+                        'other_purpose'      => $item['other_purpose'],
+                        'honor_type'         => $request->input('honorType'),
+                        'honor_name'         => $request->input('honorName'),
+                        'name'               => $request->name,
+                        'email'              => $request->email,
+                        'amount'             => (int)$item['amount'],
+                        'payment_id'         => $pi->id,
+                        'donation_mode'      => 'stripe',
+                        'frequency'          => 'one_time',
+                        'stripe_customer_id' => $customer->id,
+                        'status'             => 'paid',
+                        'address1'           => $request->address1,
+                        'address2'           => $request->address2,
+                        'city'               => $request->city,
+                        'state'              => $request->state,
+                        'country'            => $request->country,
+                    ]);
+                }
 
-                $this->sendDonationEmails($donation, $this->buildSafePayload($request, $donation));
+                $primaryDonation = $saved[0];
+                $payload = $this->buildSafePayload($request, $primaryDonation);
+                $payload['donations'] = $items;
+                $payload['donations_count'] = count($items);
+                $payload['total_amount'] = $totalAmount;
+                $this->sendDonationEmails($primaryDonation, $payload);
 
                 return response()->json([
                     'paid' => true,
-                    'donation_id' => $donation->id,
+                    'donation_id' => $primaryDonation->id,
+                    'donation_ids' => array_map(fn($d) => $d->id, $saved),
+                    'donations_count' => count($saved),
+                    'total_amount' => $totalAmount,
                     'payment_intent_id' => $pi->id,
                     'pi_status' => $pi->status,
                 ], 200);
@@ -562,6 +798,8 @@ class GeneralDonationController extends Controller
                 'client_secret' => $pi->client_secret,
                 'customer_id' => $customer->id,
                 'pi_status' => $pi->status,
+                'donations_count' => count($items),
+                'total_amount' => $totalAmount,
             ], 200);
         } catch (Exception $e) {
             Log::error('Stripe OneTime Error: ' . $e->getMessage());
