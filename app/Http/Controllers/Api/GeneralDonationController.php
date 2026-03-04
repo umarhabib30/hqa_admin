@@ -812,9 +812,23 @@ class GeneralDonationController extends Controller
      */
     public function createPaypalOrder(Request $request)
     {
-        $request->validate(['amount' => 'required|numeric|min:1']);
+        $this->normalizeDonationExtras($request);
+
+        $request->validate([
+            'amount'         => 'required_without:donations|numeric|min:1',
+            'donation_for'   => 'nullable|string',
+            'otherPurpose'   => 'nullable|string|max:255|required_if:donation_for,Other',
+            'donations'      => 'nullable|array|min:1',
+            'donations.*.donation_for' => 'required_with:donations|string',
+            'donations.*.amount' => 'required_with:donations|integer|min:1',
+            'donations.*.otherPurpose' => 'nullable|string|max:255',
+            'donations.*.other_purpose' => 'nullable|string|max:255',
+        ]);
 
         try {
+            $items = $this->buildOneTimeDonationItems($request);
+            $totalAmount = array_sum(array_column($items, 'amount'));
+
             $provider = new PayPalClient;
             $provider->setApiCredentials(config('paypal'));
             $provider->getAccessToken();
@@ -824,8 +838,12 @@ class GeneralDonationController extends Controller
                 "purchase_units" => [[
                     "amount" => [
                         "currency_code" => "USD",
-                        "value" => number_format($request->amount, 2, '.', '')
-                    ]
+                        "value" => number_format($totalAmount, 2, '.', '')
+                    ],
+                    "custom_id" => (string) count($items),
+                    "description" => count($items) > 1
+                        ? "General Donation (Multiple Purposes)"
+                        : "General Donation",
                 ]],
                 "application_context" => [
                     "shipping_preference" => "NO_SHIPPING",
@@ -833,7 +851,11 @@ class GeneralDonationController extends Controller
                 ]
             ]);
 
-            return response()->json($response);
+            return response()->json([
+                ...$response,
+                'donations_count' => count($items),
+                'total_amount' => $totalAmount,
+            ]);
         } catch (Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
@@ -849,9 +871,15 @@ class GeneralDonationController extends Controller
         $request->validate([
             'orderID'      => 'required',
             'email'        => 'required|email',
-            'amount'       => 'required|numeric',
-            'donation_for' => 'required',
+            'name'         => 'required|string',
+            'amount'       => 'required_without:donations|numeric|min:1',
+            'donation_for' => 'nullable|string',
             'otherPurpose' => 'nullable|string|max:255|required_if:donation_for,Other',
+            'donations'      => 'nullable|array|min:1',
+            'donations.*.donation_for' => 'required_with:donations|string',
+            'donations.*.amount' => 'required_with:donations|integer|min:1',
+            'donations.*.otherPurpose' => 'nullable|string|max:255',
+            'donations.*.other_purpose' => 'nullable|string|max:255',
             'honorType'    => 'nullable|string|in:memory,honor',
             'honorName'    => 'nullable|string|max:255|required_with:honorType',
             'address1'     => 'required|string',
@@ -861,6 +889,21 @@ class GeneralDonationController extends Controller
         ]);
 
         try {
+            $items = $this->buildOneTimeDonationItems($request);
+            $totalAmount = array_sum(array_column($items, 'amount'));
+
+            // Idempotency: don't create duplicates if client retries save call.
+            $existingRows = GeneralDonation::where('payment_id', $request->orderID)->get();
+            if ($existingRows->isNotEmpty()) {
+                return response()->json([
+                    'status' => 'success',
+                    'message' => 'Already saved.',
+                    'donation_id' => $existingRows->first()->id,
+                    'donation_ids' => $existingRows->pluck('id')->values(),
+                    'donations_count' => $existingRows->count(),
+                ]);
+            }
+
             $provider = new PayPalClient;
             $provider->setApiCredentials(config('paypal'));
             $provider->getAccessToken();
@@ -868,31 +911,55 @@ class GeneralDonationController extends Controller
             $response = $provider->capturePaymentOrder($request->orderID);
 
             if (isset($response['status']) && $response['status'] == 'COMPLETED') {
+                // Basic anti-tamper check.
+                $capturedValue = (float) (
+                    $response['purchase_units'][0]['payments']['captures'][0]['amount']['value'] ?? 0
+                );
+                if (abs($capturedValue - (float) $totalAmount) > 0.0001) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'Amount mismatch.',
+                    ], 400);
+                }
+
                 $goal = FundRaisa::latest()->first();
+                $saved = [];
+                foreach ($items as $item) {
+                    $saved[] = GeneralDonation::create([
+                        'fund_raisa_id'   => $goal?->id,
+                        'donation_for'    => $item['donation_for'],
+                        'other_purpose'   => $item['other_purpose'],
+                        'honor_type'      => $request->input('honorType'),
+                        'honor_name'      => $request->input('honorName'),
+                        'name'            => $request->name,
+                        'email'           => $request->email,
+                        'amount'          => (int) $item['amount'],
+                        'payment_id'      => $request->orderID,
+                        'donation_mode'   => 'paypal',
+                        'frequency'       => 'one_time',
+                        'status'          => 'paid',
+                        'address1'        => $request->address1,
+                        'address2'        => $request->address2,
+                        'city'            => $request->city,
+                        'state'           => $request->state,
+                        'country'         => $request->country,
+                    ]);
+                }
 
-                $donation = GeneralDonation::create([
-                    'fund_raisa_id'   => $goal?->id,
-                    'donation_for'    => $request->donation_for,
-                    'other_purpose'   => $request->donation_for === 'Other' ? $request->input('otherPurpose') : null,
-                    'honor_type'      => $request->input('honorType'),
-                    'honor_name'      => $request->input('honorName'),
-                    'name'            => $request->name,
-                    'email'           => $request->email,
-                    'amount'          => $request->amount,
-                    'payment_id'      => $request->orderID,
-                    'donation_mode'   => 'paypal',
-                    'frequency'       => 'one_time',
-                    'status'          => 'paid',
-                    'address1'        => $request->address1,
-                    'address2'        => $request->address2,
-                    'city'            => $request->city,
-                    'state'           => $request->state,
-                    'country'         => $request->country,
+                $primaryDonation = $saved[0];
+                $payload = $this->buildSafePayload($request, $primaryDonation);
+                $payload['donations'] = $items;
+                $payload['donations_count'] = count($items);
+                $payload['total_amount'] = $totalAmount;
+                $this->sendDonationEmails($primaryDonation, $payload);
+
+                return response()->json([
+                    'status' => 'success',
+                    'donation' => $primaryDonation,
+                    'donation_ids' => array_map(fn($d) => $d->id, $saved),
+                    'donations_count' => count($saved),
+                    'total_amount' => $totalAmount,
                 ]);
-
-                $this->sendDonationEmails($donation, $this->buildSafePayload($request, $donation));
-
-                return response()->json(['status' => 'success', 'donation' => $donation]);
             }
 
             return response()->json(['status' => 'error', 'message' => 'PayPal capture failed'], 400);
@@ -908,10 +975,15 @@ class GeneralDonationController extends Controller
         $this->normalizeDonationExtras($request);
 
         $request->validate([
-            'amount'       => 'required|numeric|min:1',
+            'amount'       => 'required_without:donations|numeric|min:1',
             'interval'     => 'required|string|in:month,year',
             'donation_for' => 'nullable',
             'otherPurpose' => 'nullable|string|max:255|required_if:donation_for,Other',
+            'donations'      => 'nullable|array|min:1',
+            'donations.*.donation_for' => 'required_with:donations|string',
+            'donations.*.amount' => 'required_with:donations|integer|min:1',
+            'donations.*.otherPurpose' => 'nullable|string|max:255',
+            'donations.*.other_purpose' => 'nullable|string|max:255',
             'honorType'    => 'nullable|string|in:memory,honor',
             'honorName'    => 'nullable|string|max:255|required_with:honorType',
             'name'         => 'required|string',
@@ -922,6 +994,10 @@ class GeneralDonationController extends Controller
         ]);
 
         try {
+            $items = $this->buildRecurringDonationItems($request);
+            $totalAmount = array_sum(array_column($items, 'amount'));
+            $primaryPurpose = $items[0]['donation_for'] ?? 'General Donation';
+
             $provider = new PayPalClient;
             $provider->setApiCredentials(config('paypal'));
             $provider->setCurrency(config('paypal.currency', 'USD'));
@@ -948,7 +1024,9 @@ class GeneralDonationController extends Controller
             }
 
             // 2. CREATE DYNAMIC PLAN
-            $planName = "Donation: " . $request->donation_for . " ($" . $request->amount . ")";
+            $planName = count($items) > 1
+                ? "Donation: Multiple Purposes ($" . $totalAmount . ")"
+                : "Donation: " . $primaryPurpose . " ($" . $totalAmount . ")";
             $planDetails = [
                 "product_id" => $productId,
                 "name" => $planName,
@@ -965,7 +1043,7 @@ class GeneralDonationController extends Controller
                         "total_cycles" => 0, // Infinite until canceled
                         "pricing_scheme" => [
                             "fixed_price" => [
-                                "value" => number_format($request->amount, 2, '.', ''),
+                                "value" => number_format($totalAmount, 2, '.', ''),
                                 "currency_code" => "USD"
                             ]
                         ]
@@ -1001,6 +1079,7 @@ class GeneralDonationController extends Controller
 
             $subscriptionData = [
                 "plan_id" => $plan['id'],
+                "custom_id" => (string) count($items),
                 "subscriber" => [
                     "name" => [
                         "given_name" => $givenName,
@@ -1032,7 +1111,11 @@ class GeneralDonationController extends Controller
             // you might want to save the record here as 'pending' 
             // and update it later via Webhook or a 'complete' endpoint.
 
-            return response()->json($subscription);
+            return response()->json([
+                ...$subscription,
+                'donations_count' => count($items),
+                'total_amount' => $totalAmount,
+            ]);
         } catch (Exception $e) {
             Log::error('PayPal Subscription Error: ' . $e->getMessage());
             return response()->json([
@@ -1051,38 +1134,72 @@ class GeneralDonationController extends Controller
 
         $request->validate([
             'subscriptionID' => 'required',
-            'amount'         => 'required',
+            'amount'         => 'required_without:donations|numeric|min:1',
             'email'          => 'required|email',
             'donation_for'   => 'nullable',
             'otherPurpose'   => 'nullable|string|max:255|required_if:donation_for,Other',
+            'donations'      => 'nullable|array|min:1',
+            'donations.*.donation_for' => 'required_with:donations|string',
+            'donations.*.amount' => 'required_with:donations|integer|min:1',
+            'donations.*.otherPurpose' => 'nullable|string|max:255',
+            'donations.*.other_purpose' => 'nullable|string|max:255',
             'honorType'      => 'nullable|string|in:memory,honor',
             'honorName'      => 'nullable|string|max:255|required_with:honorType',
             'interval'       => 'required',
         ]);
 
+        $items = $this->buildRecurringDonationItems($request);
+        $totalAmount = array_sum(array_column($items, 'amount'));
+
+        // Idempotency: avoid duplicate rows for same PayPal subscription.
+        $existingRows = GeneralDonation::where('payment_id', $request->subscriptionID)->get();
+        if ($existingRows->isNotEmpty()) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Already saved.',
+                'donation_id' => $existingRows->first()->id,
+                'donation_ids' => $existingRows->pluck('id')->values(),
+                'donations_count' => $existingRows->count(),
+            ]);
+        }
+
         $goal = FundRaisa::latest()->first();
 
-        $donation = GeneralDonation::create([
-            'fund_raisa_id'   => $goal?->id,
-            'donation_for'    => $request->donation_for,
-            'other_purpose'   => $request->donation_for === 'Other' ? $request->input('otherPurpose') : null,
-            'honor_type'      => $request->input('honorType'),
-            'honor_name'      => $request->input('honorName'),
-            'name'            => $request->name,
-            'email'           => $request->email,
-            'amount'          => $request->amount,
-            'payment_id'      => $request->subscriptionID,
-            'donation_mode'   => 'paypal',
-            'frequency'       => $request->interval, // 'month' or 'year'
-            'status'          => 'paid', // Or 'active'
-            'address1'        => $request->address1,
-            'city'            => $request->city,
-            'state'           => $request->state,
-            'country'         => $request->country,
+        $saved = [];
+        foreach ($items as $item) {
+            $saved[] = GeneralDonation::create([
+                'fund_raisa_id'   => $goal?->id,
+                'donation_for'    => $item['donation_for'],
+                'other_purpose'   => $item['other_purpose'],
+                'honor_type'      => $request->input('honorType'),
+                'honor_name'      => $request->input('honorName'),
+                'name'            => $request->name,
+                'email'           => $request->email,
+                'amount'          => (int) $item['amount'],
+                'payment_id'      => $request->subscriptionID,
+                'donation_mode'   => 'paypal',
+                'frequency'       => $request->interval, // 'month' or 'year'
+                'status'          => 'paid', // Or 'active'
+                'address1'        => $request->address1,
+                'city'            => $request->city,
+                'state'           => $request->state,
+                'country'         => $request->country,
+            ]);
+        }
+
+        $primaryDonation = $saved[0];
+        $payload = $this->buildSafePayload($request, $primaryDonation);
+        $payload['donations'] = $items;
+        $payload['donations_count'] = count($items);
+        $payload['total_amount'] = $totalAmount;
+        $this->sendDonationEmails($primaryDonation, $payload);
+
+        return response()->json([
+            'status' => 'success',
+            'donation' => $primaryDonation,
+            'donation_ids' => array_map(fn($d) => $d->id, $saved),
+            'donations_count' => count($saved),
+            'total_amount' => $totalAmount,
         ]);
-
-        $this->sendDonationEmails($donation, $this->buildSafePayload($request, $donation));
-
-        return response()->json(['status' => 'success', 'donation' => $donation]);
     }
 }
