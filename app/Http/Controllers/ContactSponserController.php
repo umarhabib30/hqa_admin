@@ -8,7 +8,6 @@ use Illuminate\Support\Facades\Mail;
 use App\Mail\ContactSponserMail;
 use App\Mail\ContactSponserConfirmationMail;
 use App\Services\MailRecipientResolver;
-use Illuminate\Support\Facades\Log;
 class ContactSponserController extends Controller
 {
     public function store(Request $request)
@@ -24,11 +23,8 @@ class ContactSponserController extends Controller
         // Notify internal recipients based on Contact Sponsor permission
         $resolver = app(MailRecipientResolver::class);
         $adminEmails = $resolver->resolveByModule('contact_sponsor', static::class . '@store');
-        Log::info($adminEmails);
         if (!empty($adminEmails)) {
-           foreach($adminEmails as $email){
-            Mail::to($email)->queue(new ContactSponserMail($contact));
-           }
+            Mail::to($adminEmails)->queue(new ContactSponserMail($contact));
         }
 
         // Confirm to user
