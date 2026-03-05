@@ -10,6 +10,7 @@ use App\Models\SponserPackageSubscriber;
 use App\Models\SponsorPackage;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use App\Services\MailRecipientResolver;
 use Stripe\Stripe;
 use Stripe\PaymentIntent;
 
@@ -86,8 +87,12 @@ class SponserApiSubscriber extends Controller
                 $subscriber->load('package');
                 // Confirmation to the subscriber
                 Mail::to($subscriber->user_email)->queue(new SponsorSubscriberConfirmationMail($subscriber));
-                // Admin notification
-                Mail::to(config('mail.admin_email'))->queue(new SponsorSubscriberCreatedMail($subscriber));
+                // Admin notification based on Sponsor Packages permission
+                $resolver = app(MailRecipientResolver::class);
+                $adminEmails = $resolver->resolveByModule('sponsor_packages', static::class . '@store');
+                if (!empty($adminEmails)) {
+                    Mail::to($adminEmails)->queue(new SponsorSubscriberCreatedMail($subscriber));
+                }
             } catch (\Throwable $e) {
                 Log::warning('Sponsor subscriber email failed', [
                     'subscriber_id' => $subscriber->id ?? null,

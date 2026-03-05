@@ -7,7 +7,7 @@ use App\Mail\GeneralDonationConfirmationMail;
 use App\Mail\GeneralDonationReceivedMail;
 use App\Models\FundRaisa;
 use App\Models\GeneralDonation;
-use App\Models\User;
+use App\Services\MailRecipientResolver;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Stripe\StripeClient;
@@ -95,18 +95,10 @@ class GeneralDonationController extends Controller
                 Mail::to($donation->email)->send(new GeneralDonationConfirmationMail($donation, $payload));
             }
 
-            $superAdmins = User::where('role', 'super_admin')->get();
-            $sentToAnyAdmin = false;
-            foreach ($superAdmins as $admin) {
-                if (!empty($admin->email)) {
-                    Mail::to($admin->email)->send(new GeneralDonationReceivedMail($donation, $payload));
-                    $sentToAnyAdmin = true;
-                }
-            }
-
-            // Fallback to configured admin email if there are no super admins.
-            if (!$sentToAnyAdmin && !empty(config('mail.admin_email'))) {
-                Mail::to(config('mail.admin_email'))->send(new GeneralDonationReceivedMail($donation, $payload));
+            $resolver = app(MailRecipientResolver::class);
+            $adminEmails = $resolver->resolveByModule('donations', static::class . '@sendDonationEmails');
+            if (!empty($adminEmails)) {
+                Mail::to($adminEmails)->send(new GeneralDonationReceivedMail($donation, $payload));
             }
         } catch (\Throwable $e) {
             // Don't fail the payment flow if mail/queue fails.

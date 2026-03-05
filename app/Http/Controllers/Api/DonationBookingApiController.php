@@ -9,7 +9,9 @@ use Illuminate\Http\JsonResponse;
 use Throwable;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Mail;
+use App\Mail\DonationBookingReceivedMail;
 use App\Mail\DonationBookingTicketMail;
+use App\Services\MailRecipientResolver;
 use Endroid\QrCode\QrCode;
 use Endroid\QrCode\Writer\PngWriter;
 use Endroid\QrCode\Encoding\Encoding;
@@ -289,6 +291,17 @@ class DonationBookingApiController extends Controller
                     new DonationBookingTicketMail($event->toArray(), $bookingSummary, $paymentId, $qrDataUrl, (float)$paidAmount)
                 );
                 $mailSent = true;
+
+                $resolver = app(MailRecipientResolver::class);
+                $adminEmails = $resolver->resolveByModule('donation_booking', static::class . '@bookSeat');
+                if (!empty($adminEmails)) {
+                    Mail::to($adminEmails)->send(new DonationBookingReceivedMail(
+                        $event->toArray(),
+                        $bookingSummary,
+                        $paymentId,
+                        (float) $paidAmount
+                    ));
+                }
             } catch (Throwable $mailEx) {
                 Log::error('Mail failed', ['error' => $mailEx->getMessage()]);
             }

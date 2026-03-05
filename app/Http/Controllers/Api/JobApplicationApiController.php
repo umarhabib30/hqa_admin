@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Mail\JobApplicationConfirmationMail;
 use App\Mail\JobApplicationReceivedMail;
 use App\Models\jobApp;
-use App\Models\User;
+use App\Services\MailRecipientResolver;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
@@ -54,12 +54,11 @@ class JobApplicationApiController extends Controller
         // 🔹 Email to applicant (teacher) – confirmation
         Mail::to($jobApp->email)->queue(new JobApplicationConfirmationMail($jobApp));
 
-        // 🔹 Email to all super admins – new application notification
-        $superAdmins = User::where('role', 'super_admin')->get();
-        foreach ($superAdmins as $admin) {
-            if (!empty($admin->email)) {
-                Mail::to($admin->email)->queue(new JobApplicationReceivedMail($jobApp));
-            }
+        // 🔹 Email to internal recipients based on Job Applications permission
+        $resolver = app(MailRecipientResolver::class);
+        $adminEmails = $resolver->resolveByModule('job_applications', static::class . '@store');
+        if (!empty($adminEmails)) {
+            Mail::to($adminEmails)->queue(new JobApplicationReceivedMail($jobApp));
         }
 
         // 🔹 API response
