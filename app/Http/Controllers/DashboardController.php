@@ -22,6 +22,21 @@ class DashboardController extends Controller
      */
     public function index(Request $request)
     {
+        $user = $request->user();
+        $can = [
+            'donations' => $user->hasPermission('donation.view'),
+            'donation_booking' => $user->hasPermission('donation.booking'),
+            'sponsor' => $user->hasPermission('sponsor_packages.view'),
+            'alumni' => $user->hasAnyPermission(['alumni.view', 'alumni.forms', 'alumni.events']),
+            'alumni_forms' => $user->hasAnyPermission(['alumni.view', 'alumni.forms']),
+            'alumni_events' => $user->hasAnyPermission(['alumni.view', 'alumni.events']),
+            'pto' => $user->hasAnyPermission(['pto.view', 'pto.events', 'pto.subscribe']),
+            'pto_events' => $user->hasAnyPermission(['pto.view', 'pto.events']),
+            'pto_subscribe' => $user->hasAnyPermission(['pto.view', 'pto.subscribe']),
+            'career' => $user->hasAnyPermission(['career.view', 'career.job_posts']),
+            'contact_sponsor' => $user->hasPermission('contact_sponsor.view'),
+        ];
+
         // Date range for donations chart (default: last 30 days)
         $dateTo = $request->filled('date_to')
             ? Carbon::parse($request->date_to)->endOfDay()
@@ -32,25 +47,39 @@ class DashboardController extends Controller
         if ($dateFrom->gt($dateTo)) {
             $dateFrom = $dateTo->copy()->subDays(30)->startOfDay();
         }
-
-        // Donations by purpose (for chart) – within date range
-        $donationsByPurpose = GeneralDonation::query()
-            ->whereBetween('created_at', [$dateFrom, $dateTo])
-            ->selectRaw('donation_for, SUM(amount) as total')
-            ->groupBy('donation_for')
-            ->orderByDesc('total')
-            ->get()
-            ->map(function ($row) {
-                return [
-                    'purpose' => $row->donation_for ?: 'Unspecified',
-                    'total' => (float) $row->total,
-                ];
-            });
-        $donationsByPurposeGrandTotal = (float) $donationsByPurpose->sum('total');
         $donationsChartDateFrom = $dateFrom->format('Y-m-d');
         $donationsChartDateTo = $dateTo->format('Y-m-d');
 
-        // Date range for sponsor subscribers chart (default: last 30 days)
+        // Donations (only if user can see donations)
+        $donationsByPurpose = collect();
+        $donationsByPurposeGrandTotal = 0.0;
+        $donationStats = ['total_amount' => 0.0, 'total_count' => 0, 'today_amount' => 0.0, 'paid_now_amount' => 0.0, 'pledged_amount' => 0.0];
+        $latestDonations = collect();
+        if ($can['donations']) {
+            $donationsByPurpose = GeneralDonation::query()
+                ->whereBetween('created_at', [$dateFrom, $dateTo])
+                ->selectRaw('donation_for, SUM(amount) as total')
+                ->groupBy('donation_for')
+                ->orderByDesc('total')
+                ->get()
+                ->map(function ($row) {
+                    return [
+                        'purpose' => $row->donation_for ?: 'Unspecified',
+                        'total' => (float) $row->total,
+                    ];
+                });
+            $donationsByPurposeGrandTotal = (float) $donationsByPurpose->sum('total');
+            $donationStats = [
+                'total_amount' => (float) (GeneralDonation::sum('amount') ?? 0),
+                'total_count' => GeneralDonation::count(),
+                'today_amount' => (float) (GeneralDonation::whereDate('created_at', Carbon::today())->sum('amount') ?? 0),
+                'paid_now_amount' => (float) (GeneralDonation::where('donation_mode', 'paid_now')->sum('amount') ?? 0),
+                'pledged_amount' => (float) (GeneralDonation::where('donation_mode', 'pledged')->sum('amount') ?? 0),
+            ];
+            $latestDonations = GeneralDonation::latest()->take(5)->get();
+        }
+
+        // Sponsor chart date range
         $sponsorDateTo = $request->filled('sponsor_date_to')
             ? Carbon::parse($request->sponsor_date_to)->endOfDay()
             : Carbon::today()->endOfDay();
@@ -60,168 +89,159 @@ class DashboardController extends Controller
         if ($sponsorDateFrom->gt($sponsorDateTo)) {
             $sponsorDateFrom = $sponsorDateTo->copy()->subDays(30)->startOfDay();
         }
-
-        // Sponsor package subscribers by type (for chart) – within date range
-        $sponsorSubscribersChartData = SponserPackageSubscriber::query()
-            ->whereBetween('created_at', [$sponsorDateFrom, $sponsorDateTo])
-            ->select('sponsor_type')
-            ->selectRaw('COUNT(*) as total')
-            ->groupBy('sponsor_type')
-            ->orderByDesc('total')
-            ->get();
-        $sponsorSubscribersChartGrandTotal = (int) $sponsorSubscribersChartData->sum('total');
         $sponsorChartDateFrom = $sponsorDateFrom->format('Y-m-d');
         $sponsorChartDateTo = $sponsorDateTo->format('Y-m-d');
-        $allBookingEvents = DonationBooking::get();
 
-        $totalSeatsBooked = $allBookingEvents->sum(function ($booking) {
-            $tableBookings = $booking->table_bookings ?? [];
-            $seats = 0;
+        $sponsorSubscribersChartData = collect();
+        $sponsorSubscribersChartGrandTotal = 0;
+        $sponsorSubscriberCount = 0;
+        $sponsorSubscribersByType = collect();
+        if ($can['sponsor']) {
+            $sponsorSubscribersChartData = SponserPackageSubscriber::query()
+                ->whereBetween('created_at', [$sponsorDateFrom, $sponsorDateTo])
+                ->select('sponsor_type')
+                ->selectRaw('COUNT(*) as total')
+                ->groupBy('sponsor_type')
+                ->orderByDesc('total')
+                ->get();
+            $sponsorSubscribersChartGrandTotal = (int) $sponsorSubscribersChartData->sum('total');
+            $sponsorSubscriberCount = SponserPackageSubscriber::count();
+            $sponsorSubscribersByType = SponserPackageSubscriber::select('sponsor_type', DB::raw('COUNT(*) as total'))
+                ->groupBy('sponsor_type')
+                ->orderByDesc('total')
+                ->get();
+        }
 
-            foreach ($tableBookings as $table) {
-                $seats += collect($table)->sum(function ($entry) use ($booking) {
-                    return DonationBooking::occupiedSeatsForBookingEntry((array) $entry, (int) $booking->seats_per_table);
-                });
-            }
-
-            return $seats;
-        });
-
-        $stats = [
-            'alumni_forms' => AlumniForm::count(),
-            'bookings' => $totalSeatsBooked,
-
-            'job_posts' => JobPost::count(),
-        ];
-
-        // Seats booked today
-        $todaySeats = $allBookingEvents->sum(function ($booking) {
-            if (!Carbon::parse($booking->created_at)->isToday()) {
-                return 0;
-            }
-
-            $tableBookings = $booking->table_bookings ?? [];
-            $seats = 0;
-
-            foreach ($tableBookings as $table) {
-                $seats += collect($table)->sum(function ($entry) use ($booking) {
-                    return DonationBooking::occupiedSeatsForBookingEntry((array) $entry, (int) $booking->seats_per_table);
-                });
-            }
-
-            return $seats;
-        });
-
-        // Seats booked last 7 days
-        $last7Days = collect(range(6, 0))->map(function ($i) use ($allBookingEvents) {
-            $date = Carbon::today()->subDays($i);
-
-            $seats = $allBookingEvents->sum(function ($booking) use ($date) {
-                if (!Carbon::parse($booking->created_at)->isSameDay($date)) {
-                    return 0;
-                }
-
+        // Donation booking stats (only if user can see donation booking)
+        $allBookingEvents = $can['donation_booking'] ? DonationBooking::get() : collect();
+        $totalSeatsBooked = 0;
+        $todaySeats = 0;
+        $last7Days = collect(range(6, 0))->map(fn ($i) => ['date' => Carbon::today()->subDays($i)->format('d M'), 'seats' => 0]);
+        if ($can['donation_booking']) {
+            $totalSeatsBooked = $allBookingEvents->sum(function ($booking) {
                 $tableBookings = $booking->table_bookings ?? [];
-                $total = 0;
-
+                $seats = 0;
                 foreach ($tableBookings as $table) {
-                    $total += collect($table)->sum(function ($entry) use ($booking) {
+                    $seats += collect($table)->sum(function ($entry) use ($booking) {
                         return DonationBooking::occupiedSeatsForBookingEntry((array) $entry, (int) $booking->seats_per_table);
                     });
                 }
-
-                return $total;
+                return $seats;
             });
-
-            return [
-                'date' => $date->format('d M'),
-                'seats' => $seats,
-            ];
-        });
-
-        // Donations overview
-        $donationStats = [
-            'total_amount' => (float) (GeneralDonation::sum('amount') ?? 0),
-            'total_count' => GeneralDonation::count(),
-            'today_amount' => (float) (GeneralDonation::whereDate('created_at', Carbon::today())->sum('amount') ?? 0),
-            'paid_now_amount' => (float) (GeneralDonation::where('donation_mode', 'paid_now')->sum('amount') ?? 0),
-            'pledged_amount' => (float) (GeneralDonation::where('donation_mode', 'pledged')->sum('amount') ?? 0),
-        ];
-        $latestDonations = GeneralDonation::latest()->take(5)->get();
-
-        // Sponsor subscribers
-        $sponsorSubscriberCount = SponserPackageSubscriber::count();
-        $sponsorSubscribersByType = SponserPackageSubscriber::select('sponsor_type', DB::raw('COUNT(*) as total'))
-            ->groupBy('sponsor_type')
-            ->orderByDesc('total')
-            ->get();
-
-        // Contact sponsor requests + PTO mail subscribers
-        $contactSponsorCount = ContactSponserModel::count();
-        $ptoSubscribersCount = PtoSubscribeMails::count();
-
-        // Current running donation booking event (fallback: next upcoming)
-        $today = Carbon::today();
-        $currentDonationEvent = DonationBooking::whereDate('event_start_date', '<=', $today)
-            ->whereDate('event_end_date', '>=', $today)
-            ->orderBy('event_start_date')
-            ->first();
-        $currentDonationEventIsUpcoming = false;
-
-        if (!$currentDonationEvent) {
-            $currentDonationEvent = DonationBooking::whereDate('event_start_date', '>=', $today)
-                ->orderBy('event_start_date')
-                ->first();
-            $currentDonationEventIsUpcoming = $currentDonationEvent ? true : false;
+            $todaySeats = $allBookingEvents->sum(function ($booking) {
+                if (!Carbon::parse($booking->created_at)->isToday()) {
+                    return 0;
+                }
+                $tableBookings = $booking->table_bookings ?? [];
+                $seats = 0;
+                foreach ($tableBookings as $table) {
+                    $seats += collect($table)->sum(function ($entry) use ($booking) {
+                        return DonationBooking::occupiedSeatsForBookingEntry((array) $entry, (int) $booking->seats_per_table);
+                    });
+                }
+                return $seats;
+            });
+            $last7Days = collect(range(6, 0))->map(function ($i) use ($allBookingEvents) {
+                $date = Carbon::today()->subDays($i);
+                $seats = $allBookingEvents->sum(function ($booking) use ($date) {
+                    if (!Carbon::parse($booking->created_at)->isSameDay($date)) {
+                        return 0;
+                    }
+                    $tableBookings = $booking->table_bookings ?? [];
+                    $total = 0;
+                    foreach ($tableBookings as $table) {
+                        $total += collect($table)->sum(function ($entry) use ($booking) {
+                            return DonationBooking::occupiedSeatsForBookingEntry((array) $entry, (int) $booking->seats_per_table);
+                        });
+                    }
+                    return $total;
+                });
+                return ['date' => $date->format('d M'), 'seats' => $seats];
+            });
         }
 
+        $stats = [
+            'alumni_forms' => $can['alumni_forms'] ? AlumniForm::count() : 0,
+            'bookings' => $totalSeatsBooked,
+            'job_posts' => $can['career'] ? JobPost::count() : 0,
+        ];
+
+        $contactSponsorCount = $can['contact_sponsor'] ? ContactSponserModel::count() : 0;
+        $ptoSubscribersCount = $can['pto_subscribe'] ? PtoSubscribeMails::count() : 0;
+
+        $today = Carbon::today();
+
+        // Current donation booking event
+        $currentDonationEvent = null;
+        $currentDonationEventIsUpcoming = false;
         $currentDonationEventSeatsBooked = 0;
-        if ($currentDonationEvent) {
-            $tableBookings = $currentDonationEvent->table_bookings ?? [];
-            foreach ($tableBookings as $table) {
-                $currentDonationEventSeatsBooked += collect($table)->sum(function ($entry) use ($currentDonationEvent) {
-                    return DonationBooking::occupiedSeatsForBookingEntry((array) $entry, (int) $currentDonationEvent->seats_per_table);
-                });
+        if ($can['donation_booking']) {
+            $currentDonationEvent = DonationBooking::whereDate('event_start_date', '<=', $today)
+                ->whereDate('event_end_date', '>=', $today)
+                ->orderBy('event_start_date')
+                ->first();
+            if (!$currentDonationEvent) {
+                $currentDonationEvent = DonationBooking::whereDate('event_start_date', '>=', $today)
+                    ->orderBy('event_start_date')
+                    ->first();
+                $currentDonationEventIsUpcoming = $currentDonationEvent ? true : false;
+            }
+            if ($currentDonationEvent) {
+                $tableBookings = $currentDonationEvent->table_bookings ?? [];
+                foreach ($tableBookings as $table) {
+                    $currentDonationEventSeatsBooked += collect($table)->sum(function ($entry) use ($currentDonationEvent) {
+                        return DonationBooking::occupiedSeatsForBookingEntry((array) $entry, (int) $currentDonationEvent->seats_per_table);
+                    });
+                }
             }
         }
 
-        // Current running / upcoming PTO event
-        $currentPtoEvent = PtoEvents::whereDate('start_date', '<=', $today)
-            ->where(function ($q) use ($today) {
-                $q->whereNull('end_date')->orWhereDate('end_date', '>=', $today);
-            })
-            ->orderBy('start_date')
-            ->first();
+        // Current PTO event
+        $currentPtoEvent = null;
         $currentPtoEventIsUpcoming = false;
-        if (!$currentPtoEvent) {
-            $currentPtoEvent = PtoEvents::whereDate('start_date', '>=', $today)
+        $currentPtoEventAttendeeCount = 0;
+        if ($can['pto_events']) {
+            $currentPtoEvent = PtoEvents::whereDate('start_date', '<=', $today)
+                ->where(function ($q) use ($today) {
+                    $q->whereNull('end_date')->orWhereDate('end_date', '>=', $today);
+                })
                 ->orderBy('start_date')
                 ->first();
-            $currentPtoEventIsUpcoming = $currentPtoEvent ? true : false;
+            if (!$currentPtoEvent) {
+                $currentPtoEvent = PtoEvents::whereDate('start_date', '>=', $today)
+                    ->orderBy('start_date')
+                    ->first();
+                $currentPtoEventIsUpcoming = $currentPtoEvent ? true : false;
+            }
+            $currentPtoEventAttendeeCount = $currentPtoEvent
+                ? \App\Models\PtoEventAttendee::where('event_id', $currentPtoEvent->id)->count()
+                : 0;
         }
-        $currentPtoEventAttendeeCount = $currentPtoEvent
-            ? \App\Models\PtoEventAttendee::where('event_id', $currentPtoEvent->id)->count()
-            : 0;
 
-        // Current running / upcoming Alumni event
-        $currentAlumniEvent = AlumniEvent::whereDate('start_date', '<=', $today)
-            ->where(function ($q) use ($today) {
-                $q->whereNull('end_date')->orWhereDate('end_date', '>=', $today);
-            })
-            ->orderBy('start_date')
-            ->first();
+        // Current Alumni event
+        $currentAlumniEvent = null;
         $currentAlumniEventIsUpcoming = false;
-        if (!$currentAlumniEvent) {
-            $currentAlumniEvent = AlumniEvent::whereDate('start_date', '>=', $today)
+        $currentAlumniEventAttendeeCount = 0;
+        if ($can['alumni_events']) {
+            $currentAlumniEvent = AlumniEvent::whereDate('start_date', '<=', $today)
+                ->where(function ($q) use ($today) {
+                    $q->whereNull('end_date')->orWhereDate('end_date', '>=', $today);
+                })
                 ->orderBy('start_date')
                 ->first();
-            $currentAlumniEventIsUpcoming = $currentAlumniEvent ? true : false;
+            if (!$currentAlumniEvent) {
+                $currentAlumniEvent = AlumniEvent::whereDate('start_date', '>=', $today)
+                    ->orderBy('start_date')
+                    ->first();
+                $currentAlumniEventIsUpcoming = $currentAlumniEvent ? true : false;
+            }
+            $currentAlumniEventAttendeeCount = $currentAlumniEvent
+                ? \App\Models\AlumniEventAttendee::where('event_id', $currentAlumniEvent->id)->count()
+                : 0;
         }
-        $currentAlumniEventAttendeeCount = $currentAlumniEvent
-            ? \App\Models\AlumniEventAttendee::where('event_id', $currentAlumniEvent->id)->count()
-            : 0;
 
         return view('dashboard.main.index', compact(
+            'can',
             'stats',
             'todaySeats',
             'last7Days',
