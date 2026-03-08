@@ -84,6 +84,35 @@ class GeneralDonationController extends Controller
     }
 
     /**
+     * @param array<int, array{donation_for:string, other_purpose:?string, amount:int}> $items
+     */
+    private function buildMetadataPurposes(array $items): string
+    {
+        $labels = array_map(function (array $item): string {
+            $purpose = trim((string) ($item['donation_for'] ?? ''));
+            if ($purpose === 'Other') {
+                $other = trim((string) ($item['other_purpose'] ?? ''));
+                return $other !== '' ? 'Other: ' . $other : 'Other';
+            }
+            return $purpose !== '' ? $purpose : 'General';
+        }, $items);
+
+        return implode(' | ', $labels);
+    }
+
+    /**
+     * PayPal custom_id max length is limited; keep a safe compact summary.
+     *
+     * @param array<int, array{donation_for:string, other_purpose:?string, amount:int}> $items
+     */
+    private function buildPaypalCustomId(array $items): string
+    {
+        $purposes = $this->buildMetadataPurposes($items);
+        $base = 'count=' . count($items) . ';purposes=' . $purposes;
+        return mb_substr($base, 0, 120);
+    }
+
+    /**
      * Send confirmation to donor and notification to super admins.
      *
      * @param array<string, mixed> $payload
@@ -345,6 +374,7 @@ class GeneralDonationController extends Controller
             $items = $this->buildRecurringDonationItems($request);
             $totalAmount = array_sum(array_column($items, 'amount'));
             $primaryPurpose = $items[0]['donation_for'] ?? $request->donation_for;
+            $purposes = $this->buildMetadataPurposes($items);
 
             $paymentMethodId = $request->filled('payment_method') ? $request->payment_method : null;
 
@@ -357,6 +387,7 @@ class GeneralDonationController extends Controller
                     'name'  => $request->name,
                     'metadata' => array_filter([
                         'purpose' => $primaryPurpose,
+                        'purposes' => $purposes,
                         'donation_count' => (string) count($items),
                     ]),
                 ]);
@@ -374,6 +405,7 @@ class GeneralDonationController extends Controller
                     'excluded_payment_method_types' => ['amazon_pay'],
                     'metadata' => array_filter([
                         'purpose' => $primaryPurpose,
+                        'purposes' => $purposes,
                         'donation_count' => (string) count($items),
                         'total_amount' => (string) $totalAmount,
                         'honor_type' => $request->input('honorType'),
@@ -440,6 +472,7 @@ class GeneralDonationController extends Controller
                 'expand' => ['latest_invoice.payment_intent'],
                 'metadata' => array_filter([
                     'purpose' => $primaryPurpose,
+                    'purposes' => $purposes,
                     'donation_count' => (string) count($items),
                     'total_amount' => (string) $totalAmount,
                 ]),
@@ -704,6 +737,7 @@ class GeneralDonationController extends Controller
             $items = $this->buildOneTimeDonationItems($request);
             $totalAmount = array_sum(array_column($items, 'amount'));
             $isMulti = count($items) > 1;
+            $purposes = $this->buildMetadataPurposes($items);
 
             $customer = $this->stripe->customers->create([
                 'email' => $request->email,
@@ -725,6 +759,7 @@ class GeneralDonationController extends Controller
                 'metadata' => array_filter([
                     'type'          => 'general_donation_one_time',
                     'purpose'       => $primaryPurpose,
+                    'purposes'      => $purposes,
                     'other_purpose' => $items[0]['other_purpose'] ?? null,
                     'donation_count' => (string) count($items),
                     'honor_type'    => $request->input('honorType'),
@@ -828,6 +863,8 @@ class GeneralDonationController extends Controller
         try {
             $items = $this->buildOneTimeDonationItems($request);
             $totalAmount = array_sum(array_column($items, 'amount'));
+            $purposes = $this->buildMetadataPurposes($items);
+            $paypalCustomId = $this->buildPaypalCustomId($items);
 
             $provider = new PayPalClient;
             $provider->setApiCredentials(config('paypal'));
@@ -840,10 +877,10 @@ class GeneralDonationController extends Controller
                         "currency_code" => "USD",
                         "value" => number_format($totalAmount, 2, '.', '')
                     ],
-                    "custom_id" => (string) count($items),
+                    "custom_id" => $paypalCustomId,
                     "description" => count($items) > 1
-                        ? "General Donation (Multiple Purposes)"
-                        : "General Donation",
+                        ? ("General Donation: " . mb_substr($purposes, 0, 90))
+                        : ("General Donation: " . $purposes),
                 ]],
                 "application_context" => [
                     "shipping_preference" => "NO_SHIPPING",
@@ -855,6 +892,7 @@ class GeneralDonationController extends Controller
                 ...$response,
                 'donations_count' => count($items),
                 'total_amount' => $totalAmount,
+                'purposes' => $purposes,
             ]);
         } catch (Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
@@ -997,6 +1035,8 @@ class GeneralDonationController extends Controller
             $items = $this->buildRecurringDonationItems($request);
             $totalAmount = array_sum(array_column($items, 'amount'));
             $primaryPurpose = $items[0]['donation_for'] ?? 'General Donation';
+            $purposes = $this->buildMetadataPurposes($items);
+            $paypalCustomId = $this->buildPaypalCustomId($items);
 
             $provider = new PayPalClient;
             $provider->setApiCredentials(config('paypal'));
@@ -1030,7 +1070,7 @@ class GeneralDonationController extends Controller
             $planDetails = [
                 "product_id" => $productId,
                 "name" => $planName,
-                "description" => $planName,
+                "description" => mb_substr($planName . " | " . $purposes, 0, 127),
                 "status" => "ACTIVE",
                 "billing_cycles" => [
                     [
@@ -1079,7 +1119,7 @@ class GeneralDonationController extends Controller
 
             $subscriptionData = [
                 "plan_id" => $plan['id'],
-                "custom_id" => (string) count($items),
+                "custom_id" => $paypalCustomId,
                 "subscriber" => [
                     "name" => [
                         "given_name" => $givenName,
@@ -1115,6 +1155,7 @@ class GeneralDonationController extends Controller
                 ...$subscription,
                 'donations_count' => count($items),
                 'total_amount' => $totalAmount,
+                'purposes' => $purposes,
             ]);
         } catch (Exception $e) {
             Log::error('PayPal Subscription Error: ' . $e->getMessage());

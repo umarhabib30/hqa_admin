@@ -27,9 +27,9 @@ return [
         'secret' => env('STRIPE_SECRET'),
     ],
     'paypal' => [
-    'client_id' => env('PAYPAL_SANDBOX_CLIENT_ID'),
-    'secret'    => env('PAYPAL_SANDBOX_CLIENT_SECRET'),
-    'mode'      => env('PAYPAL_MODE', 'sandbox'),
+    'client_id' => env('PAYPAL_LIVE_CLIENT_ID'),
+    'secret'    => env('PAYPAL_LIVE_CLIENT_SECRET'),
+    'mode'      => env('PAYPAL_MODE', 'live'),
 ],
 
 
