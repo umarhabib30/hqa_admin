@@ -39,7 +39,7 @@ class ContactSponserController extends Controller
         $resolver = app(MailRecipientResolver::class);
         $adminEmails = $resolver->resolveByModule('contact_sponsor', static::class . '@store');
         if (!empty($adminEmails)) {
-            Mail::to($adminEmails)->queue(new ContactSponserMail($contact));
+            Mail::to($adminEmails)->send(new ContactSponserMail($contact));
         }
         return response()->json([
             'status' => true,
