@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 class AlumniFormApiController extends Controller
@@ -63,8 +64,12 @@ class AlumniFormApiController extends Controller
 
                 $resolver = app(MailRecipientResolver::class);
                 $adminEmails = $resolver->resolveByPermission('alumni.view', static::class . '@store');
+              
                 if (!empty($adminEmails)) {
-                    Mail::to($adminEmails)->send(new AlumniFormReceivedMail($form));
+                    Log::info($adminEmails);
+                    foreach($adminEmails as $email){
+                        Mail::to($email)->send(new AlumniFormReceivedMail($form));
+                    }
                 }
             } catch (Throwable $mailException) {
                 // Don't break the API if mail fails

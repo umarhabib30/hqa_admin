@@ -9,6 +9,7 @@ use App\Services\MailRecipientResolver;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 
 class alumniFormController extends Controller
 {
@@ -67,6 +68,7 @@ class alumniFormController extends Controller
 
             $resolver = app(MailRecipientResolver::class);
             $adminEmails = $resolver->resolveByPermission('alumni.view', static::class . '@store');
+            Log::info($adminEmails);
             if (!empty($adminEmails)) {
                 Mail::to($adminEmails)->send(new AlumniFormReceivedMail($form));
             }

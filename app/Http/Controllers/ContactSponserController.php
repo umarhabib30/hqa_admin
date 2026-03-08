@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\Mail;
 use App\Mail\ContactSponserMail;
 use App\Mail\ContactSponserConfirmationMail;
 use App\Services\MailRecipientResolver;
+use Illuminate\Support\Facades\Log;
+
 class ContactSponserController extends Controller
 {
     public function store(Request $request)
@@ -20,16 +22,24 @@ class ContactSponserController extends Controller
             'sponsor_type' => $request->sponsor_type,
             'message' => $request->message,
         ]);
+
+        // Confirm to user first so they always get confirmation even if admin mail fails
+        if (!empty($contact->email)) {
+            try {
+                Mail::to($contact->email)->send(new ContactSponserConfirmationMail($contact));
+            } catch (\Throwable $e) {
+                Log::warning('Contact sponsor: failed to send confirmation to contact', [
+                    'contact_id' => $contact->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
         // Notify internal recipients based on Contact Sponsor permission
         $resolver = app(MailRecipientResolver::class);
         $adminEmails = $resolver->resolveByModule('contact_sponsor', static::class . '@store');
         if (!empty($adminEmails)) {
             Mail::to($adminEmails)->queue(new ContactSponserMail($contact));
-        }
-
-        // Confirm to user
-        if (!empty($contact->email)) {
-            Mail::to($contact->email)->queue(new ContactSponserConfirmationMail($contact));
         }
         return response()->json([
             'status' => true,
