@@ -14,6 +14,7 @@ class ContactSponserController extends Controller
 {
     public function store(Request $request)
     {
+        
         $contact = ContactSponserModel::create([
             'full_name' => $request->full_name,
             'company_name' => $request->company_name,
@@ -38,8 +39,17 @@ class ContactSponserController extends Controller
         // Notify internal recipients based on Contact Sponsor permission
         $resolver = app(MailRecipientResolver::class);
         $adminEmails = $resolver->resolveByModule('contact_sponsor', static::class . '@store');
+        Log::info($adminEmails);
         if (!empty($adminEmails)) {
-            Mail::to($adminEmails)->send(new ContactSponserMail($contact));
+            try {
+                Mail::to($adminEmails)->send(new ContactSponserMail($contact));
+            } catch (\Throwable $e) {
+                Log::warning('Contact sponsor: failed to send admin notification', [
+                    'admin_emails' => $adminEmails,
+                    'contact_id' => $contact->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
         }
         return response()->json([
             'status' => true,
