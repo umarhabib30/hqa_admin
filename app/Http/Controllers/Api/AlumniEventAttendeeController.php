@@ -115,12 +115,12 @@ class AlumniEventAttendeeController extends Controller
             ]);
 
             try {
-                Mail::to($attendee->email)->queue(new AlumniEventAttendeeConfirmationMail($attendee));
+                Mail::to($attendee->email)->send(new AlumniEventAttendeeConfirmationMail($attendee));
 
                 $resolver = app(MailRecipientResolver::class);
                 $adminEmails = $resolver->resolveByPermission('alumni.view', static::class . '@store');
                 if (!empty($adminEmails)) {
-                    Mail::to($adminEmails)->queue(new AlumniEventAttendeeReceivedMail($attendee));
+                    Mail::to($adminEmails)->send(new AlumniEventAttendeeReceivedMail($attendee));
                 }
             } catch (Throwable $e) {
                 // Log but don't fail the request

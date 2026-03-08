@@ -97,12 +97,12 @@ class PtoEventAttendeeController extends Controller
             ]);
 
             try {
-                Mail::to($attendee->email)->queue(new PtoEventAttendeeConfirmationMail($attendee));
+                Mail::to($attendee->email)->send(new PtoEventAttendeeConfirmationMail($attendee));
 
                 $resolver = app(MailRecipientResolver::class);
                 $adminEmails = $resolver->resolveByModule('pto_event_attendees', static::class . '@store');
                 if (!empty($adminEmails)) {
-                    Mail::to($adminEmails)->queue(new PtoEventAttendeeReceivedMail($attendee));
+                    Mail::to($adminEmails)->send(new PtoEventAttendeeReceivedMail($attendee));
                 }
             } catch (\Throwable $e) {
                 // Log but don't fail the request

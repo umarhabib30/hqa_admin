@@ -236,16 +236,16 @@ class DonationAdminController extends Controller
     {
         try {
             if (!empty($donation->email)) {
-                Mail::to($donation->email)->queue(new GeneralDonationConfirmationMail($donation));
+                Mail::to($donation->email)->send(new GeneralDonationConfirmationMail($donation));
             }
 
             $resolver = app(MailRecipientResolver::class);
             $adminEmails = $resolver->resolveByModule('donations', static::class . '@sendDonationEmails');
             if (!empty($adminEmails)) {
-                Mail::to($adminEmails)->queue(new GeneralDonationReceivedMail($donation));
+                Mail::to($adminEmails)->send(new GeneralDonationReceivedMail($donation));
             }
         } catch (\Throwable $e) {
-            // Don't fail the manual entry flow if mail/queue fails.
+            // Don't fail the manual entry flow if mail/send fails.
         }
     }
 }

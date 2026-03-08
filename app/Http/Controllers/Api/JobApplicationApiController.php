@@ -52,13 +52,13 @@ class JobApplicationApiController extends Controller
         ]);
 
         // 🔹 Email to applicant (teacher) – confirmation
-        Mail::to($jobApp->email)->queue(new JobApplicationConfirmationMail($jobApp));
+        Mail::to($jobApp->email)->send(new JobApplicationConfirmationMail($jobApp));
 
         // 🔹 Email to internal recipients based on Job Applications permission
         $resolver = app(MailRecipientResolver::class);
         $adminEmails = $resolver->resolveByModule('job_applications', static::class . '@store');
         if (!empty($adminEmails)) {
-            Mail::to($adminEmails)->queue(new JobApplicationReceivedMail($jobApp));
+            Mail::to($adminEmails)->send(new JobApplicationReceivedMail($jobApp));
         }
 
         // 🔹 API response

@@ -105,13 +105,13 @@ class SponserPackageApiController extends Controller
                 $subscriber->load('package');
 
                 // Send confirmation to subscriber
-                Mail::to($subscriber->user_email)->queue(new SponsorSubscriberConfirmationMail($subscriber));
+                Mail::to($subscriber->user_email)->send(new SponsorSubscriberConfirmationMail($subscriber));
 
                 // Notify admin based on Sponsor Packages permission
                 $resolver = app(MailRecipientResolver::class);
                 $adminEmails = $resolver->resolveByModule('sponsor_packages', static::class . '@store');
                 if (!empty($adminEmails)) {
-                    Mail::to($adminEmails)->queue(new SponsorSubscriberCreatedMail($subscriber));
+                    Mail::to($adminEmails)->send(new SponsorSubscriberCreatedMail($subscriber));
                 }
             } catch (\Throwable $e) {
                 Log::warning('Sponsor subscriber email failed', [

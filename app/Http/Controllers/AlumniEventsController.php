@@ -57,16 +57,16 @@ class AlumniEventsController extends Controller
         // ✅ CREATE EVENT
         $event = AlumniEvent::create($data);
 
-        // Send new alumni event email to all alumni subscribers (queued to avoid timeout)
+        // Send new alumni event email to all alumni subscribers (sendd to avoid timeout)
         $subscribers = AlumniMail::pluck('email')->filter()->unique();
         foreach ($subscribers as $email) {
-            Mail::to($email)->queue(new NewAlumniEventMail($event));
+            Mail::to($email)->send(new NewAlumniEventMail($event));
         }
         // Notify internal recipients based on Alumni permission
         $resolver = app(MailRecipientResolver::class);
         $adminEmails = $resolver->resolveByPermission('alumni.view', static::class . '@store');
         if (!empty($adminEmails)) {
-            Mail::to($adminEmails)->queue(new NewAlumniEventMail($event));
+            Mail::to($adminEmails)->send(new NewAlumniEventMail($event));
         }
 
         $message = $subscribers->isEmpty()
