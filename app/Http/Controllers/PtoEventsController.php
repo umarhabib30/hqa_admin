@@ -6,6 +6,7 @@ use App\Mail\NewPtoEventMail;
 use App\Models\PtoEvents as PtoEvent;
 use App\Models\PtoEvents;
 use App\Models\PtoSubscribeMails;
+use App\Services\MailRecipientResolver;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
@@ -57,13 +58,17 @@ class PtoEventsController extends Controller
         // ✅ CREATE EVENT
         $event = PtoEvents::create($data);
 
-        // Send new PTO event email to all PTO subscribers (queued to avoid timeout)
+        // Send new PTO event email to all PTO subscribers (sendd to avoid timeout)
         $subscribers = PtoSubscribeMails::pluck('email')->filter()->unique();
         foreach ($subscribers as $email) {
-            Mail::to($email)->queue(new NewPtoEventMail($event));
+            Mail::to($email)->send(new NewPtoEventMail($event));
         }
-        // Notify admin
-        Mail::to(config('mail.admin_email'))->queue(new NewPtoEventMail($event));
+        // Notify internal recipients based on PTO Events permission
+        $resolver = app(MailRecipientResolver::class);
+        $adminEmails = $resolver->resolveByModule('pto_events', static::class . '@store');
+        if (!empty($adminEmails)) {
+            Mail::to($adminEmails)->send(new NewPtoEventMail($event));
+        }
 
         // ✅ REDIRECT
         return redirect()

@@ -7,10 +7,14 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\ContactSponserMail;
 use App\Mail\ContactSponserConfirmationMail;
+use App\Services\MailRecipientResolver;
+use Illuminate\Support\Facades\Log;
+
 class ContactSponserController extends Controller
 {
     public function store(Request $request)
     {
+        
         $contact = ContactSponserModel::create([
             'full_name' => $request->full_name,
             'company_name' => $request->company_name,
@@ -19,12 +23,33 @@ class ContactSponserController extends Controller
             'sponsor_type' => $request->sponsor_type,
             'message' => $request->message,
         ]);
-        // Notify admin
-        Mail::to(config('mail.admin_email'))->queue(new ContactSponserMail($contact));
 
-        // Confirm to user
+        // Confirm to user first so they always get confirmation even if admin mail fails
         if (!empty($contact->email)) {
-            Mail::to($contact->email)->queue(new ContactSponserConfirmationMail($contact));
+            try {
+                Mail::to($contact->email)->send(new ContactSponserConfirmationMail($contact));
+            } catch (\Throwable $e) {
+                Log::warning('Contact sponsor: failed to send confirmation to contact', [
+                    'contact_id' => $contact->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        // Notify internal recipients based on Contact Sponsor permission
+        $resolver = app(MailRecipientResolver::class);
+        $adminEmails = $resolver->resolveByModule('contact_sponsor', static::class . '@store');
+        Log::info($adminEmails);
+        if (!empty($adminEmails)) {
+            try {
+                Mail::to($adminEmails)->send(new ContactSponserMail($contact));
+            } catch (\Throwable $e) {
+                Log::warning('Contact sponsor: failed to send admin notification', [
+                    'admin_emails' => $adminEmails,
+                    'contact_id' => $contact->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
         }
         return response()->json([
             'status' => true,

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Mail\NewAlumniEventMail;
 use App\Models\AlumniEvent;
 use App\Models\AlumniMail;
+use App\Services\MailRecipientResolver;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
@@ -56,13 +57,17 @@ class AlumniEventsController extends Controller
         // ✅ CREATE EVENT
         $event = AlumniEvent::create($data);
 
-        // Send new alumni event email to all alumni subscribers (queued to avoid timeout)
+        // Send new alumni event email to all alumni subscribers (sendd to avoid timeout)
         $subscribers = AlumniMail::pluck('email')->filter()->unique();
         foreach ($subscribers as $email) {
-            Mail::to($email)->queue(new NewAlumniEventMail($event));
+            Mail::to($email)->send(new NewAlumniEventMail($event));
         }
-        // Notify admin
-        Mail::to(config('mail.admin_email'))->queue(new NewAlumniEventMail($event));
+        // Notify internal recipients based on Alumni permission
+        $resolver = app(MailRecipientResolver::class);
+        $adminEmails = $resolver->resolveByPermission('alumni.view', static::class . '@store');
+        if (!empty($adminEmails)) {
+            Mail::to($adminEmails)->send(new NewAlumniEventMail($event));
+        }
 
         $message = $subscribers->isEmpty()
             ? 'Alumni Event created successfully.'

@@ -3,14 +3,17 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\AlumniForm;
-use Illuminate\Http\Request;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Mail;
-use Throwable;
-use Illuminate\Validation\ValidationException;
 use App\Mail\AlumniFormConfirmationMail;
+use App\Mail\AlumniFormReceivedMail;
+use App\Models\AlumniForm;
+use App\Services\MailRecipientResolver;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class AlumniFormApiController extends Controller
 {
@@ -57,6 +60,16 @@ class AlumniFormApiController extends Controller
             try {
                 if (!empty($form->email)) {
                     Mail::to($form->email)->send(new AlumniFormConfirmationMail($form));
+                }
+
+                $resolver = app(MailRecipientResolver::class);
+                $adminEmails = $resolver->resolveByPermission('alumni.view', static::class . '@store');
+              
+                if (!empty($adminEmails)) {
+                    Log::info($adminEmails);
+                    foreach($adminEmails as $email){
+                        Mail::to($email)->send(new AlumniFormReceivedMail($form));
+                    }
                 }
             } catch (Throwable $mailException) {
                 // Don't break the API if mail fails

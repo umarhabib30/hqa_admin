@@ -10,6 +10,7 @@
         </div>
 
         <!-- DONATIONS (TOP) -->
+        @if($can['donations'] ?? false)
         <div class="bg-white rounded-2xl shadow p-6" style="margin-top: 20px;">
             <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-6">
                 <div>
@@ -83,9 +84,12 @@
             
             </div>
         </div>
+        @endif
 
         <!-- CHARTS ROW -->
+        @if(($can['donations'] ?? false) || ($can['sponsor'] ?? false))
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6" style="margin-top: 20px;">
+            @if($can['donations'] ?? false)
             <!-- Donations by purpose (with date range) -->
             <div class="bg-white rounded-2xl shadow p-6 flex flex-col">
                 <div class="flex items-start justify-between gap-4 mb-1">
@@ -123,7 +127,9 @@
                     <p class="text-sm text-gray-500 mt-2 text-center">No donations in this date range.</p>
                 @endif
             </div>
+            @endif
 
+            @if($can['sponsor'] ?? false)
             <!-- Sponsor package subscribers count -->
             <div class="bg-white rounded-2xl shadow p-6 flex flex-col">
                 <div class="flex items-start justify-between gap-4 mb-1">
@@ -159,11 +165,15 @@
                     <p class="text-sm text-gray-500 mt-2 text-center">No sponsor subscribers yet.</p>
                 @endif
             </div>
+            @endif
         </div>
+        @endif
 
         <!-- CURRENT EVENTS: Donation Booking | PTO | Alumni -->
+        @if(($can['donation_booking'] ?? false) || ($can['pto_events'] ?? false) || ($can['alumni_events'] ?? false))
         <div class="bg-white rounded-2xl shadow p-6" style="margin-top: 20px;">
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                @if($can['donation_booking'] ?? false)
                 <!-- CURRENT DONATION BOOKING EVENT -->
                 <div class="rounded-2xl border border-gray-100">
                     <div class="p-4">
@@ -226,7 +236,9 @@
                         @endif
                     </div>
                 </div>
+                @endif
 
+                @if($can['pto_events'] ?? false)
                 <!-- CURRENT PTO EVENT -->
                 <div class="rounded-2xl border border-gray-100">
                     <div class="p-4">
@@ -261,7 +273,9 @@
                         @endif
                     </div>
                 </div>
+                @endif
 
+                @if($can['alumni_events'] ?? false)
                 <!-- CURRENT ALUMNI EVENT -->
                 <div class="rounded-2xl border border-gray-100">
                     <div class="p-4">
@@ -296,11 +310,15 @@
                         @endif
                     </div>
                 </div>
+                @endif
             </div>
         </div>
+        @endif
 
         <!-- OTHER OVERVIEW CARDS (each links to related page) -->
+        @if(($can['sponsor'] ?? false) || ($can['donation_booking'] ?? false) || ($can['alumni_forms'] ?? false) || ($can['career'] ?? false) || ($can['pto_subscribe'] ?? false) || ($can['contact_sponsor'] ?? false))
         <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6" style="margin-top: 20px;">
+            @if($can['sponsor'] ?? false)
             <a href="{{ route('sponsor-packages.index') }}" class="bg-white rounded-2xl p-5 shadow hover:shadow-md transition-shadow block group">
                 <p class="text-xs uppercase tracking-wide text-gray-500">Sponsor package subscribers</p>
                 <p class="mt-2 text-2xl font-bold text-gray-900 group-hover:text-[#00285E]">{{ number_format($sponsorSubscriberCount) }}</p>
@@ -315,36 +333,50 @@
                     @endforelse
                 </div>
             </a>
+            @endif
 
+            @if($can['donation_booking'] ?? false)
             <a href="{{ route('donationBooking.index') }}" class="bg-white rounded-2xl p-5 shadow hover:shadow-md transition-shadow block group">
                 <p class="text-xs uppercase tracking-wide text-gray-500">Seats booked (all events)</p>
                 <p class="mt-2 text-2xl font-bold text-emerald-700 group-hover:text-[#00285E]">{{ number_format($stats['bookings']) }}</p>
                 <p class="mt-2 text-sm text-gray-500">Today: <span class="font-medium text-gray-900">{{ number_format($todaySeats) }}</span></p>
             </a>
+            @endif
 
+            @if($can['alumni_forms'] ?? false)
             <a href="{{ route('alumniForm.index') }}" class="bg-white rounded-2xl p-5 shadow hover:shadow-md transition-shadow block group">
                 <p class="text-xs uppercase tracking-wide text-gray-500">Alumni form submissions</p>
                 <p class="mt-2 text-2xl font-bold text-gray-900 group-hover:text-[#00285E]">{{ number_format($stats['alumni_forms']) }}</p>
             </a>
+            @endif
 
+            @if(($can['career'] ?? false) || ($can['pto_subscribe'] ?? false) || ($can['contact_sponsor'] ?? false))
             <div class="bg-white rounded-2xl p-5 shadow">
                 <p class="text-xs uppercase tracking-wide text-gray-500">Portal activity</p>
                 <div class="mt-4 space-y-2">
+                    @if($can['career'] ?? false)
                     <a href="{{ route('jobPost.index') }}" class="flex items-center justify-between text-sm hover:bg-gray-50 -mx-2 px-2 py-1 rounded group">
                         <span class="text-gray-600 group-hover:text-[#00285E]">Teacher jobs</span>
                         <span class="font-semibold text-gray-900">{{ number_format($stats['job_posts']) }}</span>
                     </a>
+                    @endif
+                    @if($can['pto_subscribe'] ?? false)
                     <a href="{{ route('ptoSubscribemails.index') }}" class="flex items-center justify-between text-sm hover:bg-gray-50 -mx-2 px-2 py-1 rounded group">
                         <span class="text-gray-600 group-hover:text-[#00285E]">PTO subscribers</span>
                         <span class="font-semibold text-gray-900">{{ number_format($ptoSubscribersCount) }}</span>
                     </a>
+                    @endif
+                    @if($can['contact_sponsor'] ?? false)
                     <a href="{{ route('contact-sponser.index') }}" class="flex items-center justify-between text-sm hover:bg-gray-50 -mx-2 px-2 py-1 rounded group">
                         <span class="text-gray-600 group-hover:text-[#00285E]">Sponsor contact requests</span>
                         <span class="font-semibold text-gray-900">{{ number_format($contactSponsorCount) }}</span>
                     </a>
+                    @endif
                 </div>
             </div>
+            @endif
         </div>
+        @endif
     </div>
 
     <script>
