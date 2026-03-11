@@ -1,6 +1,6 @@
 <?php
 
-use App\Http\Controllers\AlumniEventAttendeeController;
+use App\Http\Controllers\Api\AlumniEventAttendeeController;
 use App\Http\Controllers\Api\AchievementsApiController;
 use App\Http\Controllers\Api\AlumniEventsApiController;
 use App\Http\Controllers\Api\AlumniFeePersonPriceApiController;

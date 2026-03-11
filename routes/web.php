@@ -43,7 +43,7 @@ use App\Http\Controllers\ResetPasswordController;
 use App\Http\Controllers\AlumniFeePersonPriceController;
 use App\Http\Controllers\AlumniPortalController;
 use App\Http\Controllers\AlumniEventAttendeeController as AlumniEventAttendeeWebController;
-use App\Http\Controllers\Api\AlumniEventAttendeeController;
+use App\Http\Controllers\Api\AlumniEventAttendeeController as AlumniEventAttendeeApiController;
 use App\Models\PtoLetterGuide;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
@@ -225,9 +225,9 @@ Route::post('/subscribe', [GeneralDonationController::class, 'recurringDonation'
 Route::post('one-time-donation', [GeneralDonationController::class, 'oneTimeDonation'])->name('one-time-donation');
 
 // Alumni Event Attendees Frontend Routes (for alumni users / public registration)
-Route::get('/alumni-event-attendees', [AlumniEventAttendeeController::class, 'index'])
+Route::get('/alumni-event-attendees', [AlumniEventAttendeeApiController::class, 'index'])
     ->name('alumni-event-attendees.index');
-Route::post('/alumni-event-attendees', [AlumniEventAttendeeController::class, 'store'])
+Route::post('/alumni-event-attendees', [AlumniEventAttendeeApiController::class, 'store'])
     ->name('alumni-event-attendees.store');
-Route::post('/alumni-event-intent', [AlumniEventAttendeeController::class, 'createIntent'])
+Route::post('/alumni-event-intent', [AlumniEventAttendeeApiController::class, 'createIntent'])
     ->name('alumni-event-attendees.intent');
